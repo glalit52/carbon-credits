@@ -357,6 +357,21 @@ def test_api_analysis_returns_findings_with_a_caveat(monitored):
     assert payload["changes"]
 
 
+@pytest.mark.parametrize("body,fragment", [
+    ({"site": "X", "from": "not-a-date"}, "ISO date"),
+    ({"site": "X", "to": "2026-13-45"}, "ISO date"),
+    ({"site": "X", "from": "2026-05-01", "to": "2026-04-01"}, "is after"),
+])
+def test_api_analysis_rejects_bad_dates_as_400_not_500(monitored, body, fragment):
+    """A typo in a caller's JSON is their error, and must not return a trace."""
+    _, store, demo, _ = monitored
+    status, payload = dispatch(store, "POST", "/api/analysis", {},
+                               {**body, "site": demo.id})
+    assert status == 400, payload
+    assert fragment in payload["error"] or fragment in payload.get("hint", "")
+    assert "trace" not in payload
+
+
 def test_api_copilot_refusal_surfaces_as_a_200_with_a_reason(monitored):
     _, store, _, _ = monitored
     status, payload = dispatch(store, "POST", "/api/copilot", {},

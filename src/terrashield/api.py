@@ -63,6 +63,23 @@ def _date(params: dict, key: str, default: date | None = None) -> date | None:
         raise ApiError(400, f"{key} must be an ISO date such as 2026-05-01")
 
 
+def _body_date(body: dict, key: str, default: date) -> date:
+    """A date from a request body, or a 400 saying what was wrong with it.
+
+    Parsing this inline let a typo in a caller's JSON raise ValueError, which
+    the dispatcher turned into a 500 with a stack trace — an internal error for
+    something the client got wrong, and a traceback handed to whoever asked.
+    """
+    raw = body.get(key)
+    if raw in (None, ""):
+        return default
+    try:
+        return date.fromisoformat(str(raw))
+    except (TypeError, ValueError):
+        raise ApiError(400, f"{key!r} must be an ISO date such as 2026-05-01",
+                       f"got {raw!r}")
+
+
 def _one(params: dict, key: str, default: str = "") -> str:
     raw = params.get(key)
     if not raw:
@@ -263,10 +280,12 @@ def api_analysis(store: Store, body: dict, **_) -> dict:
     aoi = store.get_aoi(aoi_id)
     if aoi is None:
         raise ApiError(404, f"no monitored area {aoi_id}")
-    end = date.fromisoformat(body["to"]) if body.get("to") else \
-        datetime.now(timezone.utc).date()
-    start = date.fromisoformat(body["from"]) if body.get("from") else \
-        end - timedelta(days=30)
+    end = _body_date(body, "to", datetime.now(timezone.utc).date())
+    start = _body_date(body, "from", end - timedelta(days=30))
+    if start > end:
+        raise ApiError(400, "'from' is after 'to'",
+                       "an inverted range matches nothing, which is "
+                       "indistinguishable from a period with no findings")
     changes = store.list_changes(aoi_id, start=start, end=end, limit=1000)
     anomalies = [a for a in store.list_anomalies(aoi_id, limit=1000)
                  if start <= a.observed_at.date() <= end]
