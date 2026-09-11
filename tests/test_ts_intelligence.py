@@ -241,14 +241,43 @@ def test_a_single_look_holds_an_ambiguous_finding_back():
     assert risk.held_for_confirmation(event, score)
 
 
-def test_confirmation_by_a_later_look_releases_the_hold():
+def test_confirmation_by_other_comparisons_releases_the_hold():
+    """Measured backwards, because a pipeline running day by day has no future."""
     event = _event(sev=Severity.MEDIUM)
-    later = [_event(ident="l1"), _event(ident="l2")]
-    later[1].after_scene_id = "a2"
-    score = risk.score_change(event, AOI, history=[_event(ident="h1")], later=later)
+    others = [_event(ident="o1"), _event(ident="o2")]
+    others[0].after_scene_id = "a1"
+    others[1].after_scene_id = "a2"
+    score = risk.score_change(event, AOI, history=[_event(ident="h1")],
+                              others=others)
     assert score.persistence > 0.5
-    assert score.looks > 1
+    assert score.looks == 3
     assert risk.held_for_confirmation(event, score) == ""
+
+
+def test_persistence_ignores_the_comparison_the_finding_came_from():
+    """Otherwise every finding confirms itself and the hold never means anything."""
+    event = _event()
+    same_look = _event(ident="s1")            # shares after_scene_id "a"
+    score = risk.score_change(event, AOI, others=[same_look])
+    assert score.looks == 1
+    assert score.persistence == 0.0
+
+
+def test_persistence_falls_when_other_looks_did_not_see_it():
+    event = _event(sev=Severity.MEDIUM)
+    elsewhere = []
+    for i, scene in enumerate(("a1", "a2", "a3")):
+        other = _event(ident=f"e{i}")
+        other.after_scene_id = scene
+        other.geometry = geo.rectangle((70.4, 23.4), 200, 100)   # 40 km away
+        elsewhere.append(other)
+    score = risk.score_change(event, AOI, others=elsewhere)
+    assert score.looks == 4
+    assert score.persistence == 0.0
+    held = risk.held_for_confirmation(event, score)
+    # Flagged once across four looks that all covered it is *better* evidence
+    # of something moveable than flagged once with nothing to compare against.
+    assert "did not show it" in held
 
 
 def test_damage_is_never_held_back():

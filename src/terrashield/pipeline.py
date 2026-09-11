@@ -288,7 +288,12 @@ def _facts(store: Store, aoi: Aoi, change_result, assessment: Assessment,
 
     if change_result and change_result.usable:
         for event in change_result.events:
-            score = risk.score_change(event, aoi, history=history, later=[])
+            #: `history` answers both questions the score needs: what this
+            #: site has looked like before (novelty) and how many earlier
+            #: comparisons covered this same place (persistence). Passing an
+            #: empty forward window instead left every finding permanently
+            #: unconfirmed, so nothing was ever released from the hold.
+            score = risk.score_change(event, aoi, history=history)
             held = risk.held_for_confirmation(event, score)
             f = alert_engine.change_facts(event, aoi, score)
             lon, lat = event.centroid

@@ -79,12 +79,14 @@ class RiskScore:
             out.append(f"novelty {self.novelty:.0%}: this site has looked like "
                        "this before")
         if self.looks > 1:
-            out.append(f"persistence {self.persistence:.0%}: still present in "
-                       f"{self.persistence * self.looks:.0f} of {self.looks} "
-                       "subsequent looks")
+            others = self.looks - 1
+            out.append(f"persistence {self.persistence:.0%}: also flagged in "
+                       f"{round(self.persistence * others)} of {others} other "
+                       "comparisons covering this place")
         else:
-            out.append("persistence not yet established: seen in one look only, "
-                       "so a transient object has not been ruled out")
+            out.append("persistence not yet established: this is the only "
+                       "comparison covering this place, so a transient object "
+                       "has not been ruled out")
         out.append(f"spatial reach {self.spatial:.1%} of the monitored area")
         return out
 
@@ -116,31 +118,56 @@ def novelty_of(event: ChangeEvent, history: list[ChangeEvent]) -> float:
     return round(min(1.0, max(0.0, (closest - 1.5) / 6.5)), 3)
 
 
-def persistence_of(event: ChangeEvent, later: list[ChangeEvent],
+def persistence_of(event: ChangeEvent, others: list[ChangeEvent],
                    overlap_m: float = 150.0) -> tuple[float, int]:
-    """Share of later comparisons that still show a change at this place."""
+    """Share of the other comparisons at this AOI that also flagged this place.
+
+    Direction-agnostic on purpose. Measuring persistence by looking *forward*
+    reads well and cannot be done by a pipeline running a day at a time, which
+    only has the past: pass it the future and it is always empty, so every
+    finding is permanently "seen once" and nothing is ever confirmed. Looking
+    backward answers the same question -- has this place been flagged before,
+    or is this the first time -- from evidence that exists.
+
+    `others` should be the comparisons made at the same AOI over a recent
+    window, not a global history: the denominator is how many chances there
+    were to see it again.
+    """
     from .geo import haversine_m
-    if not later:
+    if not others:
         return 0.0, 1
     by_look: dict[str, bool] = {}
-    for h in later:
+    for h in others:
+        if h.id == event.id:
+            continue
         seen = by_look.get(h.after_scene_id, False)
         if haversine_m(event.centroid, h.centroid) <= overlap_m:
             seen = True
         by_look[h.after_scene_id] = seen
-    looks = len(by_look) + 1
-    return round(sum(1 for v in by_look.values() if v) / max(len(by_look), 1), 3), looks
+    by_look.pop(event.after_scene_id, None)   # the comparison this came from
+    if not by_look:
+        return 0.0, 1
+    return (round(sum(1 for v in by_look.values() if v) / len(by_look), 3),
+            len(by_look) + 1)
 
 
 def score_change(event: ChangeEvent, aoi: Aoi,
                  history: list[ChangeEvent] | None = None,
-                 later: list[ChangeEvent] | None = None) -> RiskScore:
-    persistence, looks = persistence_of(event, later or [])
+                 others: list[ChangeEvent] | None = None) -> RiskScore:
+    """Score one finding.
+
+    `history` is what this site has looked like before, and answers novelty.
+    `others` is the set of comparisons that had a chance to see this same
+    place, and answers persistence. They are usually the same list.
+    """
+    history = history or []
+    persistence, looks = persistence_of(event, others if others is not None
+                                        else history)
     spatial = min(1.0, event.area_m2 / max(aoi.area_km2 * 1_000_000, 1.0))
     return RiskScore(
         severity=event.severity,
         confidence=event.confidence,
-        novelty=novelty_of(event, history or []),
+        novelty=novelty_of(event, history),
         persistence=persistence,
         spatial=round(spatial, 4),
         looks=looks,
@@ -152,14 +179,24 @@ def held_for_confirmation(event: ChangeEvent, score: RiskScore) -> str:
 
     A single look at a port cannot tell a stack of containers from a building.
     Saying so and waiting for the next pass is better than either guessing or
-    staying silent -- the finding is still in the queue, marked, with the date
-    the next usable scene is expected.
+    staying silent -- the finding stays in the queue, marked.
+
+    What releases the hold is being *seen again*, not merely the existence of
+    other looks. Those are opposite pieces of evidence and conflating them
+    inverts the logic: a change flagged once across four comparisons that all
+    covered it is better evidence of something moveable than a change flagged
+    once with nothing to compare against.
     """
-    if score.looks > 1:
-        return ""
     if event.change_type not in AMBIGUOUS_ON_ONE_LOOK:
         return ""
+    if score.persistence > 0:
+        return ""       # another comparison saw it too: not a one-look artefact
     if event.severity.rank >= Severity.HIGH.rank and score.novelty >= 0.8:
-        return ""   # novel and serious enough to be worth an analyst's time now
+        return ""       # novel and serious enough to be worth an analyst now
+    if score.looks > 1:
+        others = score.looks - 1
+        return (f"flagged once, and {others} other comparison(s) covering this "
+                "place did not show it. Consistent with something moveable; "
+                "held pending a look that confirms it")
     return ("seen in one comparison only; a moveable object has not been ruled "
             "out. Held for confirmation against the next usable scene")
