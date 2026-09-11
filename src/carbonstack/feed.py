@@ -390,10 +390,14 @@ class FeedProvider:
     name = "feed"
 
     def __init__(self, readings: list[Reading], *,
-                 season_confidence: dict[int, float] | None = None):
+                 season_confidence: dict[int, float] | None = None,
+                 peak_height_m: float | None = None):
         self._by_day = {r.day: r for r in readings}
         self._readings = sorted(readings, key=lambda r: r.day)
         self._season_confidence = season_confidence or {}
+        heights = [r.canopy_height_m for r in readings
+                   if r.canopy_height_m is not None]
+        self._peak_height = peak_height_m or (max(heights) if heights else 0.0)
 
     WINDOW_DAYS = 30
 
@@ -452,6 +456,14 @@ class FeedProvider:
                              r.canopy_uncertainty_m or 0.5, r.day,
                              "sentinel2+gedi")
 
+        if variable == "stocking_index":
+            r = self._nearest(on, "canopy_height_m")
+            if r is None or r.canopy_height_m is None or not self._peak_height:
+                return None
+            si = min(1.0, r.canopy_height_m / self._peak_height)
+            return Retrieval(plot.id, variable, si, "fraction",
+                             max(0.03, 0.15 * si), r.day, "sentinel2")
+
         if variable == "practice_adopted":
             confidence = self._season_confidence.get(on.year)
             if confidence is None:
@@ -479,3 +491,29 @@ def year_confidence(seasons: list[SeasonSummary]) -> float:
     if weight <= 0:
         return min(s.adoption_confidence for s in seasons)
     return sum(s.adoption_confidence * s.baseline_ch4_kg_ha for s in seasons) / weight
+
+
+def season_warnings(seasons: list[SeasonSummary]) -> list[str]:
+    """Things a reviewer must see before a rice vintage is signed off.
+
+    Lives here rather than in a caller because every path that quantifies a
+    rice vintage needs the same warnings -- the command line, the batch
+    pipeline and the dashboard builder. A warning that only one of them raises
+    is a warning that will be missed by the other two.
+    """
+    out: list[str] = []
+    for s in seasons:
+        if s.dry_down_events == 0:
+            out.append(
+                f"{s.season} {s.year}: no dry-down detected across {s.revisits} "
+                f"revisits -- the practice may not have happened")
+        elif s.adoption_confidence < 0.6:
+            out.append(
+                f"{s.season} {s.year}: adoption confidence "
+                f"{s.adoption_confidence:.0%}, only {s.clear_revisits} of "
+                f"{s.revisits} passes were clear")
+        if s.clear_revisits < s.revisits * 0.5:
+            out.append(
+                f"{s.season} {s.year}: only {s.clear_revisits} of {s.revisits} "
+                f"passes were cloud-free")
+    return out

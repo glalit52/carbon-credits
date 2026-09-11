@@ -9,11 +9,11 @@ financial model that gates it, and `carbonstack`, the dMRV core it runs on.
 |---|---|
 | `docs/research/` | Teardown of Mitti Labs and Varaha, and what it implies for us |
 | `model/carbon_model.py` | Portfolio cashflow model — the go/no-go gate |
-| `src/carbonstack/` | The product: quantification, monitoring, audit trail |
+| `src/carbonstack/` | The product — see the map below |
 | `src/carbonstack/sites.py` | The two pilot sites — real places, real climatology |
 | `src/carbonstack/feed.py` | Simulated monitoring on the real 5-day revisit cadence |
 | `dashboard/` | The live MRV dashboard and its dataset |
-| `tests/` | 85 tests, stdlib only |
+| `tests/` | 140 tests, stdlib only |
 
 ## The two numbers that shape everything
 
@@ -40,7 +40,7 @@ python3 model/carbon_model.py            # cashflow, peak funding need, sensitiv
 
 ```bash
 pip install -e ".[dev]"
-python -m pytest                         # 85 tests
+python -m pytest                         # 140 tests
 
 python -m carbonstack demo               # both tracks against synthetic monitoring
 python -m carbonstack export estate --out project.json
@@ -105,13 +105,16 @@ carbonstack/
   domain.py         Project, Farmer, Plot, Enrollment, Cohort, Observation
   biomass.py        canopy height -> AGB -> carbon -> CO2e, with error propagation
   remote_sensing.py Provider protocol, synthetic provider, field/satellite reconciliation
-  methodology/
-    base.py         deductions, uncertainty allowance, shared vintage result
-    vm0047.py       ARR, area-based, dynamic performance benchmark
-    vm0042.py       cropland and rice, practice x emission factor
-  serialize.py      projects to and from readable JSON
-  scenario.py       demo portfolios, deliberately containing bad rows
-  cli.py
+  sites.py          the two pilot sites — real places, real climatology
+  feed.py           simulated monitoring on the real 5-day revisit cadence
+  methodology/      VM0047 (ARR, dynamic benchmark) and VM0042 (practice-based)
+  store/            SQLite schema, migrations, repositories, hash-chained events
+  pipeline.py       batch monitoring, quantification, project health
+  ledger.py         vintage lifecycle, issuance, serials, buffer pool
+  payments.py       farmer revenue share, register, reconciliation
+  evidence.py       the verification pack a VVB actually receives
+  api.py            HTTP API, stdlib only
+  cli.py            the whole lifecycle
 ```
 
 The core is stdlib-only and installs anywhere — the same code has to run in a
@@ -148,6 +151,72 @@ that passes reveals a reading that was not previously visible.
 python3 scripts/build_dashboard_data.py   # run the feed + engine, write data.json
 python3 scripts/build_dashboard.py        # inline it into dashboard/index.html
 ```
+
+## Running the lifecycle
+
+```bash
+carbonstack init
+carbonstack enroll vallam
+carbonstack monitor IN-TNJ-01 --to 2026-09-11
+carbonstack quantify IN-TNJ-01 --year 2025 --tier 3 --actor lalit
+carbonstack queue                                  # what is waiting on a human
+carbonstack explain IN-TNJ-01:2025                 # where the number came from
+carbonstack review IN-TNJ-01:2025 --submit  --actor lalit
+carbonstack review IN-TNJ-01:2025 --approve --actor priya --note "3 dry-downs confirmed"
+carbonstack issue  IN-TNJ-01:2025 --registry "Gold Standard" --actor priya
+carbonstack pay raise IN-TNJ-01:2025 --price 12 --share 0.55 --actor lalit
+carbonstack evidence IN-TNJ-01 --out packs/tnj
+carbonstack verify
+carbonstack serve                                  # HTTP API on :8000
+```
+
+### What the rules refuse, and why
+
+The interesting part of a carbon platform is what it will not let you do.
+
+- **Issuing a draft** — quantify-and-issue in one step is no control at all, so
+  review is a separate act by a separate person.
+- **Approving a warned vintage without a written reason** — a warning that
+  blocks nothing is decoration. This is the only thing that makes them matter.
+- **Re-quantifying an issued vintage** — the issued number is a commercial fact
+  somebody has bought against. A recomputation that disagrees is an incident to
+  investigate, not an update to apply.
+- **Raising payments against credits that do not exist yet** — that is how a
+  project ends up owing money it has not been paid.
+- **Marking a payment paid with no reference** — a payment that cannot be
+  reconciled against a bank statement is, for audit, a payment that did not
+  happen.
+- **Issuing fractional credits** — registries issue whole tonnes. The remainder
+  is recorded as a carry, not dropped.
+
+Each refusal exits non-zero and says which rule was broken.
+
+### The event chain
+
+Every state change writes an event, and each event's hash covers its own
+content **and its predecessor's hash**. A row edited behind the application
+breaks the chain, and `carbonstack verify` says where:
+
+```
+$ sqlite3 carbonstack.db "UPDATE vintages SET net_t = 99 WHERE id='IN-TNJ-01:2025'"
+$ carbonstack verify
+EVENT CHAIN BROKEN at event 3
+  a row was changed outside the application
+```
+
+That is the difference between "our database says so" and something a verifier
+can test for themselves. The evidence pack ships the log and its integrity
+result — including when the result is *failed*, because a pack that hides a
+broken chain is worse than no pack.
+
+### The evidence pack
+
+`carbonstack evidence` writes plain files a verification body can read without
+installing anything: `plot_register.csv` (with the exclusion reason for every
+blocked plot), `observations.csv`, `vintages.csv`, `issuances.csv`,
+`payments.csv`, `derivations.json`, `event_log.csv`, a `manifest.json`, and a
+readable `SUMMARY.md`. The faster a VVB can satisfy itself, the cheaper and
+sooner the verification — which is the whole commercial argument.
 
 ## What is deliberately not real yet
 

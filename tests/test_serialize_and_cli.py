@@ -65,44 +65,100 @@ def test_cli_methodologies_lists_both(capsys):
     assert "VM0047" in out and "VM0042" in out
 
 
-def test_cli_export_then_eligibility(tmp_path, capsys):
-    path = tmp_path / "p.json"
-    assert main(["export", "estate", "--out", str(path)]) == 0
+def test_cli_export_then_import_and_eligibility(tmp_path, capsys):
+    """The stateless export feeds the database import, and eligibility reads
+    back out of it."""
+    proj = tmp_path / "p.json"
+    db = tmp_path / "t.db"
+    assert main(["export", "estate", "--out", str(proj)]) == 0
     capsys.readouterr()
 
-    assert main(["eligibility", str(path)]) == 0
+    assert main(["--db", str(db), "import", str(proj),
+                 "--methodology", "VM0047"]) == 0
+    capsys.readouterr()
+
+    assert main(["--db", str(db), "eligibility", "AP-ARR-001"]) == 0
     out = capsys.readouterr().out
     assert "area lost to paperwork" in out
     assert "tenure basis is undocumented" in out
 
 
-def test_cli_quantify_json_is_machine_readable(tmp_path, capsys):
-    path = tmp_path / "p.json"
-    main(["export", "estate", "--out", str(path)])
-    capsys.readouterr()
-
-    assert main(["quantify", str(path), "--year", "2031", "--json"]) == 0
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["methodology"] == "VM0047"
-    assert payload["net_t"] > 0
-    assert payload["calculations"]
-
-
-def test_cli_explain_shows_the_derivation(tmp_path, capsys):
-    path = tmp_path / "p.json"
-    main(["export", "estate", "--out", str(path)])
-    capsys.readouterr()
-
-    assert main(["explain", str(path), "--year", "2031"]) == 0
+def test_cli_sites_lists_the_pilots(capsys):
+    assert main(["sites"]) == 0
     out = capsys.readouterr().out
-    assert "Derivation" in out
-    assert "above-ground biomass" in out
-    assert "performance benchmark" in out
+    assert "IN-TNJ-01" in out and "KE-NYR-01" in out
+    assert "Thanjavur" in out and "Nyeri" in out
+
+
+def test_cli_refuses_a_write_without_an_actor(tmp_path, capsys):
+    """Every change to a commercial record is attributed, and the CLI says so
+    rather than inventing a default."""
+    db = tmp_path / "t.db"
+    assert main(["--db", str(db), "enroll", "vallam"]) == 0
+    capsys.readouterr()
+    with pytest.raises(SystemExit) as exc:
+        main(["--db", str(db), "review", "IN-TNJ-01:2025", "--approve"])
+    assert "actor" in str(exc.value)
+
+
+def test_cli_runs_the_whole_lifecycle(tmp_path, capsys):
+    db = str(tmp_path / "t.db")
+
+    assert main(["--db", db, "init"]) == 0
+    assert main(["--db", db, "enroll", "vallam"]) == 0
+    assert main(["--db", db, "monitor", "IN-TNJ-01", "--to", "2026-09-11"]) == 0
+    assert main(["--db", db, "quantify", "IN-TNJ-01", "--year", "2025",
+                 "--tier", "3", "--actor", "lalit"]) == 0
+    capsys.readouterr()
+
+    # Issuing before approval is refused, and the CLI exits non-zero.
+    assert main(["--db", db, "issue", "IN-TNJ-01:2025",
+                 "--registry", "Gold Standard", "--actor", "priya"]) == 2
+    assert "refused" in capsys.readouterr().err
+
+    assert main(["--db", db, "review", "IN-TNJ-01:2025", "--submit",
+                 "--actor", "lalit"]) == 0
+    assert main(["--db", db, "review", "IN-TNJ-01:2025", "--approve",
+                 "--actor", "priya", "--note", "3 dry-downs confirmed"]) == 0
+    assert main(["--db", db, "issue", "IN-TNJ-01:2025",
+                 "--registry", "Gold Standard", "--actor", "priya"]) == 0
+    assert main(["--db", db, "pay", "raise", "IN-TNJ-01:2025", "--price", "12",
+                 "--share", "0.55", "--actor", "lalit"]) == 0
+    capsys.readouterr()
+
+    assert main(["--db", db, "verify"]) == 0
+    assert "intact" in capsys.readouterr().out
+
+    assert main(["--db", db, "evidence", "IN-TNJ-01",
+                 "--out", str(tmp_path / "pack")]) == 0
+    assert (tmp_path / "pack" / "SUMMARY.md").exists()
+
+
+def test_cli_explain_reads_the_stored_derivation(tmp_path, capsys):
+    db = str(tmp_path / "t.db")
+    main(["--db", db, "enroll", "vallam"])
+    main(["--db", db, "monitor", "IN-TNJ-01", "--to", "2026-09-11"])
+    main(["--db", db, "quantify", "IN-TNJ-01", "--year", "2025",
+          "--actor", "lalit"])
+    capsys.readouterr()
+
+    assert main(["--db", db, "explain", "IN-TNJ-01:2025"]) == 0
+    out = capsys.readouterr().out
+    assert "VM0042 abatement" in out
     assert "source:" in out
 
 
-def test_cli_rejects_an_unknown_methodology(tmp_path):
-    path = tmp_path / "p.json"
-    main(["export", "estate", "--out", str(path)])
-    with pytest.raises(KeyError):
-        main(["quantify", str(path), "--year", "2031", "--methodology", "VM9999"])
+def test_cli_verify_fails_loudly_on_a_tampered_database(tmp_path, capsys):
+    import sqlite3
+
+    db = str(tmp_path / "t.db")
+    main(["--db", db, "enroll", "vallam"])
+    capsys.readouterr()
+
+    conn = sqlite3.connect(db)
+    conn.execute("UPDATE events SET payload_json = '{}' WHERE id = 1")
+    conn.commit()
+    conn.close()
+
+    assert main(["--db", db, "verify"]) == 1
+    assert "BROKEN" in capsys.readouterr().err
