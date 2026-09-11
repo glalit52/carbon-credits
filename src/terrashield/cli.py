@@ -382,7 +382,18 @@ def cmd_serve(args) -> int:
 
 
 def cmd_demo(args) -> int:
-    """Build the whole demo estate from nothing. One command, for a first look."""
+    """Build the whole demo estate from nothing. One command, for a first look.
+
+    The default window is six weeks, not six months, because a demonstration
+    that takes two hours is not a demonstration. Six weeks covers one site's
+    scripted event (Bhadla commissions an array block on 2026-03-19) and gives
+    every other site enough history for a baseline, which is what a first look
+    needs to show.
+
+    For the full estate -- each site monitored across its own events, which is
+    what the committed console is built from -- use
+    scripts/build_terrashield_demo.sh.
+    """
     _require_actor(args)
     args.org_name = "Sensegrass Demo"
     args.country = "IN"
@@ -402,6 +413,9 @@ def cmd_demo(args) -> int:
     print("\n" + "-" * 60)
     cmd_queue(argparse.Namespace(**{**vars(args), "aoi_id": None,
                                     "max_priority": 2, "limit": 10}))
+    print("This is a six-week window. For the full estate, each site monitored "
+          "across its own\nscripted events, run "
+          "scripts/build_terrashield_demo.sh.")
     return 0
 
 
@@ -490,9 +504,10 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("--token", default="")
     q.set_defaults(fn=cmd_serve)
 
-    q = sub.add_parser("demo", help="build the whole demo estate end to end")
+    q = sub.add_parser(
+        "demo", help="build the demo estate end to end (six weeks by default)")
     q.add_argument("--from", dest="since", default="2026-03-01")
-    q.add_argument("--to", default="2026-08-31")
+    q.add_argument("--to", default="2026-04-12")
     q.set_defaults(fn=cmd_demo)
     return p
 

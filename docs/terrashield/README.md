@@ -11,7 +11,7 @@ Intelligence*.
 ```bash
 pip install -e ".[dev]"
 
-terrashield --actor you@example.com demo            # the whole estate, end to end
+terrashield --actor you@example.com demo            # six weeks over four sites
 terrashield --actor you@example.com queue           # what needs an analyst
 terrashield --actor you@example.com ask "what changed at Mundra in the last 30 days"
 terrashield evaluate                                # precision, recall, calibration

@@ -340,7 +340,7 @@ and monitoring system built to the PRD in `TerraShield_AI.docx`, MVP scope
 (section 41): *AI Change Intelligence*.
 
 ```bash
-terrashield --actor you@example.com demo            # the whole estate, end to end
+terrashield --actor you@example.com demo            # six weeks over four sites
 terrashield --actor you@example.com queue           # what needs an analyst
 terrashield --actor you@example.com explain chg-…   # where a finding came from
 terrashield --actor you@example.com ask "what changed at Mundra in the last 30 days"
