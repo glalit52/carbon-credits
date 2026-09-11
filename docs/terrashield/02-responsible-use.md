@@ -61,6 +61,13 @@ object, and `alerts.prioritise` keeps held findings out of the top of the
 queue. They remain visible; they do not send an analyst somewhere on the
 strength of a maybe.
 
+What releases the hold is the finding being *seen again*, not merely the
+existence of other looks. Those are opposite pieces of evidence, and an earlier
+version of this function confused them: a change flagged once across four
+comparisons that all covered it is better evidence of something moveable than
+a change flagged once with nothing to compare against. The first case now stays
+held and says so in those terms.
+
 **Reading is audited, not just writing.** In an intelligence system the
 sensitive operation is usually a read. `rbac.READ_ACTIONS` covers imagery
 access, evidence export, report reads and every copilot interaction, and the

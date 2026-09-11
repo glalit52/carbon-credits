@@ -31,11 +31,11 @@ material is mostly not built, and is marked so.
 | Section | Status | Where |
 |---|---|---|
 | 13 Object detection | Built | `detect.py` — multi-scale background suppression, robust thresholding, connected components, classification against real object dimensions. 14 classes. Classical, not learned; `PROFILES` is the seam a fine-tuned detector replaces. |
-| 14 Change detection | Built | `change.py` — co-registration, radiometric normalisation, MAD noise floor, morphological opening, typed classification. Sensor-aware: log-ratio and multi-looking for SAR. |
+| 14 Change detection | Built | `change.py` — co-registration, radiometric normalisation, MAD noise floor, morphological opening, typed classification. Sensor-aware: log-ratio and multi-looking for SAR. Objects arriving and leaving are counted as activity, not filed as change events: a container terminal turns over forty ships a fortnight and filing each one buries the two warehouses that went up. |
 | 15 Time-series intelligence | Partly | `/api/timeline` and the console timeline carry acquisitions, changes and scores on one axis, including rejected scenes. No multi-image temporal model. |
 | 16 Pattern of life | Built | `baseline.py` — robust medians with a weekday term, tied to the AOI's geometry fingerprint. |
-| 17 Anomaly detection | Built | `anomaly.py` — weighted deviation, soft-maximum combination, score and confidence kept separate. |
-| 18 Risk scoring | Built | `risk.py` — all five dimensions the PRD names, kept as five numbers. |
+| 17 Anomaly detection | Built | `anomaly.py` — weighted deviation, soft-maximum combination, score and confidence kept separate. Infrastructure counts are excluded from the activity score: buildings do not come and go between passes, so their count's variation is the detector, not the ground. |
+| 18 Risk scoring | Built | `risk.py` — all five dimensions the PRD names, kept as five numbers. Persistence is measured backwards over the comparisons that have already covered a place, because a pipeline running a day at a time has no future to look into. |
 | 19 Alert engine | Built | `alerts.py` — declarative rules, dashboard/email/webhook channels declared per rule. Channel *delivery* is not implemented; the alert records where it should have gone. |
 | 20 Alert prioritisation | Built | Four bands from the composite risk score, with deduplication and per-rule suppression windows. |
 | 21 AI copilot | Built, grounded | `copilot.py` parses a question into a typed query and answers from the store with citations. No language model: see the module docstring for why it is arranged this way round. |
