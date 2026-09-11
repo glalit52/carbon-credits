@@ -114,7 +114,10 @@ def test_stored_alerts_carry_a_usable_deduplication_key(monitored):
     assert rows
     assert all(r["dedup_key"] for r in rows)
     for r in rows:
-        assert r["dedup_key"].startswith(f"{r['rule_id']}|{demo.id}|")
+        # Keyed by place and kind, not by rule: one finding is one alert
+        # however many rules noticed it.
+        assert r["dedup_key"].startswith(f"{demo.id}|")
+        assert r["rule_id"] not in r["dedup_key"]
     assert set(store.last_alert_times()) == {r["dedup_key"] for r in rows}
 
 

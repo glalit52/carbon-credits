@@ -241,6 +241,21 @@ def test_a_single_look_holds_an_ambiguous_finding_back():
     assert risk.held_for_confirmation(event, score)
 
 
+def test_novelty_alone_does_not_release_a_small_finding():
+    """On empty terrain every speckle artefact is novel; that is not evidence."""
+    small = _event(sev=Severity.HIGH, area=2_400.0)
+    score = risk.score_change(small, AOI)          # no history, so novelty 1.0
+    assert score.novelty == 1.0
+    assert risk.held_for_confirmation(small, score)
+
+
+def test_a_large_novel_structure_is_escalated_on_one_look():
+    big = _event(sev=Severity.HIGH, area=200_000.0)
+    score = risk.score_change(big, AOI)
+    assert score.novelty == 1.0
+    assert risk.held_for_confirmation(big, score) == ""
+
+
 def test_confirmation_by_other_comparisons_releases_the_hold():
     """Measured backwards, because a pipeline running day by day has no future."""
     event = _event(sev=Severity.MEDIUM)
@@ -317,9 +332,43 @@ def _facts(**over):
 
 
 def test_default_rules_fire_on_a_clear_new_structure():
-    raised = alert_engine.evaluate(AOI, alert_engine.default_rules("org"), [_facts()])
+    raised = alert_engine.evaluate(AOI, alert_engine.default_rules("org"),
+                                   [_facts(area_m2=60_000.0)])
     assert raised
     assert raised[0].alert.priority == 1
+
+
+def test_one_finding_raises_one_alert_however_many_rules_match():
+    """A border-sector structure matches the general rule and the border rule."""
+    rules = alert_engine.default_rules("org")
+    facts = _facts(aoi_id=BORDER.id, aoi_kind="border_sector", area_m2=60_000.0)
+    matching = [r for r in rules if r.applies_to(BORDER) and r.matches(facts)]
+    assert len(matching) >= 2, "this test needs a finding two rules both match"
+
+    raised = alert_engine.evaluate(BORDER, rules, [facts])
+    assert len(raised) == 1
+    assert {r.name for r in raised[0].rules} == {r.name for r in matching}
+    # Attributed to the narrowest scope, and delivered on every channel asked for.
+    assert raised[0].rule.aoi_kinds == ["border_sector"]
+    assert "webhook" in raised[0].alert.delivered_to
+    assert "email" in raised[0].alert.delivered_to
+
+
+def test_the_shortest_suppression_window_among_matching_rules_wins():
+    rules = alert_engine.default_rules("org")
+    facts = _facts(aoi_id=BORDER.id, aoi_kind="border_sector", area_m2=60_000.0)
+    at = datetime(2026, 5, 10, tzinfo=timezone.utc)
+    first = alert_engine.evaluate(BORDER, rules, [facts], when=at)
+    assert first
+    key = first[0].dedup_key
+    # The border rule suppresses for 3 days, the general one for 7. At 5 days
+    # the border rule is free again, so the finding is allowed through.
+    assert alert_engine.evaluate(BORDER, rules, [facts],
+                                 when=at + timedelta(days=5),
+                                 recent={key: at})
+    assert alert_engine.evaluate(BORDER, rules, [facts],
+                                 when=at + timedelta(days=2),
+                                 recent={key: at}) == []
 
 
 def test_a_rule_scoped_to_border_sectors_does_not_fire_at_a_port():
@@ -354,10 +403,10 @@ def test_a_raised_alert_carries_the_key_it_was_deduplicated_under():
     assert raised
     for r in raised:
         assert r.dedup_key
-        assert r.dedup_key.startswith(f"{r.rule.id}|{AOI.id}|")
+        assert r.dedup_key.startswith(f"{AOI.id}|")
         assert "4:9" in r.dedup_key
         assert r.dedup_key == alert_engine._dedup_key(
-            r.rule, AOI.id, _facts(place_bucket="4:9"))
+            AOI.id, _facts(place_bucket="4:9"))
 
 
 def test_a_suppression_window_holds_across_runs():

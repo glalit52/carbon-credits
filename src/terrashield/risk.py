@@ -91,6 +91,18 @@ class RiskScore:
         return out
 
 
+#: Area above which one look is decisive enough to escalate a novel, serious
+#: finding without waiting for confirmation.
+#:
+#: Novelty alone is not enough, and relying on it was a mistake worth naming.
+#: On a near-empty site every speckle artefact is novel -- there is nothing on
+#: record for it to resemble -- so "novel and high severity" exempted a stream
+#: of 1,800 m2 blobs on a salt flat from the hold and put fifty of them in the
+#: queue at priority 2 over six months. Twenty times the minimum detectable
+#: change is a structure nobody argues about; below that, wait for the next
+#: pass, which is exactly what persistence now provides.
+DECISIVE_AREA_M2 = 18_000.0
+
 #: Change types that a single look genuinely cannot separate from an object
 #: simply being parked there. Their persistence is unknown until a later look,
 #: and this is the set the queue holds back rather than escalating.
@@ -191,8 +203,9 @@ def held_for_confirmation(event: ChangeEvent, score: RiskScore) -> str:
         return ""
     if score.persistence > 0:
         return ""       # another comparison saw it too: not a one-look artefact
-    if event.severity.rank >= Severity.HIGH.rank and score.novelty >= 0.8:
-        return ""       # novel and serious enough to be worth an analyst now
+    if (event.severity.rank >= Severity.HIGH.rank and score.novelty >= 0.8
+            and event.area_m2 >= DECISIVE_AREA_M2):
+        return ""       # novel, serious and large enough to act on one look
     if score.looks > 1:
         others = score.looks - 1
         return (f"flagged once, and {others} other comparison(s) covering this "

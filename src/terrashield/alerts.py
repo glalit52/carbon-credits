@@ -265,8 +265,15 @@ class RaisedAlert:
     """An alert plus why it exists, kept together so the interface can show both."""
 
     alert: Alert
+    #: The rule that best explains the alert -- the narrowest matching scope.
     rule: Rule
-    matched: list[str]
+    #: Every rule that matched this finding. An analyst wants one row per
+    #: thing that happened, not one per rule that noticed it: a new structure
+    #: in a border sector matches both the general structure rule and the
+    #: border rule, and raising two identical alerts for it doubles the queue
+    #: while adding nothing.
+    rules: list[Rule] = field(default_factory=list)
+    matched: list[str] = field(default_factory=list)
     #: The key this alert was deduplicated under. Carried on the object rather
     #: than recomputed by the caller: the pipeline used to re-derive it by
     #: searching for any key starting with the rule id, which returned an
@@ -291,6 +298,7 @@ class RaisedAlert:
             "anomaly_ids": list(a.anomaly_ids),
             "matched_conditions": list(self.matched),
             "rule": self.rule.describe(),
+            "matched_rules": [r.name for r in self.rules] or [self.rule.name],
             "risk": self.risk.to_dict() if self.risk else None,
             "held_for_confirmation": self.held_reason,
             "occurrences": self.occurrences,
@@ -300,8 +308,13 @@ class RaisedAlert:
         }
 
 
-def _dedup_key(rule: Rule, aoi_id: str, facts: dict) -> str:
-    """Same rule, same AOI, same kind of thing, roughly the same place.
+def _dedup_key(aoi_id: str, facts: dict) -> str:
+    """Same AOI, same kind of thing, roughly the same place.
+
+    Deliberately not keyed by rule. Keyed by rule, a new structure in a border
+    sector matches both the general structure rule and the border rule and
+    produces two identical alerts, and the queue grows with the rule set rather
+    than with what is happening on the ground.
 
     Location is bucketed to a coarse grid rather than compared exactly, because
     a construction site's change polygon wanders by tens of metres between
@@ -309,7 +322,7 @@ def _dedup_key(rule: Rule, aoi_id: str, facts: dict) -> str:
     """
     place = facts.get("place_bucket", "")
     kind = facts.get("change_type") or facts.get("finding_kind", "")
-    return f"{rule.id}|{aoi_id}|{kind}|{place}"
+    return f"{aoi_id}|{kind}|{place}"
 
 
 def place_bucket(lon: float, lat: float, cell_deg: float = 0.004) -> str:
@@ -332,49 +345,55 @@ def evaluate(aoi: Aoi, rules: list[Rule], facts_list: list[dict],
     raised: dict[str, RaisedAlert] = {}
 
     for facts in facts_list:
-        for rule in rules:
-            if not rule.applies_to(aoi) or not rule.matches(facts):
-                continue
-            rank = facts.get("severity_rank", 1)
-            if rank < rule.severity_floor.rank:
-                continue
+        matching = [r for r in rules
+                    if r.applies_to(aoi) and r.matches(facts)
+                    and facts.get("severity_rank", 1) >= r.severity_floor.rank]
+        if not matching:
+            continue
 
-            key = _dedup_key(rule, aoi.id, facts)
-            last = recent.get(key)
-            if last is not None and (at - last) < timedelta(days=rule.suppress_days):
-                existing = raised.get(key)
-                if existing:
-                    existing.occurrences += 1
-                continue
-
+        key = _dedup_key(aoi.id, facts)
+        #: The shortest window among the rules that matched. A rule written to
+        #: fire often on a border sector should not be muted for a week because
+        #: a broader rule also matched the same finding.
+        window = min(r.suppress_days for r in matching)
+        last = recent.get(key)
+        if last is not None and (at - last) < timedelta(days=window):
             existing = raised.get(key)
-            if existing is not None:
+            if existing:
                 existing.occurrences += 1
-                if facts.get("risk", 0) > (existing.risk.composite if existing.risk else 0):
-                    existing.alert.summary = facts.get("summary", existing.alert.summary)
-                continue
+            continue
 
-            severity = Severity(facts.get("severity", "low"))
-            alert_id = "alert-" + format(
-                seed_of(rule.id, aoi.id, key, at.date().isoformat())
-                & 0xFFFFFFFFFFFF, "012x")
-            alert = Alert(
-                id=alert_id, org_id=rule.org_id, aoi_id=aoi.id, rule_id=rule.id,
-                title=facts.get("title", rule.name), severity=severity,
-                priority=4, created_at=at,
-                summary=facts.get("summary", ""),
-                change_event_ids=[facts["change_event_id"]]
-                if facts.get("change_event_id") else [],
-                anomaly_ids=[facts["anomaly_id"]] if facts.get("anomaly_id") else [],
-                evidence_id=facts.get("evidence_id", ""),
-                delivered_to=list(rule.channels),
-            )
-            raised[key] = RaisedAlert(
-                alert=alert, rule=rule, dedup_key=key,
-                matched=[c.describe() for c in rule.conditions],
-                risk=facts.get("risk_score"),
-                held_reason=facts.get("held_reason", ""),
-            )
+        existing = raised.get(key)
+        if existing is not None:
+            existing.occurrences += 1
+            continue
+
+        #: Attribute the alert to the narrowest rule that matched -- the one
+        #: scoped to this AOI, else to its kind, else the general one. That is
+        #: the rule an analyst asking "why did I get this" wants quoted.
+        primary = min(matching, key=lambda r: (not r.aoi_ids, not r.aoi_kinds,
+                                               r.suppress_days, r.id))
+        severity = Severity(facts.get("severity", "low"))
+        alert_id = "alert-" + format(
+            seed_of(primary.id, aoi.id, key, at.date().isoformat())
+            & 0xFFFFFFFFFFFF, "012x")
+        alert = Alert(
+            id=alert_id, org_id=primary.org_id, aoi_id=aoi.id,
+            rule_id=primary.id, title=facts.get("title", primary.name),
+            severity=severity, priority=4, created_at=at,
+            summary=facts.get("summary", ""),
+            change_event_ids=[facts["change_event_id"]]
+            if facts.get("change_event_id") else [],
+            anomaly_ids=[facts["anomaly_id"]] if facts.get("anomaly_id") else [],
+            evidence_id=facts.get("evidence_id", ""),
+            delivered_to=sorted({c for r in matching for c in r.channels}),
+        )
+        raised[key] = RaisedAlert(
+            alert=alert, rule=primary, rules=matching, dedup_key=key,
+            matched=[c.describe() for c in primary.conditions],
+            risk=facts.get("risk_score"),
+            held_reason=facts.get("held_reason", ""),
+        )
 
     return prioritise(list(raised.values()))
 
