@@ -568,10 +568,25 @@ def test_a_gradual_build_up_scores_even_though_no_day_stands_out():
     a = assess(AOI, today, {"truck_count": MetricReading("truck_count", latest)},
                baselines, rows)
     assert a.trends["truck_count"] == pytest.approx(0.6, rel=0.2)
+    #: The climb, not today's value, is what carries the score here.
     assert "truck_count:trend" in a.finding.contributions
     assert a.finding.score > 0
-    assert any("without any single day standing out" in r
-               for r in a.finding.reasons)
+    assert any("has risen about" in r for r in a.finding.reasons)
+
+
+def test_a_climb_nobody_could_see_in_one_day_says_so():
+    """The phrase is earned only when today's value alone would not have scored."""
+    rows = _ramp(per_day=0.35)
+    today = date(2026, 1, 1) + timedelta(days=90)
+    baselines = build_all(rows, today, AOI.fingerprint)
+    median = baselines["truck_count"].stat_for(today).median
+
+    a = assess(AOI, today,
+               {"truck_count": MetricReading("truck_count", median)},
+               baselines, rows)
+    assert "truck_count" not in a.finding.contributions, "today is unremarkable"
+    assert "truck_count:trend" in a.finding.contributions
+    assert any("no single day in it stands out" in r for r in a.finding.reasons)
 
 
 def test_a_flat_history_contributes_no_trend():
@@ -590,6 +605,19 @@ def test_a_declining_trend_is_not_an_anomaly():
                build_all(rows, today, AOI.fingerprint), rows)
     assert a.trends["truck_count"] < 0
     assert "truck_count:trend" not in a.finding.contributions
+
+
+def test_a_metric_is_not_counted_twice_for_being_high_and_climbing():
+    """One phenomenon seen two ways is one contribution, not two."""
+    rows = _ramp()
+    today = date(2026, 1, 1) + timedelta(days=90)
+    baselines = build_all(rows, today, AOI.fingerprint)
+    a = assess(AOI, today, {"truck_count": MetricReading("truck_count", 300.0)},
+               baselines, rows)
+    keys = set(a.finding.contributions)
+    assert not ({"truck_count", "truck_count:trend"} <= keys), keys
+    # The climb is still reported, just not scored a second time.
+    assert any("has risen about" in r for r in a.finding.reasons)
 
 
 def test_a_trend_contributes_less_than_a_same_day_excursion():

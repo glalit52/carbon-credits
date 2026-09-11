@@ -179,11 +179,9 @@ def assess(aoi: Aoi, when: date, readings: dict[str, MetricReading],
         weight = WEIGHTS.get(metric, DEFAULT_WEIGHT)
         #: Only excursions above normal contribute. A quiet day at a port is a
         #: quiet day, and scoring it as anomalous fills the queue with Sundays.
-        contribution = weight * min(1.0, max(0.0, z) / SATURATION_Z)
-        if contribution > 0.01:
-            contributions[metric] = contribution
-            reasons.append(base.describe(when, reading.value))
+        today_share = weight * min(1.0, max(0.0, z) / SATURATION_Z)
 
+        trend_share, trend_reason = 0.0, ""
         if history:
             slope = trend(history, metric, when)
             if abs(slope) > 1e-9:
@@ -194,17 +192,30 @@ def assess(aoi: Aoi, when: date, readings: dict[str, MetricReading],
                 #: quieter is not something to wake an analyst for.
                 rise = slope * TREND_WINDOW_DAYS
                 if rise > 0:
-                    rise_z = base.stat_for(when).z(base.stat_for(when).median
-                                                   + rise)
-                    share = weight * TREND_WEIGHT * min(
+                    stat = base.stat_for(when)
+                    rise_z = stat.z(stat.median + rise)
+                    trend_share = weight * TREND_WEIGHT * min(
                         1.0, max(0.0, rise_z) / TREND_SATURATION_Z)
-                    if share > 0.01:
-                        contributions[f"{metric}:trend"] = share
-                        reasons.append(
-                            f"{metric.replace('_', ' ')} has risen about "
-                            f"{rise:,.0f} over {TREND_WINDOW_DAYS} days "
-                            f"({rise_z:.1f} robust deviations across the "
-                            "window) without any single day standing out")
+                    trend_reason = (
+                        f"{metric.replace('_', ' ')} has risen about "
+                        f"{rise:,.0f} over {TREND_WINDOW_DAYS} days "
+                        f"({rise_z:.1f} robust deviations across the window)"
+                        + ("" if today_share > 0.01
+                           else " — no single day in it stands out"))
+
+        #: The stronger of the two, not their sum. A metric that is high today
+        #: *and* has been climbing is one phenomenon seen two ways, and adding
+        #: both counts the same traffic twice -- which would make a metric with
+        #: a trend term outrank a metric without one purely for having been
+        #: measured for longer.
+        if trend_share > today_share and trend_share > 0.01:
+            contributions[f"{metric}:trend"] = trend_share
+            reasons.append(trend_reason)
+        elif today_share > 0.01:
+            contributions[metric] = today_share
+            reasons.append(base.describe(when, reading.value))
+            if trend_reason:
+                reasons.append("and " + trend_reason)
 
     #: Combine as a soft maximum rather than a sum. A sum lets six mildly
     #: elevated metrics outscore one metric that is six deviations out, which
