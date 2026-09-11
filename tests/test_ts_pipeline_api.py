@@ -293,6 +293,22 @@ def test_a_site_report_names_its_evidence(monitored):
     assert "## Timeline" in report.body_markdown
 
 
+def test_a_site_report_counts_only_alerts_from_its_own_period(monitored):
+    """Otherwise the headline count disagrees with the timeline beneath it."""
+    _, store, demo, _ = monitored
+    inside = reports.site(store, demo.aoi, *RUN)
+    before = reports.site(store, demo.aoi, date(2025, 1, 1), date(2025, 2, 1))
+    assert "- Alerts: 0" in before.body_markdown
+    assert "- Alerts: 0" not in inside.body_markdown or \
+        not store.list_alerts(demo.id, limit=5)
+
+
+def test_a_report_over_an_unobserved_period_says_so(monitored):
+    _, store, demo, _ = monitored
+    report = reports.site(store, demo.aoi, date(2025, 1, 1), date(2025, 2, 1))
+    assert "No acquisitions at all in this period" in report.body_markdown
+
+
 # ---------------------------------------------------------------------------
 # API
 # ---------------------------------------------------------------------------
@@ -411,6 +427,22 @@ def test_cli_lifecycle(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "default alert rules installed" in out
     assert "audit chain     intact" in out
+
+
+def test_cli_ask_anchors_relative_periods_to_a_given_date(monitored, capsys):
+    """"The last 30 days" from today finds nothing in a window that has closed."""
+    db, store, demo, _ = monitored
+    base = ["--db", db, "--org", sites.DEMO_ORG, "--actor", "cli@x.example"]
+    question = f"what changed at {demo.aoi.name} in the last 30 days"
+
+    assert cli_main([*base, "ask", question]) == 0
+    stale = capsys.readouterr().out
+
+    assert cli_main([*base, "ask", question, "--as-of", RUN[1].isoformat()]) == 0
+    anchored = capsys.readouterr().out
+
+    assert "No changes were recorded" in stale
+    assert "change" in anchored and "No changes were recorded" not in anchored
 
 
 def test_cli_refuses_to_act_without_an_actor(tmp_path):

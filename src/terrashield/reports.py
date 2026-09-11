@@ -162,8 +162,18 @@ def site(store: Store, aoi: Aoi, start: date, end: date) -> Report:
     changes = store.list_changes(aoi.id, start=start, end=end, limit=500)
     anomalies = [a for a in store.list_anomalies(aoi.id, limit=800)
                  if start <= a.observed_at.date() <= end]
-    alerts = store.list_alerts(aoi.id, limit=200)
+    #: Filtered by the report's period like everything else around it. It was
+    #: not, so a site report for March counted every alert the site had ever
+    #: raised and quietly disagreed with the timeline printed underneath it.
+    alerts = [a for a in store.list_alerts(aoi.id, limit=500)
+              if start.isoformat() <= a["created_at"][:10] <= end.isoformat()]
     peak = max((a.score for a in anomalies), default=0.0)
+
+    coverage_line = (
+        f"- Usable acquisitions: {len(usable)} of {len(scenes)} "
+        f"({len(usable) / len(scenes):.0%})" if scenes
+        else "- No acquisitions at all in this period — nothing below is a "
+             "statement about the ground")
 
     body = [
         f"# Site report — {aoi.name}",
@@ -174,9 +184,7 @@ def site(store: Store, aoi: Aoi, start: date, end: date) -> Report:
         "",
         "## Current condition",
         "",
-        f"- Usable acquisitions: {len(usable)} of {len(scenes)} "
-        f"({len(usable) / len(scenes):.0%})" if scenes else
-        "- No acquisitions in the period",
+        coverage_line,
         f"- Change events: {len(changes)}",
         f"- Alerts: {len(alerts)}",
         f"- Peak anomaly score: {peak:.0f}/100",

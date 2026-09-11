@@ -233,7 +233,12 @@ def cmd_review(args) -> int:
 def cmd_ask(args) -> int:
     _require_actor(args)
     store = _store(args)
-    answer = copilot.ask(store, args.question)
+    #: "the last 30 days" is relative to a date, and the useful date is not
+    #: always today: an estate whose sites were monitored over different
+    #: windows is queried from inside those windows, and so is any question
+    #: asked about a period that has already closed.
+    as_of = date.fromisoformat(args.as_of) if args.as_of else None
+    answer = copilot.ask(store, args.question, today=as_of)
     if args.json:
         print(json.dumps(answer.to_dict(), indent=2))
         return 0
@@ -454,6 +459,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     q = sub.add_parser("ask", help="ask the copilot, grounded in the record")
     q.add_argument("question"), q.add_argument("--json", action="store_true")
+    q.add_argument("--as-of", default="",
+                   help="anchor relative periods to this date instead of today")
     q.set_defaults(fn=cmd_ask)
 
     q = sub.add_parser("report", help="daily, weekly or site report")
