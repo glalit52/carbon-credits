@@ -191,7 +191,7 @@ def assess(aoi: Aoi, when: date, readings: dict[str, MetricReading],
         #: quiet day, and scoring it as anomalous fills the queue with Sundays.
         today_share = weight * min(1.0, max(0.0, z) / SATURATION_Z)
 
-        trend_share, trend_reason = 0.0, ""
+        trend_share, trend_reason, trend_followup = 0.0, "", ""
         if history:
             slope = trend(history, metric, when)
             if abs(slope) > 1e-9:
@@ -206,12 +206,19 @@ def assess(aoi: Aoi, when: date, readings: dict[str, MetricReading],
                     rise_z = stat.z(stat.median + rise)
                     trend_share = weight * TREND_WEIGHT * min(
                         1.0, max(0.0, rise_z) / TREND_SATURATION_Z)
+                    #: Two phrasings, because these lines are read as
+                    #: standalone bullets in an evidence pack. One leads a
+                    #: finding; the other follows the same metric's own
+                    #: excursion and must not repeat its name or open with
+                    #: a conjunction.
+                    climb = (f"risen about {rise:,.0f} over the preceding "
+                             f"{TREND_WINDOW_DAYS} days ({rise_z:.1f} robust "
+                             "deviations across the window)")
                     trend_reason = (
-                        f"{metric.replace('_', ' ')} has risen about "
-                        f"{rise:,.0f} over {TREND_WINDOW_DAYS} days "
-                        f"({rise_z:.1f} robust deviations across the window)"
+                        f"{metric.replace('_', ' ')} has {climb}"
                         + ("" if today_share > 0.01
                            else " — no single day in it stands out"))
+                    trend_followup = f"It has also {climb}."
 
         #: The stronger of the two, not their sum. A metric that is high today
         #: *and* has been climbing is one phenomenon seen two ways, and adding
@@ -224,8 +231,8 @@ def assess(aoi: Aoi, when: date, readings: dict[str, MetricReading],
         elif today_share > 0.01:
             contributions[metric] = today_share
             reasons.append(base.describe(when, reading.value))
-            if trend_reason:
-                reasons.append("and " + trend_reason)
+            if trend_followup:
+                reasons.append(trend_followup)
 
     #: Combine as a soft maximum rather than a sum. A sum lets six mildly
     #: elevated metrics outscore one metric that is six deviations out, which

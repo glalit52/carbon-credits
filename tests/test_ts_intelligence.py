@@ -628,8 +628,11 @@ def test_a_metric_is_not_counted_twice_for_being_high_and_climbing():
                baselines, rows)
     keys = set(a.finding.contributions)
     assert not ({"truck_count", "truck_count:trend"} <= keys), keys
-    # The climb is still reported, just not scored a second time.
-    assert any("has risen about" in r for r in a.finding.reasons)
+    # The climb is still reported, just not scored a second time -- and as its
+    # own sentence, because these lines are read as bullets in an evidence pack.
+    followups = [r for r in a.finding.reasons if "risen about" in r]
+    assert followups
+    assert followups[0].startswith("It has also ")
 
 
 def test_a_trend_contributes_less_than_a_same_day_excursion():
