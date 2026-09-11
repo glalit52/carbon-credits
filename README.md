@@ -1,20 +1,41 @@
-# carbon-credits
+# Earth observation products
 
-A carbon credit and reforestation project: the research behind it, the
-financial model that gates it, and `carbonstack`, the dMRV core it runs on.
+Two products on one geospatial stack, both stdlib-only Python.
+
+**[`carbonstack`](#carbonstack)** — a dMRV core for land-based carbon projects.
+Quantifies credits under VM0047 and VM0042, refuses to credit what it cannot
+evidence, and carries the derivation with every number.
+
+**[`terrashield`](#terrashield)** — AI-powered Earth observation and geospatial
+intelligence for security, infrastructure and resilience. Detection, change,
+pattern-of-life deviation and ranked alerts, each carrying the imagery and the
+working behind it. See [`docs/terrashield/`](docs/terrashield/).
+
+They share a thesis rather than code: satellite imagery is commoditised, and the
+defensible thing is the layer that turns it into a number somebody will stake a
+decision on — with its derivation attached. A carbon credit that survives a
+verifier and a change finding that survives a briefing are the same engineering
+problem wearing different clothes.
 
 ## Where things are
 
 | Path | What it is |
 |---|---|
 | `docs/research/` | Teardown of Mitti Labs and Varaha, and what it implies for us |
+| `docs/terrashield/` | TerraShield: PRD mapping, responsible use, measured performance |
 | `model/carbon_model.py` | Portfolio cashflow model — the go/no-go gate |
-| `src/carbonstack/` | The product — see the map below |
+| `src/carbonstack/` | The dMRV core — see the map below |
 | `src/carbonstack/sites.py` | The two pilot sites — real places, real climatology |
 | `src/carbonstack/feed.py` | Simulated monitoring on the real 5-day revisit cadence |
+| `src/terrashield/` | The geospatial intelligence platform |
 | `dashboard/` | The live MRV dashboard, its dataset and example evidence packs |
-| `scripts/` | Build the dashboard dataset and page |
-| `tests/` | 140 tests, stdlib only |
+| `dashboard/terrashield/` | The TerraShield console |
+| `scripts/` | Build the dashboard datasets and pages |
+| `tests/` | 303 tests, stdlib only |
+
+---
+
+# carbonstack
 
 ## The two numbers that shape everything
 
@@ -37,7 +58,7 @@ calibrate the model, not to produce the numbers.
 python3 model/carbon_model.py            # cashflow, peak funding need, sensitivity
 ```
 
-## carbonstack
+## Running it
 
 ```bash
 pip install -e ".[dev]"
@@ -309,3 +330,81 @@ carrying Tier 1 uncertainty, which the engine already charges for.
 Reforestation is unfinanceable without provable long-horizon land rights, and
 `eligibility` is built to enforce that. Which landscape, how many hectares,
 and what tenure evidence exists is the input nothing else can substitute for.
+
+---
+
+# terrashield
+
+AI-powered Earth observation and geospatial intelligence. An analyst-assistance
+and monitoring system built to the PRD in `TerraShield_AI.docx`, MVP scope
+(section 41): *AI Change Intelligence*.
+
+```bash
+terrashield --actor you@example.com demo            # the whole estate, end to end
+terrashield --actor you@example.com queue           # what needs an analyst
+terrashield --actor you@example.com explain chg-…   # where a finding came from
+terrashield --actor you@example.com ask "what changed at Mundra in the last 30 days"
+terrashield evaluate                                # precision, recall, calibration
+terrashield --actor you@example.com report weekly
+```
+
+Full documentation is in [`docs/terrashield/`](docs/terrashield/). Three things
+are worth stating here.
+
+## It says what the sensor could not see
+
+A 4.5 m car occupies a fifth of one Sentinel-2 pixel. No model recovers it,
+because the information is not in the data. So the detector returns the classes
+it *refused* to look for and why, and the pipeline records days with no usable
+acquisition rather than skipping them. A count of zero and "we could not look"
+are different statements, and a monitoring product that conflates them is
+selling something that does not exist.
+
+The same discipline runs through the reports, which lead with coverage before
+findings — a week with three changes and a week under cloud produce very
+different reading, and only one of them is quiet.
+
+## Every finding carries its working
+
+Every change and every anomaly returns an evidence bundle: the scenes compared,
+the change mask, the baseline used, the model version, the co-registration shift
+and radiometric gain applied, and what could not be established. Bundles are
+hashed, packs verify, and `terrashield explain` prints one.
+
+```
+EVIDENCE ev-2f9b…
+  finding      change chg-9a41…
+  based on
+    scene      sentinel-2:IN-BHD-SOLAR:2026-03-05  -- before, 14% cloud, sun 41 deg
+    scene      sentinel-2:IN-BHD-SOLAR:2026-04-19  -- after, 13% cloud, sun 58 deg
+    mask       change-mask:chg-9a41…               -- 116,500 m2 above the noise floor
+    model      ts-change-1.3.0
+  not established
+    - 13% of the area was obscured by cloud and was excluded from the comparison;
+      change there is neither confirmed nor ruled out
+```
+
+## It never asserts intent
+
+PRD section 55, enforced in code rather than in a style guide. The schema has
+no field in which a motive could be stored; the copilot refuses questions about
+threat, attribution, targeting and prediction, naming what it can answer
+instead; and every anomaly bundle carries the caveat that the finding is a
+statistical deviation from the site's own record and nothing more. See
+[`docs/terrashield/02-responsible-use.md`](docs/terrashield/02-responsible-use.md).
+
+## Measured, not claimed
+
+Detection over the demo estate: **precision 0.85, recall 0.81, F1 0.83**, and
+**0.055 false positives per km² per look**. Confidence is calibrated — the
+0.80-and-above band is right 100% of the time over n=33.
+[`docs/terrashield/03-measured-performance.md`](docs/terrashield/03-measured-performance.md)
+has the full table, the threshold sweep that chose the confidence gate, and the
+caveat that matters: these are measured against modelled imagery, and must be
+re-measured on a customer's scenes before anyone quotes them.
+
+## Swapping in real imagery
+
+`catalog.Provider` is a three-method seam — `search`, `fetch`, `masks`. Implement
+it against Sentinel Hub, Planet or Maxar and nothing above it changes. See
+[`docs/terrashield/04-deploying-for-real.md`](docs/terrashield/04-deploying-for-real.md).

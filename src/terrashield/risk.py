@@ -1,0 +1,166 @@
+"""Risk scoring: the five dimensions an analyst actually triages on.
+
+PRD section 18 lists severity, confidence, novelty, persistence and spatial
+significance, and keeping them as five numbers rather than collapsing them into
+one is the whole point. They answer different questions and they disagree
+usefully:
+
+  severity      how much would this matter if it is real
+  confidence    how sure are we that it is real
+  novelty       has this site ever looked like this before
+  persistence   is it still there, or was it a one-look artefact
+  spatial       how much of the AOI it affects
+
+A single blended number cannot distinguish a confident observation of something
+minor from a shaky observation of something major, and those need opposite
+responses. The composite exists only to order a queue; the five components are
+what is shown beside it, and what the analyst argues with.
+
+Persistence deserves particular note because it resolves the ambiguity the
+change engine cannot. At 10 m, a cluster of shipping containers arriving in a
+port yard and a new building going up produce nearly identical evidence in a
+single pair. What separates them is that the containers are gone next week.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import date
+
+from .domain import Aoi, ChangeEvent, ChangeType, Severity
+
+
+@dataclass
+class RiskScore:
+    """Five dimensions and an ordering key, never a statement of intent."""
+
+    severity: Severity
+    confidence: float           # 0..1, from the engine that produced the finding
+    novelty: float              # 0..1, distance from anything in the site's record
+    persistence: float          # 0..1, share of subsequent looks that still show it
+    spatial: float              # 0..1, share of the AOI affected
+    looks: int = 1              # how many comparisons this has been seen in
+
+    @property
+    def composite(self) -> float:
+        """0..100, for ranking only.
+
+        Severity sets the ceiling and confidence scales it, because an
+        unconfirmed observation of something serious should not outrank a
+        confirmed one of the same thing. Novelty, persistence and spatial reach
+        adjust within that band rather than across it.
+        """
+        base = {Severity.LOW: 25.0, Severity.MEDIUM: 50.0,
+                Severity.HIGH: 75.0, Severity.CRITICAL: 92.0}[self.severity]
+        modifier = (0.45 * self.novelty + 0.35 * self.persistence
+                    + 0.20 * self.spatial)
+        return round(min(100.0, base * (0.55 + 0.45 * self.confidence)
+                         * (0.80 + 0.40 * modifier)), 1)
+
+    def to_dict(self) -> dict:
+        return {
+            "severity": self.severity.value,
+            "confidence": round(self.confidence, 3),
+            "novelty": round(self.novelty, 3),
+            "persistence": round(self.persistence, 3),
+            "spatial": round(self.spatial, 3),
+            "looks": self.looks,
+            "composite": self.composite,
+        }
+
+    def explain(self) -> list[str]:
+        out = [
+            f"severity {self.severity.value}: how much this would matter if confirmed",
+            f"confidence {self.confidence:.0%}: how well the imagery supports it",
+        ]
+        if self.novelty >= 0.7:
+            out.append(f"novelty {self.novelty:.0%}: nothing comparable in this "
+                       "site's recorded history")
+        elif self.novelty <= 0.3:
+            out.append(f"novelty {self.novelty:.0%}: this site has looked like "
+                       "this before")
+        if self.looks > 1:
+            out.append(f"persistence {self.persistence:.0%}: still present in "
+                       f"{self.persistence * self.looks:.0f} of {self.looks} "
+                       "subsequent looks")
+        else:
+            out.append("persistence not yet established: seen in one look only, "
+                       "so a transient object has not been ruled out")
+        out.append(f"spatial reach {self.spatial:.1%} of the monitored area")
+        return out
+
+
+#: Change types that a single look genuinely cannot separate from an object
+#: simply being parked there. Their persistence is unknown until a later look,
+#: and this is the set the queue holds back rather than escalating.
+AMBIGUOUS_ON_ONE_LOOK = frozenset({
+    ChangeType.NEW_STRUCTURE, ChangeType.CONSTRUCTION_ACTIVITY,
+    ChangeType.SURFACE_CHANGE,
+})
+
+
+def novelty_of(event: ChangeEvent, history: list[ChangeEvent]) -> float:
+    """How unlike anything in the site's record this change is.
+
+    Compared on type and size, not location: a port that has seen three
+    warehouses go up has seen a warehouse go up, wherever the fourth one lands.
+    """
+    same_type = [h for h in history
+                 if h.change_type is event.change_type and h.id != event.id]
+    if not same_type:
+        return 1.0
+    ratios = [max(event.area_m2, h.area_m2) / max(min(event.area_m2, h.area_m2), 1.0)
+              for h in same_type]
+    closest = min(ratios)
+    #: Within a factor of two of something already seen is not novel; an order
+    #: of magnitude larger than anything on record is.
+    return round(min(1.0, max(0.0, (closest - 1.5) / 6.5)), 3)
+
+
+def persistence_of(event: ChangeEvent, later: list[ChangeEvent],
+                   overlap_m: float = 150.0) -> tuple[float, int]:
+    """Share of later comparisons that still show a change at this place."""
+    from .geo import haversine_m
+    if not later:
+        return 0.0, 1
+    by_look: dict[str, bool] = {}
+    for h in later:
+        seen = by_look.get(h.after_scene_id, False)
+        if haversine_m(event.centroid, h.centroid) <= overlap_m:
+            seen = True
+        by_look[h.after_scene_id] = seen
+    looks = len(by_look) + 1
+    return round(sum(1 for v in by_look.values() if v) / max(len(by_look), 1), 3), looks
+
+
+def score_change(event: ChangeEvent, aoi: Aoi,
+                 history: list[ChangeEvent] | None = None,
+                 later: list[ChangeEvent] | None = None) -> RiskScore:
+    persistence, looks = persistence_of(event, later or [])
+    spatial = min(1.0, event.area_m2 / max(aoi.area_km2 * 1_000_000, 1.0))
+    return RiskScore(
+        severity=event.severity,
+        confidence=event.confidence,
+        novelty=novelty_of(event, history or []),
+        persistence=persistence,
+        spatial=round(spatial, 4),
+        looks=looks,
+    )
+
+
+def held_for_confirmation(event: ChangeEvent, score: RiskScore) -> str:
+    """Why this finding is not being escalated yet, or an empty string.
+
+    A single look at a port cannot tell a stack of containers from a building.
+    Saying so and waiting for the next pass is better than either guessing or
+    staying silent -- the finding is still in the queue, marked, with the date
+    the next usable scene is expected.
+    """
+    if score.looks > 1:
+        return ""
+    if event.change_type not in AMBIGUOUS_ON_ONE_LOOK:
+        return ""
+    if event.severity.rank >= Severity.HIGH.rank and score.novelty >= 0.8:
+        return ""   # novel and serious enough to be worth an analyst's time now
+    return ("seen in one comparison only; a moveable object has not been ruled "
+            "out. Held for confirmation against the next usable scene")
