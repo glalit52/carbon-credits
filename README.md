@@ -11,6 +11,9 @@ answering the disqualifying questions before building anything.
   — teardown of Mitti Labs (rice methane, Gold Standard, Tier 3 dMRV) and
   Varaha (multi-pathway removals, Verra/Puro/Isometric), what is replicable,
   what reforestation specifically implies, and the decisions blocking a build.
+  Also published as a shareable page:
+  [Mitti Labs and Varaha](https://claude.ai/code/artifact/0ef24f9a-220c-4d5b-a571-6ad65f106038)
+  (source in `docs/research/01-mitti-labs-and-varaha.html`).
 
 ## Next
 

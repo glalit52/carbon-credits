@@ -1,0 +1,677 @@
+<title>Mitti Labs and Varaha</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --ground:#EDF0ED;
+    --surface:#FBFCFB;
+    --surface-2:#E3E8E4;
+    --ink:#16211F;
+    --ink-2:#3C4A46;
+    --muted:#6B7A75;
+    --line:#D2DAD6;
+    --line-soft:#DFE5E1;
+    --paddy:#0F6B62;
+    --paddy-soft:#0f6b6218;
+    --laterite:#A65A2E;
+    --laterite-soft:#a65a2e18;
+    --shadow:0 1px 2px rgba(22,33,31,.05);
+
+    --f-display:"Newsreader",Georgia,"Times New Roman",serif;
+    --f-body:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+
+    --col:68ch;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ground:#0F1512;
+      --surface:#161E1B;
+      --surface-2:#1D2723;
+      --ink:#E5EBE7;
+      --ink-2:#BAC6C1;
+      --muted:#8B9A94;
+      --line:#2A3531;
+      --line-soft:#222C29;
+      --paddy:#57C3B3;
+      --paddy-soft:#57c3b31f;
+      --laterite:#DE9260;
+      --laterite-soft:#de92601f;
+      --shadow:0 1px 2px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0F1512;
+    --surface:#161E1B;
+    --surface-2:#1D2723;
+    --ink:#E5EBE7;
+    --ink-2:#BAC6C1;
+    --muted:#8B9A94;
+    --line:#2A3531;
+    --line-soft:#222C29;
+    --paddy:#57C3B3;
+    --paddy-soft:#57c3b31f;
+    --laterite:#DE9260;
+    --laterite-soft:#de92601f;
+    --shadow:0 1px 2px rgba(0,0,0,.3);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    background:var(--ground);
+    color:var(--ink);
+    font-family:var(--f-body);
+    font-size:16px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{
+    max-width:940px;
+    margin:0 auto;
+    padding-inline:20px;
+    padding-block:0 72px;
+  }
+  .col{max-width:var(--col)}
+
+  /* ---------- masthead ---------- */
+  header.mast{
+    border-bottom:1px solid var(--line);
+    padding-block:56px 32px;
+    margin-bottom:44px;
+  }
+  .eyebrow{
+    font-family:var(--f-mono);
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--muted);
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px 18px;
+    margin-bottom:22px;
+  }
+  .eyebrow b{color:var(--paddy);font-weight:600}
+  h1{
+    font-family:var(--f-display);
+    font-weight:500;
+    font-size:clamp(2.3rem,6.2vw,3.6rem);
+    line-height:1.04;
+    letter-spacing:-.018em;
+    margin:0 0 18px;
+    text-wrap:balance;
+  }
+  .standfirst{
+    font-family:var(--f-display);
+    font-size:clamp(1.05rem,2.4vw,1.28rem);
+    line-height:1.5;
+    color:var(--ink-2);
+    max-width:60ch;
+    margin:0;
+  }
+  .standfirst em{color:var(--laterite);font-style:italic}
+
+  /* ---------- generic type ---------- */
+  h2{
+    font-family:var(--f-display);
+    font-weight:500;
+    font-size:clamp(1.55rem,3.6vw,2rem);
+    line-height:1.14;
+    letter-spacing:-.012em;
+    margin:0 0 14px;
+    text-wrap:balance;
+  }
+  h3{
+    font-family:var(--f-body);
+    font-weight:600;
+    font-size:1rem;
+    letter-spacing:-.005em;
+    margin:0 0 8px;
+  }
+  p{margin:0 0 16px}
+  a{color:var(--paddy)}
+  strong{font-weight:600;color:var(--ink)}
+  section{margin-bottom:56px}
+  .sec-tag{
+    font-family:var(--f-mono);
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--muted);
+    display:block;
+    margin-bottom:10px;
+  }
+  .mono{font-family:var(--f-mono);font-size:.9em}
+  .num{font-variant-numeric:tabular-nums}
+
+  /* ---------- the split ---------- */
+  .split{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+    border-radius:3px;
+    overflow:hidden;
+  }
+  .co{background:var(--surface);padding:26px 24px}
+  .co-name{
+    font-family:var(--f-display);
+    font-size:1.5rem;
+    font-weight:600;
+    line-height:1;
+    margin:0 0 4px;
+  }
+  .co-kind{
+    font-family:var(--f-mono);
+    font-size:11px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    display:inline-block;
+    padding:3px 8px;
+    border-radius:2px;
+    margin-bottom:20px;
+  }
+  .co.a .co-name{color:var(--paddy)}
+  .co.a .co-kind{background:var(--paddy-soft);color:var(--paddy)}
+  .co.b .co-name{color:var(--laterite)}
+  .co.b .co-kind{background:var(--laterite-soft);color:var(--laterite)}
+  dl.facts{margin:0;display:grid;gap:0}
+  dl.facts>div{
+    display:grid;
+    grid-template-columns:8.5rem 1fr;
+    gap:14px;
+    padding:9px 0;
+    border-top:1px solid var(--line-soft);
+    align-items:baseline;
+  }
+  dl.facts>div:first-child{border-top:0}
+  dl.facts dt{
+    font-family:var(--f-mono);
+    font-size:10.5px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+  dl.facts dd{margin:0;font-size:.94rem;line-height:1.45}
+  @media (max-width:460px){
+    dl.facts>div{grid-template-columns:1fr;gap:2px}
+  }
+
+  /* ---------- callout ---------- */
+  .callout{
+    border-left:2px solid var(--laterite);
+    background:var(--laterite-soft);
+    padding:16px 20px;
+    margin:24px 0;
+    border-radius:0 3px 3px 0;
+  }
+  .callout p:last-child{margin-bottom:0}
+  .callout .lede{
+    font-family:var(--f-display);
+    font-size:1.08rem;
+    line-height:1.45;
+  }
+
+  /* ---------- patterns ---------- */
+  ol.patterns{
+    list-style:none;
+    margin:0;
+    padding:0;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+    gap:20px 32px;
+  }
+  ol.patterns li{
+    border-top:1px solid var(--line);
+    padding-top:14px;
+  }
+  ol.patterns li:last-child{grid-column:1/-1}
+  ol.patterns p{margin:0;font-size:.93rem;color:var(--ink-2);line-height:1.55}
+
+  /* ---------- price ladder ---------- */
+  .chart{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:24px 22px 20px;
+  }
+  .chart-head{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:space-between;
+    gap:8px 16px;
+    align-items:baseline;
+    margin-bottom:26px;
+  }
+  .chart-head h3{margin:0}
+  .legend{display:flex;gap:14px;font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .swatch{width:10px;height:10px;border-radius:1px;display:block}
+  .sw-a{background:var(--paddy)}
+  .sw-b{background:var(--laterite)}
+
+  .axis{
+    position:relative;
+    height:16px;
+    margin-bottom:6px;
+    border-bottom:1px solid var(--line);
+  }
+  .axis span{
+    position:absolute;
+    top:0;
+    transform:translateX(-50%);
+    font-family:var(--f-mono);
+    font-size:10.5px;
+    color:var(--muted);
+    font-variant-numeric:tabular-nums;
+  }
+  .axis span:first-child{transform:none}
+  .axis span:last-child{transform:translateX(-100%)}
+
+  .bars{display:grid;gap:16px}
+  .bar-row{display:grid;gap:5px}
+  .bar-lab{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    gap:12px;
+    font-size:.88rem;
+  }
+  .bar-lab .val{
+    font-family:var(--f-mono);
+    font-size:.82rem;
+    font-variant-numeric:tabular-nums;
+    white-space:nowrap;
+    color:var(--ink-2);
+  }
+  .track{
+    position:relative;
+    height:12px;
+    background:var(--surface-2);
+    border-radius:1px;
+    overflow:hidden;
+  }
+  .fill{
+    position:absolute;
+    top:0;
+    bottom:0;
+    border-radius:1px;
+  }
+  .fill.a{background:var(--paddy)}
+  .fill.b{background:var(--laterite)}
+  .chart-note{
+    font-size:.8rem;
+    color:var(--muted);
+    margin:20px 0 0;
+    padding-top:14px;
+    border-top:1px solid var(--line-soft);
+    line-height:1.5;
+  }
+
+  /* ---------- tables ---------- */
+  .tscroll{overflow-x:auto;margin:0 0 8px}
+  table{
+    border-collapse:collapse;
+    width:100%;
+    min-width:520px;
+    font-size:.9rem;
+  }
+  caption{
+    text-align:left;
+    font-family:var(--f-mono);
+    font-size:11px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--muted);
+    padding-bottom:10px;
+  }
+  th,td{
+    text-align:left;
+    padding:11px 16px 11px 0;
+    border-bottom:1px solid var(--line-soft);
+    vertical-align:top;
+  }
+  thead th{
+    border-bottom:1px solid var(--line);
+    font-family:var(--f-mono);
+    font-size:10.5px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--muted);
+    font-weight:500;
+    white-space:nowrap;
+  }
+  tbody th{font-weight:500;color:var(--ink)}
+  td:last-child,th:last-child{padding-right:0}
+  .cell-a{color:var(--paddy)}
+  .cell-b{color:var(--laterite)}
+
+  /* ---------- math strip ---------- */
+  .math{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+    border-radius:3px;
+    overflow:hidden;
+    margin-bottom:20px;
+  }
+  .math div{background:var(--surface);padding:18px 18px 16px}
+  .math .k{
+    font-family:var(--f-mono);
+    font-size:10.5px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--muted);
+    display:block;
+    margin-bottom:8px;
+  }
+  .math .v{
+    font-family:var(--f-display);
+    font-size:1.6rem;
+    line-height:1;
+    font-variant-numeric:tabular-nums;
+    display:block;
+    margin-bottom:5px;
+  }
+  .math .out .v{color:var(--laterite)}
+  .math .s{font-size:.82rem;color:var(--muted);line-height:1.4;display:block}
+
+  /* ---------- risks ---------- */
+  ul.risks{list-style:none;margin:0;padding:0;display:grid;gap:14px}
+  ul.risks li{
+    display:grid;
+    grid-template-columns:auto 1fr;
+    gap:14px;
+    align-items:start;
+    font-size:.94rem;
+    line-height:1.55;
+  }
+  ul.risks .tick{
+    width:3px;
+    align-self:stretch;
+    background:var(--laterite);
+    border-radius:2px;
+    min-height:100%;
+  }
+
+  /* ---------- decisions ---------- */
+  .qs{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:3px;overflow:hidden}
+  .q{background:var(--surface);padding:20px}
+  .q p{margin:0;font-size:.9rem;color:var(--ink-2);line-height:1.5}
+  .q .qt{
+    font-family:var(--f-display);
+    font-size:1.05rem;
+    line-height:1.3;
+    margin:0 0 8px;
+    display:block;
+    color:var(--ink);
+  }
+
+  /* ---------- phases ---------- */
+  ol.phases{list-style:none;margin:0;padding:0;display:grid;gap:0}
+  ol.phases li{
+    display:grid;
+    grid-template-columns:5.5rem 1fr;
+    gap:20px;
+    padding:20px 0;
+    border-top:1px solid var(--line);
+  }
+  ol.phases li:last-child{border-bottom:1px solid var(--line)}
+  .ph-n{
+    font-family:var(--f-mono);
+    font-size:11px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--muted);
+    padding-top:3px;
+  }
+  .ph-n b{display:block;color:var(--paddy);font-size:1.5rem;line-height:1;font-family:var(--f-display);letter-spacing:0;text-transform:none;margin-bottom:4px}
+  ol.phases p{margin:0 0 8px;font-size:.94rem;line-height:1.55}
+  ol.phases p:last-child{margin-bottom:0}
+  @media (max-width:520px){
+    ol.phases li{grid-template-columns:1fr;gap:8px}
+    .ph-n b{display:inline;margin-right:8px}
+  }
+
+  footer{
+    border-top:1px solid var(--line);
+    padding-top:24px;
+    font-size:.85rem;
+    color:var(--muted);
+    line-height:1.6;
+  }
+  footer a{color:var(--muted);text-decoration-color:var(--line)}
+  a:focus-visible,:focus-visible{outline:2px solid var(--paddy);outline-offset:2px}
+</style>
+
+<div class="wrap">
+
+  <header class="mast">
+    <div class="eyebrow">
+      <span>Research note</span>
+      <span>11 Sept 2026</span>
+      <span><b>Pre-decision</b></span>
+    </div>
+    <h1>Mitti Labs and Varaha</h1>
+    <p class="standfirst">Two Indian developers, two working playbooks, and one uncomfortable finding for us: <em>neither of them chose to lead with reforestation.</em> Understanding why is the whole point of reading this before we design anything.</p>
+  </header>
+
+  <section>
+    <span class="sec-tag">The split</span>
+    <h2>Same buyer, opposite architecture</h2>
+    <p class="col">Both are India-based, both sold volume to Google, both raised real money in the last eighteen months. Structurally they are almost inverses of each other &mdash; and that contrast is the most useful thing on this page.</p>
+    <div class="split">
+      <div class="co a">
+        <p class="co-name">Mitti Labs</p>
+        <span class="co-kind">Avoidance &middot; one pathway, deep</span>
+        <dl class="facts">
+          <div><dt>Founded</dt><dd>2023</dd></div>
+          <div><dt>Pathway</dt><dd>Rice methane via Alternate Wetting &amp; Drying</dd></div>
+          <div><dt>Registry</dt><dd>Gold Standard &mdash; <span class="mono">Tier&nbsp;3</span> issuance, June 2026</dd></div>
+          <div><dt>Anchor offtake</dt><dd>Google &mdash; <span class="num">1,000,000</span> credits through 2030</dd></div>
+          <div><dt>Footprint</dt><dd>~<span class="num">100,000</span>&nbsp;ha at peak &middot; Karnataka, Andhra Pradesh, Telangana</dd></div>
+          <div><dt>Capital</dt><dd>~$12.5M total; $9.5M Series&nbsp;A led by Aramco Ventures</dd></div>
+          <div><dt>Moat</dt><dd>A measurement science asset &mdash; locally measured emission factors</dd></div>
+        </dl>
+      </div>
+      <div class="co b">
+        <p class="co-name">Varaha</p>
+        <span class="co-kind">Removal &middot; many pathways, one platform</span>
+        <dl class="facts">
+          <div><dt>Founded</dt><dd>2022</dd></div>
+          <div><dt>Pathways</dt><dd>Regen ag, biochar, enhanced rock weathering, agroforestry</dd></div>
+          <div><dt>Registries</dt><dd>Verra <span class="mono">VM0042</span>, Puro.earth, Isometric</dd></div>
+          <div><dt>Anchor offtake</dt><dd>Google &mdash; <span class="num">100,000</span>&nbsp;t biochar; Mirova &mdash; $30.5M</dd></div>
+          <div><dt>Footprint</dt><dd><span class="num">200,000</span>+ farmers &middot; 14 projects &middot; ~<span class="num">150,000</span> credits issued</dd></div>
+          <div><dt>Capital</dt><dd>$20M equity, plus $30.5M as credit prepay &mdash; not equity</dd></div>
+          <div><dt>Moat</dt><dd>An operations asset &mdash; smallholder enrolment at scale</dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <section class="col">
+    <span class="sec-tag">Teardown &mdash; Mitti Labs</span>
+    <h2>Sell the verification, not the methane</h2>
+    <p>Flooded paddies go anaerobic, anaerobic soil breeds methanogens, and rice becomes one of the largest human methane sources on earth. Alternate Wetting and Drying breaks the cycle by letting the field dry down before re&#8209;flooding. Reported effect: roughly <strong>50% less methane and 40% less irrigation water, with no yield penalty</strong>. Methane is ~28&times; CO<sub>2</sub> over a century, so a change in <em>water scheduling</em> throws off real credit volume &mdash; no planting, no new asset, no twenty&#8209;year commitment.</p>
+    <p>The hard part was never the agronomy. It is proving the practice happened on land you never visited. Two claims carry the commercial weight:</p>
+    <p><strong>Tier 3 emission factors.</strong> IPCC accounting has tiers: <span class="mono">Tier&nbsp;1</span> is a global default from a table, <span class="mono">Tier&nbsp;2</span> is regional, <span class="mono">Tier&nbsp;3</span> is model- or measurement-based and specific to local conditions. Mitti builds theirs from direct methane flux measurement and field trials in their own districts, and Gold Standard issued against it.</p>
+    <p><strong>Census, not sample.</strong> Conventional smallholder verification reviews logbooks and interviews for a sample &mdash; they cite under 1% of farmers actually reviewed. Mitti monitors every acre remotely, detecting flood and dry cycles, seeding and harvest from orbit.</p>
+    <div class="callout">
+      <p class="lede">Buyers are not paying for methane avoidance. They are paying for methane avoidance that will not embarrass them in three years.</p>
+    </div>
+    <p>What we could copy: the dMRV&#8209;first posture, the census argument, the single&#8209;pathway focus, and the co&#8209;benefit framing &mdash; note they raised the Series&nbsp;A on <em>water resilience</em>, not carbon, which widens the funder pool considerably. What we could not copy cheaply: Tier&nbsp;3 factors are a multi&#8209;year, capital&#8209;intensive science programme. That is precisely why a company founded in 2023 could sign a landmark deal in 2026 &mdash; the intervening years went into measurement infrastructure.</p>
+  </section>
+
+  <section class="col">
+    <span class="sec-tag">Teardown &mdash; Varaha</span>
+    <h2>A logistics company wearing a climate-tech logo</h2>
+    <p>Varaha took the inverse bet: build one dMRV and farmer&#8209;operations platform, then run whichever pathway the science and the market currently reward. They now describe themselves as the largest carbon project developer in Asia.</p>
+    <p>The portfolio is unusually broad. Regenerative agriculture under Verra <span class="mono">VM0042</span> is the flagship <em>Kheti</em> programme &mdash; direct&#8209;seeded rice, residue management, reduced tillage. Biochar in Banni, Gujarat converts <em>Prosopis juliflora</em>, an invasive species, into a durable removal &mdash; the removal and the biodiversity restoration are the same act. Enhanced rock weathering spread <span class="num">100,000</span>&nbsp;t of basalt across smallholder cotton farms and produced <strong>Asia's first registry&#8209;backed ERW issuance</strong>, third in the world. They are the first company anywhere with verified issuances from two distinct removal pathways.</p>
+    <p>The stack: <strong>Vann</strong>, a field&#8209;operations app with a dedicated ARR variant, handling enrolment, plot boundaries and practice evidence; a proprietary <strong>Carbon Quantification Tool</strong> for GHG accounting; and remote sensing with ML quality control on top. They describe it as <em>zero&#8209;trust</em> &mdash; near&#8209;daily satellite and AI checks replacing the annual manual audit.</p>
+    <p>Choosing app&#8209;plus&#8209;satellite over satellite&#8209;only is a pathway decision, not a taste one. For soil carbon and agroforestry you cannot see the practice from orbit reliably enough. You need a person with a phone at the plot &mdash; and then you use the satellite to catch the person.</p>
+    <p>One financing detail deserves more attention than the headline number: <strong>Mirova took no equity.</strong> It put in $30.5M and receives a share of credits generated over time. That is a prepay stream, the instrument mining has used for decades. It funds working capital without dilution and moves delivery risk onto the developer.</p>
+  </section>
+
+  <section>
+    <span class="sec-tag">Transferable</span>
+    <h2>Seven patterns worth stealing</h2>
+    <ol class="patterns">
+      <li><h3>Sell the verification</h3><p>Credits are a commodity; trust is not. Both companies' pitch is fundamentally about MRV credibility, and that is what closed the Google deals.</p></li>
+      <li><h3>Pick a short evidence loop</h3><p>Rice credits within a season, biochar on production, ERW on application. Trees take five to ten years. This is why neither led with reforestation.</p></li>
+      <li><h3>The co-benefit drives adoption</h3><p>Farmers adopt AWD for water security. Carbon is the financing mechanism behind the curtain. A carbon-only story has a retention problem.</p></li>
+      <li><h3>Anchor offtake before scale</h3><p>Google-shaped demand turns a science project into a financeable asset. Start that conversation before the hectares, not after them.</p></li>
+      <li><h3>Prepay beats equity</h3><p>The Mirova structure is available to us: capital advanced against future credits, no dilution.</p></li>
+      <li><h3>Registry per pathway</h3><p>Gold Standard for rice methane, Verra for soil, Puro for biochar and ERW. Do not marry a registry.</p></li>
+      <li><h3>Own the ground truth</h3><p>Both built their own field app. No land-based dMRV survives audit on satellites alone.</p></li>
+    </ol>
+  </section>
+
+  <section>
+    <span class="sec-tag">Economics</span>
+    <h2>The arithmetic that kills most projects</h2>
+    <p class="col">Reported figures for smallholder soil&#8209;carbon programmes, per farmer per year. This is the structural problem the entire industry is organised around solving.</p>
+    <div class="math">
+      <div><span class="k">Inputs &amp; training</span><span class="v">$150</span><span class="s">per farmer, one-off</span></div>
+      <div><span class="k">MRV</span><span class="v">$150&ndash;200</span><span class="s">per farmer &mdash; the cost dMRV attacks</span></div>
+      <div><span class="k">Sequestration</span><span class="v">1&ndash;3 t</span><span class="s">CO<sub>2</sub>e per year, smallholder</span></div>
+      <div class="out"><span class="k">Farmer earns</span><span class="v">$5&ndash;45</span><span class="s">per year at $5&ndash;15 per credit</span></div>
+    </div>
+    <p class="col">Three fixes exist and every serious developer uses all three: <strong>aggregate hard</strong> &mdash; viable clusters start near 50 farmers and 200&ndash;500&nbsp;ha, real projects run to tens of thousands, and aggregators take 30&ndash;60% of credit revenue to cover fixed cost; <strong>collapse MRV cost with remote sensing</strong>, which is exactly why Mitti and Varaha spend their capital there; and <strong>choose a higher&#8209;value credit</strong>.</p>
+
+    <div class="chart">
+      <div class="chart-head">
+        <h3>What a tonne actually clears in 2026</h3>
+        <div class="legend">
+          <span><i class="swatch sw-a"></i>Nature-based (ARR)</span>
+          <span><i class="swatch sw-b"></i>Durable removal</span>
+        </div>
+      </div>
+      <div class="axis" aria-hidden="true">
+        <span style="left:0%">0</span>
+        <span style="left:25%">100</span>
+        <span style="left:50%">200</span>
+        <span style="left:75%">300</span>
+        <span style="left:100%">400</span>
+      </div>
+      <div class="bars">
+        <div class="bar-row">
+          <div class="bar-lab"><span>ARR, low-rated</span><span class="val">&euro;9</span></div>
+          <div class="track"><div class="fill a" style="left:0;width:2.25%"></div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-lab"><span>ARR, market average</span><span class="val">$22</span></div>
+          <div class="track"><div class="fill a" style="left:0;width:5.5%"></div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-lab"><span>ARR, BBB+ rated</span><span class="val">&euro;28.55</span></div>
+          <div class="track"><div class="fill a" style="left:0;width:7.14%"></div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-lab"><span>Biochar, India artisanal</span><span class="val">&euro;105</span></div>
+          <div class="track"><div class="fill b" style="left:0;width:26.25%"></div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-lab"><span>Biochar, India industrial</span><span class="val">&euro;120&ndash;150</span></div>
+          <div class="track"><div class="fill b" style="left:30%;width:7.5%"></div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-lab"><span>Biochar &amp; ERW via Puro, Carbonfuture</span><span class="val">$200&ndash;400</span></div>
+          <div class="track"><div class="fill b" style="left:50%;width:50%"></div></div>
+        </div>
+      </div>
+      <p class="chart-note">Per tonne CO<sub>2</sub>e. Currencies shown as published and not FX&#8209;adjusted, so read the axis as approximate. Two things to take from it: a well&#8209;rated ARR credit earns roughly three times a poorly&#8209;rated one for <em>the same trees</em> &mdash; quality rating is a revenue line, not a vanity metric &mdash; and durable removals clear at five to fifteen times nature&#8209;based rates.</p>
+    </div>
+  </section>
+
+  <section>
+    <span class="sec-tag">Our stated goal</span>
+    <h2>Reforestation is the hardest square on the board</h2>
+    <p class="col">If we build reforestation, the governing document is Verra <span class="mono">VM0047</span> (Afforestation, Reforestation and Revegetation, v1.1, June&nbsp;2025), now ICVCM CCP&#8209;approved &mdash; which is what separates the &euro;28 credit from the &euro;9 one. It is the first nature&#8209;based methodology to use remote sensing for <strong>dynamic performance benchmarks</strong>: instead of arguing a counterfactual in a project document, the baseline is re&#8209;derived from observed data at every verification. The central measured quantity is the <strong>stocking index</strong>, and Verra has vetted external data service providers to supply it.</p>
+    <p class="col">That is genuinely good news for a software&#8209;led team. The rest is not:</p>
+    <div class="tscroll">
+      <table>
+        <caption>Pathway comparison</caption>
+        <thead>
+          <tr><th scope="col">Factor</th><th scope="col">Rice methane &amp; biochar</th><th scope="col">Reforestation (ARR)</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Time to first credit</th><td class="cell-a">Months to one season</td><td class="cell-b">Typically 5+ years</td></tr>
+          <tr><th scope="row">Capital before revenue</th><td class="cell-a">Low</td><td class="cell-b">High and sustained</td></tr>
+          <tr><th scope="row">Permanence obligation</th><td class="cell-a">Limited or none</td><td class="cell-b">30&ndash;100 yr, buffer pool deductions</td></tr>
+          <tr><th scope="row">Land tenure evidence</th><td class="cell-a">Weak requirement</td><td class="cell-b">Strong &mdash; long-horizon rights must be proven</td></tr>
+          <tr><th scope="row">Price realised</th><td class="cell-a">&euro;105&ndash;400 / t</td><td class="cell-b">~$22 / t average</td></tr>
+          <tr><th scope="row">Reversal risk</th><td class="cell-a">Low</td><td class="cell-b">Fire, grazing, felling, drought</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout col">
+      <p class="lede">Reforestation is the slowest, most capital-hungry, lowest-priced and highest-reversal-risk pathway available.</p>
+      <p>That is not an argument against doing it. It is an argument against doing it first, alone and unfunded. The pattern that works &mdash; Varaha's pattern &mdash; is to run a fast&#8209;cycle pathway that generates cashflow and MRV credibility, and let it carry the trees through their pre&#8209;credit years. Agroforestry is the natural bridge: it puts trees on farmland already enrolled for soil carbon, so the enrolment, boundary data, farmer relationship and field app are already paid for.</p>
+    </div>
+  </section>
+
+  <section class="col">
+    <span class="sec-tag">Known failure modes</span>
+    <h2>Documented, not hypothetical</h2>
+    <ul class="risks">
+      <li><i class="tick"></i><span><strong>MRV collapse.</strong> Northern Rangelands Trust credits in Kenya were suspended over flawed soil&#8209;carbon accounting. The market has learned that soil measurement at scale is genuinely hard.</span></li>
+      <li><i class="tick"></i><span><strong>Attrition between listing and issuance.</strong> Of agriculture projects listed with Verra in India, only a fraction registered and &mdash; per the source &mdash; none had issued. Listing is not registration; registration is not issuance. Model on issuance.</span></li>
+      <li><i class="tick"></i><span><strong>Farmer follow&#8209;through.</strong> Projects fail on weak extension services, especially with marginalised communities. Over 85% of Indian farmers are smallholders with no prior exposure to carbon crediting.</span></li>
+      <li><i class="tick"></i><span><strong>Permanence.</strong> Unresolved for smallholder land, and buffer pool contributions cut sellable volume from day one.</span></li>
+      <li><i class="tick"></i><span><strong>Double counting.</strong> With India's CCTS live, the interaction between voluntary credits and the national mechanism is a live legal question.</span></li>
+    </ul>
+    <p style="margin-top:24px"><strong>Policy we must design around.</strong> India's Carbon Credit Trading Scheme launches mid&#8209;2026, replacing PAT with GHG&#8209;intensity trading. Its offset mechanism for non&#8209;obligated sectors &mdash; agriculture and forestry &mdash; is being operationalised, the Indian Carbon Market Portal went live in March&nbsp;2026, and eight BEE&#8209;approved offset methodologies exist so far, including mangrove afforestation. Critically, projects must have a start date <strong>no earlier than 1&nbsp;January&nbsp;2025</strong>. That is a hard gate, and it happens to be in our favour if we start now.</p>
+  </section>
+
+  <section>
+    <span class="sec-tag">Blocking</span>
+    <h2>Six questions before a line of code</h2>
+    <p class="col">These are genuinely open, and the answers change what gets built. The first, second and fourth are disqualifying &mdash; nothing downstream is worth starting without them.</p>
+    <div class="qs">
+      <div class="q"><span class="qt">Developer or vendor?</span><p>Do we own the credits and the farmer relationships, or sell the MRV stack to people who do? Mitti and Varaha are both developers who built software. The reverse is a different company with a much smaller market today.</p></div>
+      <div class="q"><span class="qt">What funds years one to four?</span><p>Reforestation alone does not. Which fast&#8209;cycle pathway carries the trees?</p></div>
+      <div class="q"><span class="qt">Voluntary, CCTS, or both?</span><p>Different methodologies, different buyers, different price points &mdash; and a real risk of conflict between them.</p></div>
+      <div class="q"><span class="qt">What land, and what tenure evidence?</span><p>ARR is unfinanceable without provable long&#8209;horizon rights. Cheapest way to disqualify a plan, so check it first.</p></div>
+      <div class="q"><span class="qt">Build ground truth, or buy it?</span><p>Do we need our own Vann equivalent, or can we license field capture and spend our effort elsewhere?</p></div>
+      <div class="q"><span class="qt">What is our Tier 3?</span><p>What defensible measurement asset do we own? Without one we are reselling commodity satellite indices.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <span class="sec-tag">Sequenced by dependency</span>
+    <h2>Proposed next steps</h2>
+    <ol class="phases">
+      <li>
+        <div class="ph-n"><b>0</b>Decide</div>
+        <div><p><strong>This week.</strong> Answer the six questions above. Everything below is blocked on the first, second and fourth.</p></div>
+      </li>
+      <li>
+        <div class="ph-n"><b>1</b>2&ndash;4 wks</div>
+        <div>
+          <p><strong>Feasibility, desk only.</strong> Read <span class="mono">VM0047</span> v1.1 in full plus the CCTS offset methodology list, and write a one&#8209;page eligibility memo for one named candidate landscape.</p>
+          <p>Then build a bottom&#8209;up model for that landscape: hectares, species, growth curves, credit timing, buffer deduction, MRV cost per hectare, farmer share. <strong>Kill the plan here if it does not clear.</strong> Start the offtake conversation in this phase, not in phase 3.</p>
+        </div>
+      </li>
+      <li>
+        <div class="ph-n"><b>2</b>4&ndash;8 wks</div>
+        <div>
+          <p><strong>Prototype the MRV core.</strong> The only genuinely software part, and the reusable one: a stocking&#8209;index and biomass pipeline over a real area of interest. The literature has converged on a known&#8209;good architecture &mdash; Sentinel&#8209;2 optical and Sentinel&#8209;1 SAR fused with GEDI spaceborne LiDAR as sparse height and biomass ground truth, an ML model on top, with explicit uncertainty quantification. Open global canopy height models exist to benchmark against.</p>
+          <p>Deliverable: canopy height, biomass and uncertainty for one candidate site, validated against whatever field plots we can obtain.</p>
+        </div>
+      </li>
+      <li>
+        <div class="ph-n"><b>3</b>Pilot</div>
+        <div><p>One cluster, real farmers, real enrolment, ground&#8209;truth capture, one verification cycle. Small enough to fail cheaply.</p></div>
+      </li>
+    </ol>
+  </section>
+
+  <footer>
+    <p>Compiled from public sources, September 2026 &mdash; company sites and press releases, TechCrunch, AgFunderNews, ESG Dive, Carbon Herald, Verra and Gold Standard methodology pages, Puro.earth, Sylvera and Regreener pricing surveys, Climate Policy Initiative, ICAP, and the remote&#8209;sensing literature on GEDI&ndash;Sentinel fusion. Figures drawn from press coverage rather than registry records are directional; single&#8209;source numbers should be confirmed before they enter a financial model. Full source list lives with the working note in the repository.</p>
+  </footer>
+
+</div>
