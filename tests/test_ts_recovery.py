@@ -25,6 +25,8 @@ import pytest
 from terrashield import change, detect, evaluate, sites
 from terrashield.catalog import SyntheticProvider, best_pair, coverage
 from terrashield.domain import ChangeType, Sensor, Severity
+from terrashield.raster import Mask, Raster
+from terrashield.world import Rng
 
 WINDOW = (date(2026, 2, 1), date(2026, 3, 31))
 
@@ -287,6 +289,80 @@ def test_coregistration_recovers_a_deliberate_shift(provider):
     d_col, d_row, quality = change.coregister(rb, shifted)
     assert (d_col, d_row) == (2, -1)
     assert quality > 0.2
+
+
+def test_cloud_is_kept_out_of_the_registration_score(provider):
+    """Cloud in one scene only must not decide where the other one sits.
+
+    Cloud is bright, it is in one scene and not the other, and it does not
+    move with the ground, so it adds a large near-constant term to every
+    candidate shift. That flattens the alignment curve until the minimum is
+    decided by noise -- and a scene displaced on noise puts a bright rim along
+    one side of every static building and a dark rim along the other.
+    """
+    demo = sites.load("bhadla")
+    before, _ = _pick(provider, demo, date(2026, 2, 1), date(2026, 3, 31))
+    rb = provider.fetch(demo.aoi, before)
+    shifted = rb.shifted(1, -1)
+
+    #: A bright bank of cloud over a third of the after scene, present nowhere
+    #: in the before scene.
+    clouded = shifted.copy()
+    cloud = Mask.like(rb)
+    for row in range(rb.height):
+        for col in range(rb.width // 3):
+            clouded.set(col, row, 0.92)
+            cloud.set(col, row, True)
+
+    blind = change.coregister(rb, clouded)
+    seeing = change.coregister(rb, clouded, exclude=cloud)
+    assert seeing[:2] == (1, -1), (
+        f"with the cloud excluded the true shift should be recovered, got {seeing}")
+    assert blind[:2] != (1, -1) or blind[2] < seeing[2], (
+        "the cloud should measurably degrade the score it is included in")
+
+
+def test_a_shift_is_not_applied_without_evidence_for_it(provider):
+    """An aligned pair must be left alone, however flat the search surface.
+
+    The failure this pins was found by running the demo estate, not by review:
+    a Landsat pair over Sardar Sarovar with 6% cloud before and 29% after
+    scored 0.12108 to 0.12186 across seven candidate row shifts -- a 0.06%
+    spread -- and the argmin of that noise was applied as a two-row shift. It
+    produced five changes at a site where nothing was built, four of them
+    hugging the edges of the dam wall and the powerhouse, one reported at high
+    severity as "a uniform engineered surface has replaced a varied natural
+    one".
+    """
+    demo = sites.load("sardar")
+    scenes = {s.id: s for s in provider.search(
+        demo.aoi, date(2026, 2, 20), date(2026, 4, 5))}
+    before = scenes["landsat-9:IN-SSD-DAM:2026-02-26"]
+    after = scenes["landsat-9:IN-SSD-DAM:2026-03-30"]
+    rb = provider.fetch(demo.aoi, before)
+    ra = provider.fetch(demo.aoi, after)
+    mb = provider.masks(demo.aoi, before, rb)
+    ma = provider.masks(demo.aoi, after, ra)
+
+    result = change.compare(demo.aoi, before, after, rb, ra,
+                            mb.cloud, ma.cloud, mb.water, ma.water)
+    assert result.usable, result.refusal
+    assert result.registration_shift == (0, -1), result.registration_shift
+    assert not result.events, [e.explanation for e in result.events]
+
+
+def test_a_flat_search_surface_yields_no_shift():
+    """Uniform noise gives the estimator nothing; it must decline, not guess."""
+    grid = Raster.like(Raster(40, 40, 10.0, 0.0, 0.0, [0.0] * 1600))
+    rng = Rng(4)
+    a = grid.copy()
+    b = grid.copy()
+    for i in range(len(a.cells)):
+        a.cells[i] = 0.4 + rng.gauss(0.0, 0.01)
+        b.cells[i] = 0.4 + rng.gauss(0.0, 0.01)
+    d_col, d_row, quality = change.coregister(a, b)
+    assert (d_col, d_row) == (0, 0)
+    assert quality < change.MIN_REGISTRATION_QUALITY
 
 
 def test_normalisation_removes_an_illumination_difference(provider):

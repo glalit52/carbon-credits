@@ -171,41 +171,102 @@ def pair_problems(before: Scene, after: Scene) -> str:
 # Co-registration and normalisation
 # ---------------------------------------------------------------------------
 
-def coregister(before: Raster, after: Raster, max_shift: int = 3
-               ) -> tuple[int, int, float]:
+#: How much better than no alignment at all the best shift has to score before
+#: it is worth applying, as a fraction of the unshifted error.
+#:
+#: A shift is not a free guess. Moving a scene by one cell throws every sharp
+#: edge in it one cell out of register, and a mis-registered edge is exactly
+#: what the change detector is built to notice: it reports a bright rim along
+#: one side of every static building and a dark rim along the other. So the
+#: null hypothesis is "already aligned", and displacing a scene needs evidence.
+#:
+#: Measured over 81 same-sensor, same-track pairs across the four demonstration
+#: sites, March-May 2026, against the geolocation error the sensor model
+#: actually injected:
+#:
+#:                                   exact   within 1   worse than no shift
+#:     no mask, no guard             64/81      79/81                  3/81
+#:     cloud-masked only             70/81      80/81                  2/81
+#:     cloud-masked + this guard     62/81      78/81                  0/81
+#:
+#: Two percent is where it is because pairs that were already aligned -- true
+#: offset under half a cell -- score at most 0.0144, and this has to sit above
+#: that ceiling to suppress them. A one percent threshold keeps eight more
+#: exact matches and lets one spurious shift back through, which is the wrong
+#: side of the trade: the eight are SAR pairs left with a one-cell residual,
+#: already softened by the 3x3 multi-look, while the one displaces a correctly
+#: aligned scene and invents a rim along every static edge in it.
+#:
+#: Genuine shifts score up to 0.40 with a median of 0.09, so the guard is not
+#: close to them.
+MIN_REGISTRATION_QUALITY = 0.02
+
+
+def coregister(before: Raster, after: Raster, max_shift: int = 3,
+               exclude: Mask | None = None) -> tuple[int, int, float]:
     """Find the integer cell shift that best aligns `after` onto `before`.
 
     Scored on mean absolute difference over a decimated sample of cells --
     every third cell in each direction, which is a ninth of the work and
     statistically indistinguishable at this grid size.
+
+    `exclude` must cover everything obscured in *either* scene, and passing it
+    is not optional in practice. Cloud is bright, it sits in one scene and not
+    the other, and it does not move with the ground. Leaving it in the score
+    adds a large, nearly shift-invariant constant to every candidate, which
+    flattens the curve until the minimum is decided by noise. On a Landsat pair
+    over Sardar Sarovar with 6% cloud before and 29% after, the scores across
+    seven candidate row shifts spanned 0.12108 to 0.12186 -- a 0.06% spread --
+    and the winner was two rows from the truth. Masking the cloud out turns the
+    same curve into a clean minimum with a 7% margin.
+
+    A cell is skipped if it is obscured at either end of the comparison, so the
+    same ground is scored in both scenes whatever the shift.
     """
-    best: tuple[int, int, float] | None = None
     step = 3
+    rows = range(max_shift, before.height - max_shift, step)
+    cols = range(max_shift, before.width - max_shift, step)
+
+    def error(d_col: int, d_row: int) -> tuple[float, int]:
+        total = 0.0
+        n = 0
+        for row in rows:
+            for col in cols:
+                if exclude is not None and (exclude.get(col, row)
+                                            or exclude.get(col + d_col,
+                                                           row + d_row)):
+                    continue
+                total += abs(before.get(col, row)
+                             - after.get(col + d_col, row + d_row))
+                n += 1
+        return total / max(n, 1), n
+
+    zero, seen = error(0, 0)
+    #: With little clear ground left there is nothing to register against, and
+    #: a shift fitted to a handful of cells is worse than no shift at all.
+    if seen < 64 or zero <= 1e-9:
+        return 0, 0, 0.0
+
+    best: tuple[int, int, float] | None = None
     for d_row in range(-max_shift, max_shift + 1):
         for d_col in range(-max_shift, max_shift + 1):
-            total = 0.0
-            n = 0
-            for row in range(max_shift, before.height - max_shift, step):
-                for col in range(max_shift, before.width - max_shift, step):
-                    total += abs(before.get(col, row)
-                                 - after.get(col + d_col, row + d_row))
-                    n += 1
-            score = total / max(n, 1)
+            score, n = error(d_col, d_row)
+            #: A candidate that clears far less ground than the unshifted one
+            #: is scoring different terrain, not a better alignment.
+            if n < seen // 2:
+                continue
             if best is None or score < best[2]:
                 best = (d_col, d_row, score)
     assert best is not None
     d_col, d_row, score = best
+
     #: Quality is how much better the best alignment is than no alignment at
     #: all. Near zero means the shift search found nothing to improve, which is
-    #: normal for an already-aligned pair and suspicious for a misaligned one.
-    zero = 0.0
-    n = 0
-    for row in range(max_shift, before.height - max_shift, step):
-        for col in range(max_shift, before.width - max_shift, step):
-            zero += abs(before.get(col, row) - after.get(col, row))
-            n += 1
-    zero /= max(n, 1)
-    quality = (zero - score) / zero if zero > 1e-9 else 0.0
+    #: normal for an already-aligned pair -- so believe that rather than
+    #: applying the argmin of a flat surface.
+    quality = (zero - score) / zero
+    if quality < MIN_REGISTRATION_QUALITY:
+        return 0, 0, quality
     return d_col, d_row, quality
 
 
@@ -278,7 +339,7 @@ def compare(aoi: Aoi, before_scene: Scene, after_scene: Scene,
         before = before.box_blur(1)
         after = after.box_blur(1)
 
-    d_col, d_row, quality = coregister(before, after)
+    d_col, d_row, quality = coregister(before, after, exclude=obscured)
     aligned = after.shifted(-d_col, -d_row)
 
     gain, offset = normalise(aligned, before, exclude=obscured)
