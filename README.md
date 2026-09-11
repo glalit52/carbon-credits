@@ -346,6 +346,11 @@ terrashield --actor you@example.com explain chg-…   # where a finding came fro
 terrashield --actor you@example.com ask "what changed at Mundra in the last 30 days"
 terrashield evaluate                                # precision, recall, calibration
 terrashield --actor you@example.com report weekly
+
+# Rebuild the committed console from scratch
+bash scripts/build_terrashield_demo.sh terrashield.db
+python3 scripts/build_terrashield_data.py --db terrashield.db
+python3 scripts/build_terrashield_dashboard.py
 ```
 
 Full documentation is in [`docs/terrashield/`](docs/terrashield/). Three things

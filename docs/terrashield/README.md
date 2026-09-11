@@ -90,6 +90,15 @@ Each carries scripted events on known dates — a new array block, a warehouse, 
 track extension, a congestion episode, a drawdown. Those dates are the ground
 truth the engines are scored against in `tests/test_ts_recovery.py`.
 
+The committed console dataset is built by `scripts/build_terrashield_demo.sh`,
+which monitors each site over its own window spanning that site's events. That
+is not a shortcut around one long run — it is what a real estate looks like.
+Sites are enrolled when a customer buys them, so an estate has four different
+start dates and four different amounts of history, and every number the console
+shows has to survive that. It is why coverage is measured from each site's
+first acquisition rather than from a nominal window, and why baselines are held
+per AOI and tied to the AOI's geometry fingerprint.
+
 ## The honest part
 
 The demo imagery is modelled, not downloaded. `world.py` holds what is on the
