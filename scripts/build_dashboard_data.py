@@ -16,10 +16,11 @@ from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+DASH = ROOT / "dashboard"
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "model"))
 
-from carbonstack import methodology                       # noqa: E402
+from carbonstack import evidence, ledger, methodology, payments  # noqa: E402
 from carbonstack.biomass import co2e_per_ha                # noqa: E402
 from carbonstack.domain import TrackKind                   # noqa: E402
 from carbonstack.feed import (                             # noqa: E402
@@ -29,6 +30,8 @@ from carbonstack.feed import (                             # noqa: E402
 from carbonstack.methodology.vm0042 import EmissionFactor  # noqa: E402
 from carbonstack.methodology.vm0047 import PerformanceBenchmark  # noqa: E402
 from carbonstack.sites import NYERI, THANJAVUR, as_project  # noqa: E402
+from carbonstack.store import Store                        # noqa: E402
+from carbonstack.store.repo import StoreError              # noqa: E402
 
 SERIES_END = date(2027, 12, 31)      # the live feed the dashboard reveals
 PROJECTION_END = date(2040, 12, 31)  # long enough to show the estate reaching maturity
@@ -57,6 +60,7 @@ def rice_block() -> dict:
         by_year.setdefault(s.year, []).append(s)
 
     vintages = []
+    results = []
     for year, ss in sorted(by_year.items()):
         complete = [s for s in ss if s.end <= TODAY]
         abatement_per_ha = sum(s.abatement_tco2e_ha for s in ss)
@@ -87,6 +91,8 @@ def rice_block() -> dict:
                     f"{s_.season} {s_.year}: adoption confidence "
                     f"{s_.adoption_confidence:.0%}, only {s_.clear_revisits} of "
                     f"{s_.revisits} passes were clear")
+        result.warnings = list(payload["warnings"])
+        results.append(result)
         vintages.append({
             **payload,
             "complete": len(complete) == len(ss),
@@ -110,6 +116,8 @@ def rice_block() -> dict:
         "readings": [r.to_dict() for r in readings],
         "vintages": vintages,
         "projection": projection,
+        "_results": results,
+        "_project": project,
         "methodology": {
             "id": "VM0042",
             "name": "Improved Agricultural Land Management / rice water management",
@@ -140,6 +148,7 @@ def coffee_block() -> dict:
     long_provider = FeedProvider(long_readings)
 
     vintages = []
+    results = []
     for year in range(site.enrolled_on.year + 1, PROJECTION_END.year + 1):
         result = m.quantify(project, long_provider, year)
         payload = result.to_dict()
@@ -147,6 +156,8 @@ def coffee_block() -> dict:
             f"{year}: {f}" for f in long_provider.flags_near(date(year, 12, 31))
             if "cloud" not in f
         ]
+        result.warnings = list(payload["warnings"])
+        results.append(result)
         vintages.append({
             **payload,
             "complete": date(year, 12, 31) <= TODAY,
@@ -169,6 +180,8 @@ def coffee_block() -> dict:
         "readings": [r.to_dict() for r in readings],
         "standing_stock": stock,
         "vintages": vintages,
+        "_results": results,
+        "_project": project,
         "methodology": {
             "id": "VM0047",
             "name": "Afforestation, Reforestation and Revegetation (area-based)",
@@ -299,9 +312,96 @@ def economics(blocks: list[dict]) -> dict:
     }
 
 
+def govern(blocks: list[dict]) -> dict:
+    """Run the real lifecycle into a real database, and report what happened.
+
+    The dashboard should not be a second, parallel calculation of the same
+    numbers -- that is how two screens end up disagreeing and nobody knows
+    which is right. So the governance section is read back out of the store
+    after the actual ledger, payment and evidence code has run against it.
+    """
+    db_path = DASH / "pilot.db"
+    if db_path.exists():
+        db_path.unlink()
+    for suffix in ("-wal", "-shm"):
+        extra = db_path.with_name(db_path.name + suffix)
+        if extra.exists():
+            extra.unlink()
+
+    out: dict = {"sites": {}}
+    with Store(db_path, actor="pipeline") as store:
+        for block in blocks:
+            site = block["site"]
+            project = block["_project"]
+            track = site["track"]
+            meth = "VM0042" if track in ("rice", "cropland") else "VM0047"
+            store.save_project(project, methodology_id=meth)
+
+            settled = []
+            for result in block["_results"]:
+                if date(result.year, 12, 31) > TODAY:
+                    continue
+                v = ledger.record_vintage(store, result, actor="pipeline")
+                ledger.submit_for_review(store, v.id, actor="ops")
+                note = ("reviewed: " + "; ".join(v.warnings)) if v.warnings else ""
+                if v.warnings:
+                    # A warned vintage is held, not waved through. That is the
+                    # whole point of the warning existing.
+                    ledger.hold(store, v.id, actor="verifier",
+                                note="held pending field confirmation")
+                    settled.append(ledger.get_vintage(store, v.id))
+                    continue
+                ledger.approve(store, v.id, actor="verifier", note=note)
+                try:
+                    ledger.issue(store, v.id,
+                                 registry="Gold Standard" if track == "rice" else "Verra",
+                                 actor="verifier")
+                except StoreError:
+                    settled.append(ledger.get_vintage(store, v.id))
+                    continue
+                terms = payments.PaymentTerms(
+                    price_per_credit=PRICE[track],
+                    farmer_share=FARMER_SHARE[track])
+                payments.raise_payments(store, v.id, terms, actor="finance")
+                settled.append(ledger.get_vintage(store, v.id))
+
+            out["sites"][site["id"]] = {
+                "vintages": [v.to_dict() for v in settled],
+                "issuances": [i.to_dict()
+                              for i in ledger.issuances(store, site["id"])],
+                "buffer": ledger.buffer_balance(store, site["id"]),
+                "payments": [p.to_dict()
+                             for p in payments.register(store, project_id=site["id"])],
+                "payment_summary": payments.summary(store, site["id"]),
+            }
+
+        intact, bad = store.verify_chain()
+        events = store.events()
+        out["integrity"] = {
+            "chain_intact": intact,
+            "first_bad_event": bad,
+            "event_count": len(events),
+            "head_hash": events[-1]["hash"] if events else None,
+        }
+        out["events"] = [
+            {"at": e["at"], "actor": e["actor"], "kind": e["kind"],
+             "subject_id": e["subject_id"], "hash": e["hash"][:12]}
+            for e in events
+        ]
+        for block in blocks:
+            evidence.build(store, block["site"]["id"],
+                           DASH / "packs" / block["site"]["id"])
+    return out
+
+
 def main() -> int:
     rice = rice_block()
     coffee = coffee_block()
+
+    governance = govern([rice, coffee])
+    for block in (rice, coffee):
+        block.pop("_results", None)
+        block.pop("_project", None)
 
     payload = {
         "generated_at": date.today().isoformat(),
@@ -316,6 +416,7 @@ def main() -> int:
         },
         "blocks": [rice, coffee],
         "economics": economics([rice, coffee]),
+        "governance": governance,
     }
 
     out = ROOT / "dashboard" / "data.json"

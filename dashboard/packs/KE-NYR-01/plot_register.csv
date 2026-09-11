@@ -1,0 +1,2 @@
+plot_id,farmer_id,farmer_name,village,district,area_ha,centroid_lon,centroid_lat,boundary_fingerprint,tenure,tenure_reference,consent_on,consent_reference,enrolled_on,practice,creditable,exclusion_reason
+KE-NYR-01-P1,KE-NYR-01-F1,"Smallholder, 2.8 ha",Gatugi,"Nyeri County, Central Highlands",2.8729,36.962234,-0.434404,d111aafd05a57411,owned_title,KE/LR/NYERI/MUNICIPALITY/8841,2025-03-20,CONSENT/KE-NYR-01/001,2025-03-20,block_planting,yes,

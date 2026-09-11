@@ -1,0 +1,39 @@
+{
+  "IN-TNJ-01:2025": [
+    {
+      "citations": [
+        "Verra VM0042 v2.0, Improved Agricultural Land Management",
+        "awd: 0.965198243262335 tCO2e/ha/yr (Tier 1) -- measured from 41 revisits across 2 season(s); 28.0x GWP100"
+      ],
+      "name": "VM0042 abatement, vintage 2025",
+      "result": 1.1697756880886234,
+      "terms": [
+        {
+          "detail": "",
+          "label": "enrolled area",
+          "unit": "ha",
+          "value": 2.4917905151233644
+        },
+        {
+          "detail": "area x detected adoption probability",
+          "label": "confidence-weighted area",
+          "unit": "ha",
+          "value": 2.193581556113902
+        },
+        {
+          "detail": "",
+          "label": "gross abatement",
+          "unit": "tCO2e",
+          "value": 2.117241064413798
+        },
+        {
+          "detail": "abatement-weighted across emission factor tiers",
+          "label": "relative uncertainty",
+          "unit": "fraction",
+          "value": 0.5
+        }
+      ],
+      "unit": "tCO2e"
+    }
+  ]
+}

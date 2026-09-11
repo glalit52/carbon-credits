@@ -1,0 +1,69 @@
+{
+  "generated_at": "2026-09-11T08:38:44+00:00",
+  "project": {
+    "id": "IN-TNJ-01",
+    "name": "Vallam paddy block, Thanjavur district, Tamil Nadu",
+    "track": "rice",
+    "country": "India",
+    "start_date": "2025-06-01",
+    "methodology": "VM0042",
+    "registry": null,
+    "registry_ref": null,
+    "crediting_period_yrs": 30
+  },
+  "area": {
+    "enrolled_ha": 2.4918,
+    "creditable_ha": 2.4918,
+    "plots": 1,
+    "plots_excluded": 0,
+    "farmers": 1
+  },
+  "monitoring": {
+    "observations": 0,
+    "variables": [],
+    "sources": [],
+    "first": null,
+    "last": null
+  },
+  "credits": {
+    "vintages": 1,
+    "gross_tco2e": 2.1172,
+    "net_tco2e": 1.1698,
+    "issued_credits": 1.0,
+    "buffer": {
+      "held_t": 0.2064,
+      "released_t": 0,
+      "entries": 1
+    }
+  },
+  "payments": {
+    "payments": 1,
+    "farmers": 1,
+    "paid_total": 0,
+    "outstanding_total": 6.6,
+    "overdue_count": 0,
+    "overdue_total": 0,
+    "failed_count": 0,
+    "currency": "USD"
+  },
+  "integrity": {
+    "event_count": 7,
+    "chain_intact": true,
+    "first_bad_event": null,
+    "head_hash": "c6f100ae1842b7f05ed0fc742661cec3ad9f597920637e930afdc83ab00e8d15"
+  },
+  "files": [
+    "derivations.json",
+    "event_log.csv",
+    "issuances.csv",
+    "observations.csv",
+    "payments.csv",
+    "plot_register.csv",
+    "vintages.csv"
+  ],
+  "caveats": [
+    "Allometric equation is a generic placeholder and must be replaced with a locally calibrated equation before issuance.",
+    "Performance benchmark is a placeholder and must be sourced from a registry-vetted data service provider.",
+    "Where the monitoring source is 'synthetic' or 'feed', values are simulated and must not be used for issuance."
+  ]
+}

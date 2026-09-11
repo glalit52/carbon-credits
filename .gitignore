@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Databases are build output here — `carbonstack init` recreates them, and the
+# demo one is rebuilt by scripts/build_dashboard_data.py on every run.
+*.db
+*.db-wal
+*.db-shm

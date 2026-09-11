@@ -12,7 +12,8 @@ financial model that gates it, and `carbonstack`, the dMRV core it runs on.
 | `src/carbonstack/` | The product — see the map below |
 | `src/carbonstack/sites.py` | The two pilot sites — real places, real climatology |
 | `src/carbonstack/feed.py` | Simulated monitoring on the real 5-day revisit cadence |
-| `dashboard/` | The live MRV dashboard and its dataset |
+| `dashboard/` | The live MRV dashboard, its dataset and example evidence packs |
+| `scripts/` | Build the dashboard dataset and page |
 | `tests/` | 140 tests, stdlib only |
 
 ## The two numbers that shape everything
@@ -217,6 +218,21 @@ blocked plot), `observations.csv`, `vintages.csv`, `issuances.csv`,
 `payments.csv`, `derivations.json`, `event_log.csv`, a `manifest.json`, and a
 readable `SUMMARY.md`. The faster a VVB can satisfy itself, the cheaper and
 sooner the verification — which is the whole commercial argument.
+
+## One record, two surfaces
+
+The dashboard is not a second calculation of the same numbers — that is how two
+screens end up disagreeing and nobody knows which is right. `scripts/build_dashboard_data.py`
+runs the **actual** lifecycle into a real database (enrol, monitor, quantify,
+review, approve, issue, raise payments, export evidence) and then reads the
+result back out. Its *Chain of custody* section is the event log from that run,
+and `dashboard/packs/` holds the evidence packs it produced on the way.
+
+That run also demonstrates the governance working rather than being bypassed:
+the paddy's 2025 vintage clears review and issues 1 credit with a $6.60 farmer
+payment raised against it; the 2026 vintage carries the no-dry-down warning and
+is **held**, not waved through. The coffee block has no settled vintage at all
+yet — on a removal pathway that wait is the pathway, not a delay.
 
 ## What is deliberately not real yet
 

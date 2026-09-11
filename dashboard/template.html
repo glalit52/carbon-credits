@@ -207,6 +207,47 @@
   .dbstate{font-family:var(--f-mono);font-size:10.5px;color:var(--muted);margin-top:13px;
     padding-top:11px;border-top:1px solid var(--line-soft)}
 
+  /* ---------- ledger ---------- */
+  .ledger-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+    gap:1px;background:var(--line);border:1px solid var(--line);border-radius:3px;
+    overflow:hidden;margin-bottom:16px}
+  .ledger-grid > div{background:var(--surface);padding:14px 15px}
+  .ledger-grid .k{font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px}
+  .ledger-grid .v{font-family:var(--f-display);font-size:1.35rem;line-height:1;
+    font-variant-numeric:tabular-nums;display:block;margin-bottom:4px}
+  .ledger-grid .s{font-size:.78rem;color:var(--muted);display:block;line-height:1.4}
+  .serial{font-family:var(--f-mono);font-size:11px;color:var(--ink-2);
+    background:var(--sunken);padding:3px 7px;border-radius:2px;display:inline-block}
+  .empty{font-size:.88rem;color:var(--muted);line-height:1.55;margin:0;
+    padding:16px 0;border-top:1px solid var(--line-soft)}
+
+  /* ---------- chain ---------- */
+  .chain{margin-top:40px;padding-top:28px;border-top:1px solid var(--line)}
+  .chain h2{font-family:var(--f-display);font-weight:500;font-size:1.5rem;margin:0 0 8px}
+  .chain > p{color:var(--ink-2);max-width:66ch;margin:0 0 18px}
+  .chainhead{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;
+    font-family:var(--f-mono);font-size:11px;color:var(--muted);margin-bottom:16px}
+  .chainhead .hash{color:var(--ink-2);word-break:break-all}
+  .events{border:1px solid var(--line);border-radius:3px;background:var(--surface);
+    overflow:hidden}
+  .ev{display:grid;grid-template-columns:auto 6.5rem minmax(0,1fr) minmax(0,10rem) 6rem;
+    gap:14px;padding:9px 15px;border-top:1px solid var(--line-soft);
+    align-items:center;font-family:var(--f-mono);font-size:11.5px}
+  .ev:first-child{border-top:0}
+  .ev .who{color:var(--accent)}
+  .ev .what{color:var(--ink)}
+  .ev .subj{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ev .h{color:var(--muted);font-size:10px;text-align:right}
+  .ev .what,.ev .subj{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ev .link{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--accent);
+    flex:none}
+  @media (max-width:700px){
+    .ev{grid-template-columns:auto minmax(0,1fr);gap:3px 12px}
+    .ev .subj,.ev .h{grid-column:2}
+    .ev .h{text-align:left}
+  }
+
   /* ---------- portfolio ---------- */
   .portfolio{margin-top:46px;padding-top:30px;border-top:1px solid var(--line)}
   .portfolio h2{font-family:var(--f-display);font-weight:500;font-size:1.6rem;margin:0 0 10px}
@@ -260,6 +301,17 @@
 
   <div class="tabs" role="tablist" id="tabs"></div>
   <div id="panels"></div>
+
+  <section class="chain">
+    <h2>Chain of custody</h2>
+    <p>Every state change below was written by the ledger, payment and evidence
+      code itself &mdash; this page reads the database back rather than
+      recomputing it, so there is only one version of what happened. Each
+      event's hash covers its own content and its predecessor's, so a row
+      edited behind the application breaks the chain and names the event.</p>
+    <div class="chainhead" id="chainhead"></div>
+    <div class="events" id="events"></div>
+  </section>
 
   <section class="portfolio">
     <h2>What one plot is worth, and what it would take</h2>
@@ -907,7 +959,7 @@
     // --- ledger ---
     var fig5 = el("figure");
     var top5 = el("div", "figtop");
-    top5.appendChild(el("h3", null, "The ledger"));
+    top5.appendChild(el("h3", null, "How gross becomes issuable"));
     top5.appendChild(el("span", "note", "Deductions apply in order, each to the running remainder."));
     fig5.appendChild(top5);
     var scroll = el("div", "tscroll");
@@ -964,6 +1016,96 @@
       fig5.appendChild(more);
     }
     panel.appendChild(fig5);
+
+    // --- ledger ---
+    var gov = (DATA.governance && DATA.governance.sites &&
+               DATA.governance.sites[site.id]) || null;
+    var figL = el("figure");
+    var topL = el("div", "figtop");
+    topL.appendChild(el("h3", null, "Issued, held and owed"));
+    topL.appendChild(el("span", "note",
+      "Read back from the database after the ledger ran, not recomputed here."));
+    figL.appendChild(topL);
+
+    var settled = gov ? gov.vintages : [];
+    var issuedRows = gov ? gov.issuances : [];
+
+    if (!settled.length) {
+      var firstYear = block.vintages.length ? block.vintages[0].year : NOW.getFullYear();
+      var closes = Math.max(firstYear, NOW.getFullYear());
+      var p2 = el("p", "empty");
+      p2.textContent = "No vintage has settled yet. The first closes 31 December "
+        + closes + ", so nothing has been quantified for issuance, nothing is in "
+        + "the buffer pool, and no farmer payment is owed. On a removal pathway "
+        + "that wait is the pathway, not a delay.";
+      figL.appendChild(p2);
+    } else {
+      var grid = el("div", "ledger-grid");
+      function cell(k, v, sTxt) {
+        var n = el("div");
+        n.appendChild(el("span", "k", k));
+        n.appendChild(el("span", "v", v));
+        n.appendChild(el("span", "s", sTxt));
+        grid.appendChild(n);
+      }
+      var totalIssued = issuedRows.reduce(function (a, i) { return a + i.quantity; }, 0);
+      var heldV = settled.filter(function (v) { return v.status === "held"; });
+      cell("Credits issued", num(totalIssued, 0),
+           issuedRows.length ? "on " + issuedRows[0].registry : "none yet");
+      cell("Buffer held", num(gov.buffer.held_t, 2),
+           "tCO₂e across " + gov.buffer.entries + " entr" +
+           (gov.buffer.entries === 1 ? "y" : "ies"));
+      cell("Held for review", String(heldV.length),
+           heldV.length ? "vintage " + heldV.map(function (v) { return v.year; }).join(", ")
+                        : "nothing blocked");
+      cell("Owed to farmers", money(gov.payment_summary.outstanding_total),
+           gov.payment_summary.payments + " payment(s), " +
+           gov.payment_summary.overdue_count + " overdue");
+      figL.appendChild(grid);
+
+      var scrollL = el("div", "tscroll");
+      var tL = el("table");
+      tL.innerHTML = "<thead><tr><th>Vintage</th><th>Issuable</th><th>Serials</th>" +
+        "<th>Buffer</th><th>Status</th></tr></thead>";
+      var tbL = el("tbody");
+      settled.forEach(function (v) {
+        var iss = issuedRows.filter(function (i) { return i.vintage_id === v.id; })[0];
+        var tr = el("tr");
+        tr.appendChild(el("td", null, String(v.year)));
+        tr.appendChild(el("td", null, num(v.issuable_whole, 0) +
+          (v.carry ? "  (carry " + num(v.carry, 3) + ")" : "")));
+        var tdS = el("td");
+        if (iss) {
+          var sp = el("span", "serial", iss.serial_start === iss.serial_end
+            ? iss.serial_start : iss.serial_start + " → " + iss.serial_end);
+          tdS.appendChild(sp);
+        } else {
+          tdS.textContent = "—";
+        }
+        tr.appendChild(tdS);
+        tr.appendChild(el("td", null, num(v.buffer_t, 3)));
+        var tdSt = el("td");
+        var cls = v.status === "issued" ? "ok" : v.status === "held" ? "warn" : "idle";
+        tdSt.appendChild(el("span", "chip " + cls, v.status));
+        tr.appendChild(tdSt);
+        tbL.appendChild(tr);
+      });
+      tL.appendChild(tbL);
+      scrollL.appendChild(tL);
+      figL.appendChild(scrollL);
+
+      if (gov.payments.length) {
+        var payNote = el("div", "covnote");
+        var p0 = gov.payments[0];
+        payNote.innerHTML = "<span>farmer share " +
+          money(gov.payment_summary.outstanding_total + gov.payment_summary.paid_total) +
+          " across " + gov.payment_summary.farmers + " farmer(s)</span>" +
+          "<span>due " + p0.due_on + "</span>" +
+          "<span>status " + p0.status + "</span>";
+        figL.appendChild(payNote);
+      }
+    }
+    panel.appendChild(figL);
 
     // --- review queue ---
     var flagged = block.vintages.filter(function (v) {
@@ -1134,6 +1276,37 @@
   });
   t.appendChild(tb);
   et.appendChild(t);
+
+  // ---- chain of custody ---------------------------------------------------
+  (function () {
+    var g = DATA.governance;
+    var head = document.getElementById("chainhead");
+    var list = document.getElementById("events");
+    if (!g) { head.textContent = "no governance record in this build"; return; }
+
+    var chip = el("span", "chip " + (g.integrity.chain_intact ? "ok" : "block"),
+      g.integrity.chain_intact ? "chain intact" : "chain broken");
+    head.appendChild(chip);
+    head.appendChild(el("span", null, g.integrity.event_count + " events"));
+    var h = el("span", "hash");
+    h.textContent = "head " + (g.integrity.head_hash || "—").slice(0, 32) + "…";
+    head.appendChild(h);
+
+    (g.events || []).forEach(function (e) {
+      var row = el("div", "ev");
+      row.appendChild(el("i", "link"));
+      row.appendChild(el("span", "who", e.actor));
+      row.appendChild(el("span", "what", e.kind));
+      row.appendChild(el("span", "subj", e.subject_id));
+      row.appendChild(el("span", "h", e.hash));
+      list.appendChild(row);
+    });
+    if (!(g.events || []).length) {
+      var none = el("div", "ev");
+      none.textContent = "no events recorded";
+      list.appendChild(none);
+    }
+  })();
 
   // ---- status bar ---------------------------------------------------------
   var allReadings = [];

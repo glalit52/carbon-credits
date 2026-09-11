@@ -1,0 +1,2 @@
+vintage_id,year,methodology,area_ha,gross_tco2e,carry,deduction_buffer_pool,deduction_uncertainty,issuable_whole,net_tco2e,relative_uncertainty,status,warnings
+IN-TNJ-01:2025,2025,VM0042,2.4918,2.1172,0.169776,0.2064,0.741,1,1.1698,0.5,issued,
