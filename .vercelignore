@@ -2,7 +2,9 @@ tests/
 model/
 docs/
 scripts/build_dashboard*.py
+scripts/build_terrashield*.py
 dashboard/template.html
+dashboard/terrashield/template.html
 __pycache__/
 *.pyc
 .pytest_cache/

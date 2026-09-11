@@ -30,5 +30,12 @@ jobs:
       - name: dashboard is in sync with the code that generates it
         run: python3 scripts/check_dashboard_fresh.py
 
+      # The TerraShield console cannot be regenerated in CI -- that means six
+      # months of the monitoring pipeline over four sites -- so this checks the
+      # drift that actually happens instead: a rebuilt dataset with a stale
+      # page, or a chip referenced but not committed.
+      - name: terrashield console is consistent with its dataset
+        run: python3 scripts/check_terrashield_dashboard.py
+
       - name: static build succeeds
         run: bash scripts/build_static.sh
