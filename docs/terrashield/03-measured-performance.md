@@ -77,6 +77,34 @@ At 0.50 precision rises by sixteen points and false positives more than halve,
 while recall falls by one point — everything discarded was noise. Push to 0.55
 and real detections start going with it.
 
+## The neighbourhood a detection is compared against
+
+`detect.edge_drop` asks whether a candidate is sharper than its surroundings,
+which requires deciding what "surroundings" means. The code grows a ring
+outward from the component's boundary starting one cell out, so the shell
+immediately adjacent to the object is included in the comparison.
+
+That is untidy — the adjacent shell is partly the object's own soft edge, and
+excluding it to make a clean annulus is the more defensible-sounding choice.
+It measures worse. Same command, same window, the only difference being
+whether the adjacent shell is in the ring:
+
+| Neighbourhood | Precision | Recall | F1 | FP/km² |
+|---|---:|---:|---:|---:|
+| **From one cell out** | **0.85** | **0.81** | **0.83** | **0.055** |
+| Clean annulus | 0.85 | 0.78 | 0.81 | 0.055 |
+
+The three points of recall are entirely at Mundra (0.77 → 0.74) and Sardar
+Sarovar (0.67 → 0.50), and nothing at all at Bhadla or Kutch — the two sites
+with water and the two without. Against water the adjacent shell is dark and
+carries most of the contrast; remove it and the sharpest edge in the scene is
+the one no longer being measured.
+
+This is recorded because the original code arrived at the wider ring by
+accident rather than by design, and a later cleanup removed it as obviously
+redundant. It was not redundant. `detect.EDGE_RING_INNER` now names it, so
+narrowing it again is a decision with a number attached.
+
 ## Change detection
 
 Scored by whether the scripted events in `world.py` are recovered, in
