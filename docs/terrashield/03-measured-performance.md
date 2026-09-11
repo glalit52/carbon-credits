@@ -117,7 +117,7 @@ Scored by whether the scripted events in `world.py` are recovered, in
 | Kutch building through the monsoon | 44 × 30 m, appears 2026-08-11 | Found on SAR, typed structural, in a window with ≤2 usable optical scenes |
 | Mundra vessel turnover | dozens per fortnight | Routed to `movements`, counted as arrivals and departures, never filed as change |
 
-And four negative assertions, each covering a failure that was observed and
+And seven negative assertions, each covering a failure that was observed and
 fixed during development:
 
 - A new photovoltaic block is **not** reported as inundation. Panels are as dark
@@ -127,6 +127,47 @@ fixed during development:
 - A Sentinel-2 / Landsat-9 pair is **refused**, not differenced.
 - A SAR pair from two ground tracks is **refused**, not differenced.
 - Co-registration recovers a deliberate two-cell shift exactly.
+- Cloud in one scene only does **not** decide where the other scene sits.
+- The Sardar Sarovar pair of 2026-02-26 / 2026-03-30 reports **nothing**.
+- A flat search surface yields **no shift** rather than the argmin of noise.
+
+### The registration failure those last three pin
+
+This one is worth spelling out, because it is the most expensive class of false
+positive in change detection and it does not look like a bug in review.
+
+Co-registration scored cloud as though it were ground. Cloud is bright, it is
+in one scene and not the other, and it does not move with the terrain, so it
+adds a large near-constant term to every candidate shift. On a Landsat-9 pair
+over Sardar Sarovar with 6% cloud before and 29% after, the seven candidate row
+shifts scored between 0.12108 and 0.12186 — a spread of 0.06%. The minimum of
+that is noise. It was applied as a two-row shift, and a scene displaced by two
+rows puts a bright rim along one side of every static structure and a dark rim
+along the other.
+
+The result was five changes at a site where nothing had been built: four of
+them hugging the edges of the dam wall and the powerhouse, one of them reported
+at **high severity** as "a uniform engineered surface has replaced a varied
+natural one". It is a dam. It had been there the whole time.
+
+The function already computed the number that exposes this — it returned a
+registration quality of 0.0057, meaning the best alignment was half a percent
+better than no alignment at all, and its own docstring called that suspicious.
+Nothing read it.
+
+| Configuration | Exact | Within 1 cell | Worse than no shift |
+|---|---:|---:|---:|
+| No mask, no guard | 64/81 | 79/81 | **3/81** |
+| Cloud-masked only | 70/81 | 80/81 | 2/81 |
+| **Cloud-masked + quality guard** | 62/81 | 78/81 | **0/81** |
+
+Measured over 81 same-sensor, same-track pairs across the four sites, against
+the geolocation error the sensor model actually injected. The guard costs eight
+exact matches — all SAR pairs left with a one-cell residual that the 3×3
+multi-look already softens — and removes every case where the pipeline made a
+pair *worse* than leaving it alone. That is the right side of the trade, because
+a scene displaced on no evidence does not produce a slightly worse answer; it
+produces confident structures along every edge in the scene.
 
 ## Coverage, which is the number that governs all the others
 
