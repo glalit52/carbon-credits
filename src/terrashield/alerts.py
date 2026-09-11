@@ -366,6 +366,13 @@ def evaluate(aoi: Aoi, rules: list[Rule], facts_list: list[dict],
         existing = raised.get(key)
         if existing is not None:
             existing.occurrences += 1
+            #: Several findings can share a place and kind within one run. The
+            #: alert must describe the worst of them, not whichever the change
+            #: engine happened to emit first: relying on the caller's ordering
+            #: means a minor surface change filed ahead of a major structure in
+            #: the same bucket silently becomes the headline.
+            if _outranks(facts, existing):
+                _restate(existing, facts, matching)
             continue
 
         #: Attribute the alert to the narrowest rule that matched -- the one
@@ -420,6 +427,31 @@ def prioritise(alerts: list[RaisedAlert]) -> list[RaisedAlert]:
         else:
             r.alert.priority = _band(score)
     return ordered
+
+
+def _outranks(facts: dict, existing: RaisedAlert) -> bool:
+    incoming = (facts.get("severity_rank", 1), facts.get("risk", 0.0))
+    current = (existing.alert.severity.rank,
+               existing.risk.composite if existing.risk else 0.0)
+    return incoming > current
+
+
+def _restate(alert: RaisedAlert, facts: dict, matching: list[Rule]) -> None:
+    """Re-describe an alert from a more severe finding in the same bucket."""
+    alert.alert.severity = Severity(facts.get("severity", "low"))
+    alert.alert.title = facts.get("title", alert.alert.title)
+    alert.alert.summary = facts.get("summary", alert.alert.summary)
+    alert.risk = facts.get("risk_score", alert.risk)
+    alert.held_reason = facts.get("held_reason", "")
+    if facts.get("evidence_id"):
+        alert.alert.evidence_id = facts["evidence_id"]
+    if facts.get("change_event_id"):
+        alert.alert.change_event_ids = [facts["change_event_id"]]
+    if facts.get("anomaly_id"):
+        alert.alert.anomaly_ids = [facts["anomaly_id"]]
+    for rule in matching:
+        if rule not in alert.rules:
+            alert.rules.append(rule)
 
 
 def _band(score: float) -> int:

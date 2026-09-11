@@ -409,6 +409,26 @@ def test_a_raised_alert_carries_the_key_it_was_deduplicated_under():
             AOI.id, _facts(place_bucket="4:9"))
 
 
+def test_the_worst_finding_in_a_bucket_becomes_the_alert():
+    """Never whichever the change engine happened to emit first."""
+    rules = alert_engine.default_rules("org")
+    minor = _facts(place_bucket="9:9", severity="medium", severity_rank=2,
+                   risk=40.0, title="Minor", area_m2=60_000.0,
+                   change_type="new_structure")
+    major = _facts(place_bucket="9:9", severity="critical", severity_rank=4,
+                   risk=95.0, title="Major", area_m2=400_000.0,
+                   change_type="new_structure", change_event_id="c-major",
+                   evidence_id="ev-major")
+
+    for order in ([minor, major], [major, minor]):
+        raised = alert_engine.evaluate(AOI, rules, order)
+        assert len(raised) == 1, "one place and kind is one alert"
+        assert raised[0].alert.title == "Major"
+        assert raised[0].alert.severity is Severity.CRITICAL
+        assert raised[0].alert.evidence_id == "ev-major"
+        assert raised[0].occurrences == 2
+
+
 def test_a_suppression_window_holds_across_runs():
     rules = [r for r in alert_engine.default_rules("org")
              if r.id == "rule-new-structure"]
