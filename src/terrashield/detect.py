@@ -25,12 +25,11 @@ from, its measured extent, and a confidence that means something, because
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
-from datetime import datetime
 
 from .domain import Aoi, Detection, ObjectClass, Scene, Sensor
 from .geo import frame_for, haversine_m
 from .raster import Component, Mask, Raster, label_components, percentile, threshold
-from .sensors import SENSORS, cloud_mask
+from .sensors import cloud_mask
 from .world import seed_of
 
 MODEL_VERSION = "ts-detect-1.2.0"

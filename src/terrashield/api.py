@@ -25,7 +25,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable
 from urllib.parse import parse_qs, urlparse
 
-from . import copilot, evidence as evidence_mod, reports
+from . import copilot
 from .domain import ReviewStatus, Role
 from .pipeline import health
 from .rbac import AccessDenied, TenantViolation

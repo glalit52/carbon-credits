@@ -29,7 +29,7 @@ from datetime import date
 
 from .domain import Constellation, Scene, Sensor
 from .raster import Mask, Raster
-from .world import Feature, Rng, SiteTruth, fbm, height_of, seed_of
+from .world import Rng, SiteTruth, fbm, height_of, seed_of
 
 
 @dataclass(frozen=True)

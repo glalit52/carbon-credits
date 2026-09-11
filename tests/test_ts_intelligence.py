@@ -318,13 +318,26 @@ def test_one_construction_site_produces_one_alert_not_forty():
     assert max(r.occurrences for r in raised) >= 20
 
 
+def test_a_raised_alert_carries_the_key_it_was_deduplicated_under():
+    """The pipeline stores this key; re-deriving it picked the wrong one."""
+    rules = alert_engine.default_rules("org")
+    raised = alert_engine.evaluate(AOI, rules, [_facts(place_bucket="4:9")])
+    assert raised
+    for r in raised:
+        assert r.dedup_key
+        assert r.dedup_key.startswith(f"{r.rule.id}|{AOI.id}|")
+        assert "4:9" in r.dedup_key
+        assert r.dedup_key == alert_engine._dedup_key(
+            r.rule, AOI.id, _facts(place_bucket="4:9"))
+
+
 def test_a_suppression_window_holds_across_runs():
     rules = [r for r in alert_engine.default_rules("org")
              if r.id == "rule-new-structure"]
     at = datetime(2026, 5, 10, tzinfo=timezone.utc)
     first = alert_engine.evaluate(AOI, rules, [_facts()], when=at)
     assert first
-    key = alert_engine._dedup_key(rules[0], AOI.id, _facts())
+    key = first[0].dedup_key
     again = alert_engine.evaluate(AOI, rules, [_facts()],
                                   when=at + timedelta(days=2),
                                   recent={key: at})

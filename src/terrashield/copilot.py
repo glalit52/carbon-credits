@@ -33,7 +33,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 
-from .domain import Aoi, ChangeType, Severity, SiteStatus
+from .domain import Aoi, ChangeType, Severity
 from .store.repo import Store
 
 

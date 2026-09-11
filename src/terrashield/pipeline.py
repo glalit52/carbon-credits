@@ -29,16 +29,14 @@ identical on a chart and are completely different in a briefing.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, timedelta
 
 from . import alerts as alert_engine
 from . import change, detect, evidence, risk
 from .anomaly import Assessment, MetricReading, assess, headline
 from .baseline import Observation, build_all
-from .catalog import Coverage, Provider, best_pair, coverage
-from .domain import (
-    Alert, Aoi, ChangeEvent, ObjectClass, Scene, Sensor, SiteStatus,
-)
+from .catalog import Coverage, Provider, coverage
+from .domain import Aoi, ChangeEvent, ObjectClass, Scene, Sensor, SiteStatus
 from .store.repo import Store
 
 #: Object classes whose counts are tracked as pattern-of-life metrics.
@@ -213,11 +211,8 @@ def run_day(store: Store, provider: Provider, aoi: Aoi, when: date,
     raised = alert_engine.evaluate(
         aoi, rules, facts, when=scene.acquired_at,
         recent=store.last_alert_times())
-    by_key = {alert_engine._dedup_key(r.rule, aoi.id, f): f
-              for f in facts for r in raised if r.rule.matches(f)}
     for r in raised:
-        key = next((k for k, f in by_key.items() if k.startswith(f"{r.rule.id}|")), "")
-        store.put_alert(r.alert, r.to_dict(), dedup_key=key,
+        store.put_alert(r.alert, r.to_dict(), dedup_key=r.dedup_key,
                         occurrences=r.occurrences)
     result.raised = raised
     result.alerts = len(raised)

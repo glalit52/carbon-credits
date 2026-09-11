@@ -107,6 +107,17 @@ def test_arrivals_and_departures_are_metrics_not_change_events(monitored):
                for c in store.list_changes(demo.id, limit=500))
 
 
+def test_stored_alerts_carry_a_usable_deduplication_key(monitored):
+    """Without this the suppression window never matches on the next run."""
+    _, store, demo, _ = monitored
+    rows = store.list_alerts(demo.id, limit=200)
+    assert rows
+    assert all(r["dedup_key"] for r in rows)
+    for r in rows:
+        assert r["dedup_key"].startswith(f"{r['rule_id']}|{demo.id}|")
+    assert set(store.last_alert_times()) == {r["dedup_key"] for r in rows}
+
+
 def test_audit_chain_survives_a_full_run(monitored):
     _, store, _, _ = monitored
     assert store.verify_audit_chain() == (True, None)

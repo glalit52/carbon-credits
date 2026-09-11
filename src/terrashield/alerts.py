@@ -267,6 +267,14 @@ class RaisedAlert:
     alert: Alert
     rule: Rule
     matched: list[str]
+    #: The key this alert was deduplicated under. Carried on the object rather
+    #: than recomputed by the caller: the pipeline used to re-derive it by
+    #: searching for any key starting with the rule id, which returned an
+    #: arbitrary one whenever a rule matched more than one finding. The stored
+    #: key then did not describe the alert, so the suppression window never
+    #: matched on the next run and a single construction site re-alerted on
+    #: every pass for two months.
+    dedup_key: str = ""
     risk: RiskScore | None = None
     held_reason: str = ""
     occurrences: int = 1
@@ -276,6 +284,7 @@ class RaisedAlert:
         return {
             "id": a.id, "aoi_id": a.aoi_id, "rule_id": a.rule_id,
             "rule_name": self.rule.name, "title": a.title,
+            "dedup_key": self.dedup_key,
             "severity": a.severity.value, "priority": a.priority,
             "created_at": a.created_at.isoformat(), "summary": a.summary,
             "change_event_ids": list(a.change_event_ids),
@@ -361,7 +370,7 @@ def evaluate(aoi: Aoi, rules: list[Rule], facts_list: list[dict],
                 delivered_to=list(rule.channels),
             )
             raised[key] = RaisedAlert(
-                alert=alert, rule=rule,
+                alert=alert, rule=rule, dedup_key=key,
                 matched=[c.describe() for c in rule.conditions],
                 risk=facts.get("risk_score"),
                 held_reason=facts.get("held_reason", ""),

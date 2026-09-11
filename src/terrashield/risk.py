@@ -25,7 +25,6 @@ single pair. What separates them is that the containers are gone next week.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
 
 from .domain import Aoi, ChangeEvent, ChangeType, Severity
 

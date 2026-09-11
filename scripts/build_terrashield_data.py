@@ -17,7 +17,6 @@ evidence bundle's scene reference is enough to regenerate the picture.
 from __future__ import annotations
 
 import argparse
-import base64
 import json
 import sys
 from collections import Counter
@@ -29,7 +28,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from terrashield import change, sites                       # noqa: E402
 from terrashield.catalog import SyntheticProvider, coverage  # noqa: E402
-from terrashield.domain import Role, Severity, SiteStatus    # noqa: E402
+from terrashield.domain import Role, SiteStatus              # noqa: E402
 from terrashield.raster import render_overlay_png, render_png  # noqa: E402
 from terrashield.store import Store                          # noqa: E402
 

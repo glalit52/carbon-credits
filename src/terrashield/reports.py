@@ -14,11 +14,9 @@ makes the difference between a quiet week and a blind one impossible to miss.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 
 from .domain import Aoi, Report, Severity, SiteStatus
-from .evidence import digest
 from .store.repo import Store
 
 SEVERITY_ORDER = [Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM, Severity.LOW]

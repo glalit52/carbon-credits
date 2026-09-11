@@ -23,7 +23,7 @@ ground truth the anomaly engine is scored against in tests/test_recovery.py.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date
 
 from . import geo
