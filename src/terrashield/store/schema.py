@@ -226,6 +226,16 @@ MIGRATIONS: list[tuple[int, str]] = [
     CREATE INDEX idx_audit_actor ON audit_log(actor, at);
     CREATE INDEX idx_audit_org   ON audit_log(org_id, at);
     """),
+    (2, """
+    -- When the finding happened, as distinct from when its bundle was
+    -- written. Exporting "the evidence for this site over the last six
+    -- months" filtered on the row's creation time, which is the moment the
+    -- pipeline ran -- so a pack built today for a period ending in March came
+    -- back empty, and looked like a site with no findings rather than a query
+    -- asking the wrong question.
+    ALTER TABLE evidence ADD COLUMN finding_at TEXT NOT NULL DEFAULT '';
+    CREATE INDEX idx_evidence_when ON evidence(aoi_id, finding_at);
+    """),
 ]
 
 

@@ -60,9 +60,11 @@ def _change(aoi_id: str, ident: str, when: date) -> ChangeEvent:
 # ---------------------------------------------------------------------------
 
 def test_migrations_are_idempotent(db):
+    from terrashield.store.schema import MIGRATIONS
+    latest = max(v for v, _ in MIGRATIONS)
     a = Store(db, org_id=ORG)
     b = Store(db, org_id=ORG)
-    assert a.version == b.version == 1
+    assert a.version == b.version == latest
 
 
 def test_round_trips_an_aoi_exactly(store):
@@ -240,6 +242,44 @@ def test_alert_suppression_state_survives_a_restart(store, db):
     store.put_alert(alert, {"x": 1}, dedup_key="k1")
     reopened = Store(db, org_id=ORG, actor="owner@example.com", role=Role.ADMIN)
     assert reopened.last_alert_times()["k1"] == at
+
+
+def test_evidence_is_selected_by_when_the_finding_happened(store, db):
+    """Not by when its bundle row was written; those differ by however long
+    ago the pipeline ran, and filtering on the wrong one makes a pack for an
+    earlier period come back empty."""
+    from terrashield.evidence import EvidenceBundle
+
+    march = datetime(2026, 3, 12, tzinfo=timezone.utc)
+    july = datetime(2026, 7, 4, tzinfo=timezone.utc)
+    for ident, when in (("ev-mar", march), ("ev-jul", july)):
+        bundle = EvidenceBundle(
+            id=ident, aoi_id="AOI-1", finding_id=f"c-{ident}",
+            finding_kind="change",
+            created_at=datetime(2026, 9, 11, tzinfo=timezone.utc),  # today
+            finding_at=when)
+        store.put_evidence(bundle)
+
+    supervisor = Store(db, org_id=ORG, actor="sup@a.example",
+                       role=Role.SUPERVISOR)
+    spring = supervisor.list_evidence("AOI-1", date(2026, 3, 1),
+                                      date(2026, 3, 31))
+    assert [b["id"] for b in spring] == ["ev-mar"]
+    summer = supervisor.list_evidence("AOI-1", date(2026, 7, 1),
+                                      date(2026, 7, 31))
+    assert [b["id"] for b in summer] == ["ev-jul"]
+    assert len(supervisor.list_evidence("AOI-1")) == 2
+
+
+def test_migrations_add_columns_without_losing_rows(db):
+    """Migration 2 runs against a database that already has evidence in it."""
+    first = Store(db, org_id=ORG, actor="a@x.example")
+    assert first.version >= 2
+    cols = {r[1] for r in first.conn.execute("PRAGMA table_info(evidence)")}
+    assert "finding_at" in cols
+    applied = {r[0] for r in first.conn.execute(
+        "SELECT version FROM schema_version")}
+    assert applied == {1, 2}
 
 
 def test_counts_are_scoped_to_the_tenant(store, db):

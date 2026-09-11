@@ -601,10 +601,11 @@ class Store:
         with self.conn:
             self.conn.execute(
                 "INSERT OR REPLACE INTO evidence (id, aoi_id, finding_id,"
-                " finding_kind, created_at, sha256, body_json)"
-                " VALUES (?,?,?,?,?,?,?)",
+                " finding_kind, created_at, finding_at, sha256, body_json)"
+                " VALUES (?,?,?,?,?,?,?,?)",
                 (bundle.id, bundle.aoi_id, bundle.finding_id, bundle.finding_kind,
-                 _iso(bundle.created_at), bundle.sha256,
+                 _iso(bundle.created_at),
+                 _iso(bundle.finding_at or bundle.created_at), bundle.sha256,
                  json.dumps(bundle.to_dict(), default=str)))
 
     def get_evidence(self, evidence_id: str) -> dict | None:
@@ -630,13 +631,15 @@ class Store:
         sql = ("SELECT e.* FROM evidence e JOIN aois a ON a.id = e.aoi_id"
                " WHERE e.aoi_id = ? AND a.org_id = ?")
         args: list[Any] = [aoi_id, self._org()]
+        #: Selected on when the finding happened, not on when its bundle was
+        #: written. Those differ by however long ago the pipeline ran.
         if start:
-            sql += " AND e.created_at >= ?"
+            sql += " AND e.finding_at >= ?"
             args.append(start.isoformat())
         if end:
-            sql += " AND e.created_at <= ?"
+            sql += " AND e.finding_at <= ?"
             args.append(end.isoformat() + "T23:59:59+00:00")
-        rows = self.conn.execute(sql + " ORDER BY e.created_at", args).fetchall()
+        rows = self.conn.execute(sql + " ORDER BY e.finding_at", args).fetchall()
         self.audit("evidence.export", aoi_id, {"count": len(rows)})
         return [json.loads(r["body_json"]) for r in rows]
 

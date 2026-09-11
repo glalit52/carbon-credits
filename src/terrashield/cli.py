@@ -283,6 +283,8 @@ def cmd_evidence(args) -> int:
         id=d["id"], aoi_id=d["aoi_id"], finding_id=d["finding_id"],
         finding_kind=d["finding_kind"],
         created_at=datetime.fromisoformat(d["created_at"]),
+        finding_at=(datetime.fromisoformat(d["finding_at"])
+                    if d.get("finding_at") else None),
         artefacts=[evidence.Artefact(**a) for a in d["artefacts"]],
         measurements=d["measurements"], gaps=d["gaps"],
         narrative=d["narrative"]) for d in docs]

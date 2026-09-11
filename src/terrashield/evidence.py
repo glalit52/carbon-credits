@@ -60,6 +60,10 @@ class EvidenceBundle:
     finding_id: str
     finding_kind: str            # change | anomaly | alert
     created_at: datetime
+    #: When the finding itself happened. Distinct from `created_at`, which is
+    #: when this bundle was written: a pack covering March, exported in
+    #: September, has to select on the first and not the second.
+    finding_at: datetime | None = None
     artefacts: list[Artefact] = field(default_factory=list)
     measurements: dict[str, Any] = field(default_factory=dict)
     gaps: list[str] = field(default_factory=list)
@@ -85,6 +89,7 @@ class EvidenceBundle:
             "finding_id": self.finding_id,
             "finding_kind": self.finding_kind,
             "created_at": self.created_at.isoformat(),
+            "finding_at": self.finding_at.isoformat() if self.finding_at else None,
             "sha256": self.sha256,
             "artefacts": [a.to_dict() for a in self.artefacts],
             "measurements": self.measurements,
@@ -98,6 +103,8 @@ class EvidenceBundle:
             f"EVIDENCE {self.id}",
             f"  finding      {self.finding_kind} {self.finding_id}",
             f"  area         {self.aoi_id}",
+            f"  observed     {self.finding_at.isoformat()}"
+            if self.finding_at else "  observed     not recorded",
             f"  produced     {self.created_at.isoformat()}",
             f"  bundle hash  {self.sha256[:32]}",
             "",
@@ -136,7 +143,7 @@ def for_change(event: ChangeEvent, aoi: Aoi, before: Scene, after: Scene,
     bundle = EvidenceBundle(
         id="ev-" + digest(event.id, aoi.fingerprint)[:16],
         aoi_id=aoi.id, finding_id=event.id, finding_kind="change",
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(timezone.utc), finding_at=event.detected_at,
         narrative=event.explanation,
     )
     bundle.add("scene", before.id, _scene_payload(before),
@@ -196,7 +203,7 @@ def for_anomaly(finding: AnomalyFinding, aoi: Aoi, assessment,
     bundle = EvidenceBundle(
         id="ev-" + digest(finding.id, aoi.fingerprint)[:16],
         aoi_id=aoi.id, finding_id=finding.id, finding_kind="anomaly",
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(timezone.utc), finding_at=finding.observed_at,
         narrative="; ".join(finding.reasons),
     )
     for s in scenes:
