@@ -417,6 +417,32 @@ class Component:
         return min(1.0, self.area_m2 / max(major * minor, 1e-9))
 
     @property
+    def outside_neighbours(self) -> set[tuple[int, int]]:
+        """Cells just outside the component, touching it.
+
+        The basis of every neighbourhood measurement in the engines, and the
+        reason they scale. Asking "are all 81 cells within four of this one
+        also mine?" for every cell is O(81n), and at the whole-scene detection
+        scale a component can be sixty thousand cells -- five million set
+        lookups for one measurement, repeated per polarity, per scale, per
+        scene. A reservoir drawdown brought a six-month run to a crawl in
+        exactly this way.
+
+        Only the rim matters. Any cell outside the component but within a few
+        cells of it is within a few cells of one of these, because the straight
+        line from an interior cell to an outside cell has to cross the rim.
+        """
+        own = {(c, r) for c, r in self.cells}
+        out: set[tuple[int, int]] = set()
+        for c, r in self.cells:
+            for dc, dr in ((-1, 0), (1, 0), (0, -1), (0, 1),
+                           (-1, -1), (1, 1), (-1, 1), (1, -1)):
+                p = (c + dc, r + dr)
+                if p not in own:
+                    out.add(p)
+        return out
+
+    @property
     def bbox_fill(self) -> float:
         """Fraction of the axis-aligned bounding box occupied. Kept for masks."""
         c0, r0, c1, r1 = self.bbox_cells

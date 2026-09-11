@@ -138,6 +138,44 @@ def test_connected_components_are_four_connected():
     assert len(comps) == 2
 
 
+def test_outside_neighbours_is_the_rim_and_only_the_rim():
+    r = Raster(20, 20, 1.0, 0, 0)
+    for row in range(5, 15):
+        for col in range(5, 15):
+            r.set(col, row, 1.0)
+    [comp] = label_components(threshold(r, 0.5))
+    rim = comp.outside_neighbours
+    assert (4, 4) in rim and (15, 15) in rim      # diagonal corners count
+    assert (7, 7) not in rim                      # interior
+    assert (3, 3) not in rim                      # two cells out
+    # A 10x10 square has a 12x12 ring around it, less nothing.
+    assert len(rim) == 12 * 12 - 10 * 10
+
+
+def test_neighbourhood_helpers_scale_to_a_large_region():
+    """O(81n) per cell made a reservoir drawdown take minutes. It should not."""
+    import time
+    from terrashield.change import interior
+    from terrashield.detect import edge_drop
+
+    r = Raster(300, 300, 10.0, 0, 0)
+    for row in range(40, 260):
+        for col in range(40, 260):
+            r.set(col, row, 1.0)
+    [comp] = label_components(threshold(r, 0.5))
+    assert comp.pixel_count == 220 * 220
+
+    started = time.monotonic()
+    core = interior(comp, 4)
+    drop = edge_drop(comp, r)
+    elapsed = time.monotonic() - started
+
+    # Eroding a solid 220-cell square by four leaves exactly 212 squared.
+    assert len(core) == 212 * 212
+    assert drop == pytest.approx(1.0)
+    assert elapsed < 5.0, f"took {elapsed:.1f}s on one 48,400-cell component"
+
+
 def test_opening_removes_speckle_and_keeps_shapes():
     m = Mask(20, 20, 1.0, 0, 0, [False] * 400)
     m.set(0, 0, True)

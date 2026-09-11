@@ -302,6 +302,17 @@ def test_dry_season_optical_coverage_is_good(provider):
     assert cov.longest_gap_days <= 10
 
 
+def test_the_raster_cache_is_bounded(provider):
+    """An unbounded scene cache is a slow leak with a monitoring workload."""
+    demo = sites.load("kutch")
+    scenes = [s for s in provider.search(demo.aoi, date(2026, 1, 1),
+                                         date(2026, 6, 30)) if s.usable]
+    assert len(scenes) > provider.cache_size
+    for scene in scenes:
+        provider.fetch(demo.aoi, scene)
+    assert len(provider._cache) <= provider.cache_size
+
+
 def test_rendering_is_deterministic(provider):
     """Two runs of the same scene must be byte-identical, forever."""
     demo = sites.load("kutch")

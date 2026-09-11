@@ -26,6 +26,7 @@ Planet or Maxar. Nothing above this module knows which provider it has.
 from __future__ import annotations
 
 import math
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Protocol
@@ -166,11 +167,34 @@ class SyntheticProvider:
 
     truths: dict[str, SiteTruth] = field(default_factory=dict)
     climates: dict[str, CloudClimate] = field(default_factory=dict)
-    #: Rendered rasters are the expensive artefact; a site-week of analysis
-    #: re-reads the same few scenes many times.
-    _cache: dict[tuple[str, float], Raster] = field(default_factory=dict, repr=False)
-    _mask_cache: dict[tuple[str, float], "SceneMasks"] = field(
-        default_factory=dict, repr=False)
+    #: Rendered rasters are the expensive artefact and a day's analysis
+    #: re-reads the same two scenes several times, so caching them matters.
+    #:
+    #: Bounded, though. An unbounded cache here is a slow leak with a
+    #: monitoring workload: a six-month run over four sites touches four
+    #: hundred scenes, each a 500 x 360 grid of floats, and the process was
+    #: observed holding 1.9 GB by the third site. The working set is tiny --
+    #: today's scene and the one being compared against -- so a small
+    #: least-recently-used bound costs nothing and removes the failure mode
+    #: where a long-running service dies on the estate that made it useful.
+    cache_size: int = 16
+    _cache: "OrderedDict[tuple[str, float], Raster]" = field(
+        default_factory=OrderedDict, repr=False)
+    _mask_cache: "OrderedDict[tuple[str, float], SceneMasks]" = field(
+        default_factory=OrderedDict, repr=False)
+
+    def _remember(self, cache: OrderedDict, key, value):
+        cache[key] = value
+        cache.move_to_end(key)
+        while len(cache) > max(self.cache_size, 2):
+            cache.popitem(last=False)
+        return value
+
+    def _recall(self, cache: OrderedDict, key):
+        if key in cache:
+            cache.move_to_end(key)
+            return cache[key]
+        return None
 
     def register(self, truth: SiteTruth, climate: CloudClimate = ARID) -> None:
         self.truths[truth.aoi_id] = truth
@@ -247,11 +271,11 @@ class SyntheticProvider:
             raise KeyError(f"no imagery available for AOI {aoi.id}")
         gsd = gsd_m or SENSORS[scene.constellation].gsd_m
         key = (scene.id, gsd)
-        cached = self._cache.get(key)
+        cached = self._recall(self._cache, key)
         if cached is not None:
             return cached.copy()
         r = render(truth, scene, extent_m(aoi), gsd)
-        self._cache[key] = r
+        self._remember(self._cache, key, r)
         return r.copy()
 
     def masks(self, aoi: Aoi, scene: Scene, r: Raster) -> SceneMasks:
@@ -260,13 +284,13 @@ class SyntheticProvider:
         if truth is None:
             raise KeyError(f"no imagery available for AOI {aoi.id}")
         key = (scene.id + "|masks", r.gsd_m)
-        cached = self._mask_cache.get(key)
+        cached = self._recall(self._mask_cache, key)
         if cached is not None:
             return cached
-        masks = SceneMasks(cloud=cloud_mask(r, scene),
-                           water=water_truth_mask(truth, scene.acquired_on, r))
-        self._mask_cache[key] = masks
-        return masks
+        return self._remember(
+            self._mask_cache, key,
+            SceneMasks(cloud=cloud_mask(r, scene),
+                       water=water_truth_mask(truth, scene.acquired_on, r)))
 
 
 @dataclass(frozen=True)

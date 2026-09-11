@@ -363,11 +363,15 @@ def interior(comp: Component, margin: int = 2) -> list[tuple[int, int]]:
     appeared" as "someone disturbed the ground", which is a materially
     different thing to put in front of an analyst.
     """
-    own = {(c, r) for c, r in comp.cells}
-    return [(c, r) for c, r in comp.cells
-            if all((c + dc, r + dr) in own
-                   for dc in range(-margin, margin + 1)
-                   for dr in range(-margin, margin + 1))]
+    #: Grown inward from the rim rather than testing each cell against its own
+    #: 81-cell neighbourhood: the same answer, and it does not turn a large
+    #: region into millions of set lookups.
+    near: set[tuple[int, int]] = set()
+    for oc, orr in comp.outside_neighbours:
+        for dc in range(-margin, margin + 1):
+            for dr in range(-margin, margin + 1):
+                near.add((oc + dc, orr + dr))
+    return [(c, r) for c, r in comp.cells if (c, r) not in near]
 
 
 def _describe(aoi: Aoi, before_scene: Scene, after_scene: Scene,
@@ -437,14 +441,14 @@ def _describe(aoi: Aoi, before_scene: Scene, after_scene: Scene,
 
 def _ring(comp: Component, width: int, height: int,
           inner: int = 2, outer: int = 5) -> list[tuple[int, int]]:
+    """The annulus around a component, grown from its rim."""
     own = {(c, r) for c, r in comp.cells}
     out: set[tuple[int, int]] = set()
-    for c, r in comp.cells:
-        for dc in range(-outer, outer + 1):
-            for dr in range(-outer, outer + 1):
-                if max(abs(dc), abs(dr)) < inner:
-                    continue
-                p = (c + dc, r + dr)
+    reach = max(1, outer - 1)
+    for bc, br in comp.outside_neighbours:
+        for dc in range(-reach, reach + 1):
+            for dr in range(-reach, reach + 1):
+                p = (bc + dc, br + dr)
                 if p not in own and 0 <= p[0] < width and 0 <= p[1] < height:
                     out.add(p)
     return sorted(out)
