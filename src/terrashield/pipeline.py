@@ -149,6 +149,32 @@ def run_day(store: Store, provider: Provider, aoi: Aoi, when: date,
 
     observations = _observations(aoi, scene, det, when, visible)
 
+    #: The comparison runs before the assessment, not after it. Arrivals and
+    #: departures are metrics like any other, and appending them afterwards
+    #: left them stored for tomorrow's baseline but missing from today's
+    #: readings -- so the two weights they carry could never fire, and a port
+    #: that turned over three times its usual traffic scored on vessel count
+    #: alone.
+    change_result, before_scene = _compare_against_history(
+        store, provider, aoi, scene, scenes, raster, masks)
+    if change_result and change_result.usable:
+        #: Counted rather than filed as change events: that is what keeps a
+        #: busy port's change record readable, and it gives the baseline engine
+        #: two metrics a single-scene object count cannot produce -- how much
+        #: traffic turned over between looks, in each direction.
+        observations.append(Observation(
+            aoi.id, "object_arrivals", when, float(change_result.arrivals),
+            quality=visible, scene_id=scene.id))
+        observations.append(Observation(
+            aoi.id, "object_departures", when, float(change_result.departures),
+            quality=visible, scene_id=scene.id))
+        if change_result.movements:
+            result.notes.append(
+                f"{change_result.arrivals} object(s) arrived and "
+                f"{change_result.departures} left between the compared scenes; "
+                "counted as activity, not filed as change")
+    store.put_observations(observations)
+
     history = store.list_observations(aoi.id, end=when - timedelta(days=1))
     baselines = build_all(history, when, aoi.fingerprint)
 
@@ -171,26 +197,6 @@ def run_day(store: Store, provider: Provider, aoi: Aoi, when: date,
     assessment.finding.evidence_id = anomaly_bundle.id
     store.put_anomaly(assessment.finding)
 
-    change_result, before_scene = _compare_against_history(
-        store, provider, aoi, scene, scenes, raster, masks)
-    if change_result and change_result.usable:
-        #: Arrivals and departures are pattern-of-life, not change. Counting
-        #: them here rather than filing them as events is what keeps a busy
-        #: port's change record readable, and it gives the baseline engine two
-        #: metrics a single-scene object count cannot produce: how much traffic
-        #: turned over between looks, in each direction.
-        observations.append(Observation(
-            aoi.id, "object_arrivals", when, float(change_result.arrivals),
-            quality=visible, scene_id=scene.id))
-        observations.append(Observation(
-            aoi.id, "object_departures", when, float(change_result.departures),
-            quality=visible, scene_id=scene.id))
-        if change_result.movements:
-            result.notes.append(
-                f"{change_result.arrivals} object(s) arrived and "
-                f"{change_result.departures} left between the compared scenes; "
-                "counted as activity, not filed as change")
-    store.put_observations(observations)
     result.change_result = change_result
     if change_result and not change_result.usable:
         result.notes.append("change comparison refused: " + change_result.refusal)

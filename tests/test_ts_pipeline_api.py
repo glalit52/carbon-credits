@@ -515,3 +515,25 @@ def test_cli_coverage_reports_gaps(capsys, tmp_path):
     out = capsys.readouterr().out
     assert "longest gap without a usable look" in out
     assert "rejected for cloud" in out
+
+
+def test_movement_metrics_reach_the_scorer_not_only_the_baseline(monitored):
+    """Appended after the assessment they were stored and never scored.
+
+    `object_arrivals` and `object_departures` carry weights in anomaly.WEIGHTS.
+    A weight on a metric the scorer never sees is a weight that cannot fire, so
+    a port turning over three times its usual traffic would have scored on
+    vessel count alone.
+    """
+    from terrashield.anomaly import WEIGHTS
+
+    _, store, demo, results = monitored
+    assert {"object_arrivals", "object_departures"} <= set(WEIGHTS)
+
+    scored = [r for r in results
+              if r.assessment and "object_arrivals" in r.assessment.readings]
+    assert scored, "no run day carried the movement metrics into its readings"
+
+    #: And they are recorded for future baselines, which is the other half.
+    metrics = {o.metric for o in store.list_observations(demo.id)}
+    assert {"object_arrivals", "object_departures"} <= metrics

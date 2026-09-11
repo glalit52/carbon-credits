@@ -178,8 +178,13 @@ def build_all(observations: list[Observation], as_of: date,
     return out
 
 
+#: How far back a trend is fitted. Long enough for a gradual build-up to show
+#: a slope, short enough that last season is not evidence about this one.
+TREND_WINDOW_DAYS = 60
+
+
 def trend(observations: list[Observation], metric: str, as_of: date,
-          window_days: int = 60) -> float:
+          window_days: int = TREND_WINDOW_DAYS) -> float:
     """Slope of the metric over the window, in units per day.
 
     Least squares over time. A slow build-up is invisible to any single-day

@@ -543,3 +543,63 @@ def test_every_tracked_class_is_either_scored_or_declared_structural():
     for klass in TRACKED:
         metric = f"{klass.value}_count"
         assert metric in WEIGHTS or metric in STRUCTURAL_METRICS, metric
+
+
+# ---------------------------------------------------------------------------
+# Trends
+# ---------------------------------------------------------------------------
+
+def _ramp(metric="truck_count", start_value=20.0, per_day=0.6, days=90,
+          start=date(2026, 1, 1)):
+    """History that climbs steadily, with no single day out of the ordinary."""
+    return [Observation("AOI-T", metric, start + timedelta(days=i),
+                        start_value + per_day * i)
+            for i in range(days)]
+
+
+def test_a_gradual_build_up_scores_even_though_no_day_stands_out():
+    """The case a same-day deviation test cannot see, and the one
+    pattern-of-life monitoring is sold on."""
+    rows = _ramp()
+    today = date(2026, 1, 1) + timedelta(days=90)
+    baselines = build_all(rows, today, AOI.fingerprint)
+    latest = rows[-1].value + 0.6
+
+    a = assess(AOI, today, {"truck_count": MetricReading("truck_count", latest)},
+               baselines, rows)
+    assert a.trends["truck_count"] == pytest.approx(0.6, rel=0.2)
+    assert "truck_count:trend" in a.finding.contributions
+    assert a.finding.score > 0
+    assert any("without any single day standing out" in r
+               for r in a.finding.reasons)
+
+
+def test_a_flat_history_contributes_no_trend():
+    rows = _ramp(per_day=0.0)
+    today = date(2026, 1, 1) + timedelta(days=90)
+    a = assess(AOI, today, {"truck_count": MetricReading("truck_count", 20.0)},
+               build_all(rows, today, AOI.fingerprint), rows)
+    assert "truck_count:trend" not in a.finding.contributions
+
+
+def test_a_declining_trend_is_not_an_anomaly():
+    """A site getting quieter is not something to wake an analyst for."""
+    rows = _ramp(start_value=80.0, per_day=-0.6)
+    today = date(2026, 1, 1) + timedelta(days=90)
+    a = assess(AOI, today, {"truck_count": MetricReading("truck_count", 26.0)},
+               build_all(rows, today, AOI.fingerprint), rows)
+    assert a.trends["truck_count"] < 0
+    assert "truck_count:trend" not in a.finding.contributions
+
+
+def test_a_trend_contributes_less_than_a_same_day_excursion():
+    rows = _ramp()
+    today = date(2026, 1, 1) + timedelta(days=90)
+    baselines = build_all(rows, today, AOI.fingerprint)
+    trending = assess(AOI, today,
+                      {"truck_count": MetricReading("truck_count", rows[-1].value)},
+                      baselines, rows)
+    spiking = assess(AOI, today,
+                     {"truck_count": MetricReading("truck_count", 400.0)},
+                     baselines, rows)
+    assert spiking.finding.score > trending.finding.score

@@ -24,7 +24,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 
-from .baseline import MIN_SAMPLES, Baseline, Observation, trend
+from .baseline import (
+    MIN_SAMPLES, TREND_WINDOW_DAYS, Baseline, Observation, trend,
+)
 from .domain import AnomalyFinding, Aoi, Severity
 from .world import seed_of
 
@@ -72,6 +74,18 @@ STRUCTURAL_METRICS = frozenset({
 
 #: Observations after which more history stops adding confidence.
 FULL_HISTORY = 4 * MIN_SAMPLES
+
+#: How much of a metric's weight a sustained trend can contribute, relative to
+#: a same-day excursion. Less, because a slope is weaker evidence about today
+#: than a value is -- but not zero, because a build-up gradual enough that no
+#: single day is unusual is exactly what a same-day test cannot see, and is
+#: the case pattern-of-life monitoring is sold on.
+TREND_WEIGHT = 0.6
+
+#: Rise over the trend window, in robust deviations, at which a trend
+#: contributes its full share. Two means the metric has moved two deviations
+#: across the window without any single day standing out.
+TREND_SATURATION_Z = 2.0
 
 #: Deviation at which a metric contributes its full weight. Three robust
 #: deviations is roughly a one-in-a-hundred day for a well-behaved metric, and
@@ -174,6 +188,23 @@ def assess(aoi: Aoi, when: date, readings: dict[str, MetricReading],
             slope = trend(history, metric, when)
             if abs(slope) > 1e-9:
                 trends[metric] = slope
+                #: The rise the slope implies across the whole window, scored
+                #: in the same robust units as a same-day deviation. Only
+                #: upward, for the same reason excursions are: a site getting
+                #: quieter is not something to wake an analyst for.
+                rise = slope * TREND_WINDOW_DAYS
+                if rise > 0:
+                    rise_z = base.stat_for(when).z(base.stat_for(when).median
+                                                   + rise)
+                    share = weight * TREND_WEIGHT * min(
+                        1.0, max(0.0, rise_z) / TREND_SATURATION_Z)
+                    if share > 0.01:
+                        contributions[f"{metric}:trend"] = share
+                        reasons.append(
+                            f"{metric.replace('_', ' ')} has risen about "
+                            f"{rise:,.0f} over {TREND_WINDOW_DAYS} days "
+                            f"({rise_z:.1f} robust deviations across the "
+                            "window) without any single day standing out")
 
     #: Combine as a soft maximum rather than a sum. A sum lets six mildly
     #: elevated metrics outscore one metric that is six deviations out, which

@@ -223,6 +223,10 @@ def for_anomaly(finding: AnomalyFinding, aoi: Aoi, assessment,
         "baseline_observations": finding.baseline_n,
         **{f"deviation_{k}": round(v, 2)
            for k, v in sorted(assessment.deviations.items())},
+        #: Slopes as well as today's values. A finding driven by a build-up no
+        #: single day made unusual has to be able to show the build-up.
+        **{f"trend_per_day_{k}": round(v, 4)
+           for k, v in sorted(assessment.trends.items())},
     })
     for metric, why in sorted(assessment.skipped.items()):
         bundle.gaps.append(f"{metric.replace('_', ' ')} not assessed: {why}")
