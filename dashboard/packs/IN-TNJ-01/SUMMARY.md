@@ -1,6 +1,6 @@
 # Evidence pack — Vallam paddy block, Thanjavur district, Tamil Nadu
 
-Generated 2026-09-11T08:38:44+00:00 · project `IN-TNJ-01` · methodology `VM0042`
+Generated 2026-09-11T09:00:45+00:00 · project `IN-TNJ-01` · methodology `VM0042`
 
 ## Project
 
@@ -38,7 +38,7 @@ Generated 2026-09-11T08:38:44+00:00 · project `IN-TNJ-01` · methodology `VM004
 
 - 7 events in the log
 - Hash chain: **intact**
-- Head hash: `c6f100ae1842b7f05ed0fc742661cec3ad9f597920637e930afdc83ab00e8d15`
+- Head hash: `ee6a843fc79e54e9e4bd9d29c30fba9f01b35ed598ee571010dcbb36d02ff5a8`
 
 Every event's hash covers its own content and its predecessor's hash. Recompute the chain from `event_log.csv` to confirm nothing was edited after the fact.
 

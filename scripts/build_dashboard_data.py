@@ -11,6 +11,7 @@ readings that were not visible this week.
 from __future__ import annotations
 
 import json
+import os
 import sys
 from datetime import date
 from pathlib import Path
@@ -35,7 +36,14 @@ from carbonstack.store.repo import StoreError              # noqa: E402
 
 SERIES_END = date(2027, 12, 31)      # the live feed the dashboard reveals
 PROJECTION_END = date(2040, 12, 31)  # long enough to show the estate reaching maturity
-TODAY = date.today()
+
+# The build is a snapshot as of a stated date, not "whenever this ran". Which
+# vintages have settled, and therefore the economics, depend on that date -- so
+# leaving it implicit makes the output drift with the calendar and there is no
+# way to rebuild what was committed. CARBONSTACK_AS_OF pins it; the payload
+# records it; scripts/check_dashboard_fresh.py reads it back to reproduce.
+TODAY = (date.fromisoformat(os.environ["CARBONSTACK_AS_OF"])
+         if os.environ.get("CARBONSTACK_AS_OF") else date.today())
 
 # Commercial assumptions. Sourced in docs/research/01-mitti-labs-and-varaha.md;
 # every one of them is a placeholder until a term sheet says otherwise.
@@ -404,7 +412,7 @@ def main() -> int:
         block.pop("_project", None)
 
     payload = {
-        "generated_at": date.today().isoformat(),
+        "generated_at": TODAY.isoformat(),
         "series_end": SERIES_END.isoformat(),
         "provenance": {
             "locations": "real",
@@ -419,10 +427,15 @@ def main() -> int:
         "governance": governance,
     }
 
-    out = ROOT / "dashboard" / "data.json"
+    out = Path(os.environ.get("CARBONSTACK_DATA_OUT", ROOT / "dashboard" / "data.json"))
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload, separators=(",", ":")) + "\n")
     readable = sum(len(b["readings"]) for b in payload["blocks"])
-    print(f"wrote {out.relative_to(ROOT)}  "
+    try:
+        shown = out.relative_to(ROOT)
+    except ValueError:
+        shown = out
+    print(f"wrote {shown}  "
           f"{out.stat().st_size / 1024:.0f} KB, {readable} readings, "
           f"{sum(len(b['vintages']) for b in payload['blocks'])} vintages")
     return 0

@@ -21,17 +21,14 @@ jobs:
       - run: python -m pytest -q
 
       # The dashboard is committed rather than built on deploy, so it can
-      # drift from the code that generates it. Rebuilding here catches that:
-      # if the data no longer matches, the diff is non-empty and this fails.
+      # drift from the code that generates it. This rebuilds and compares.
+      #
+      # Not a plain `git diff`: the governance section is read back from a real
+      # database run, so it carries wall-clock timestamps, uuid4 ids and hashes
+      # over both. Those differ every run by design. The checker normalises
+      # exactly those and compares everything else strictly.
       - name: dashboard is in sync with the code that generates it
-        run: |
-          python3 scripts/build_dashboard_data.py
-          python3 scripts/build_dashboard.py
-          if ! git diff --quiet -- dashboard/data.json dashboard/index.html; then
-            echo "::error::dashboard/ is stale — run scripts/build_dashboard_data.py"
-            git diff --stat -- dashboard/data.json dashboard/index.html
-            exit 1
-          fi
+        run: python3 scripts/check_dashboard_fresh.py
 
       - name: static build succeeds
         run: bash scripts/build_static.sh
