@@ -211,6 +211,29 @@ def test_vessel_movement_is_activity_not_a_change_event(provider):
     assert not any(e.change_type in change.MOVEMENT_TYPES for e in result.events)
 
 
+def test_a_cluster_of_departing_vessels_is_not_flooding(provider):
+    """Berthed ships cluster; a row of them leaving merges into one region.
+
+    Capping the afloat test by area sent exactly those to the inundation
+    branch, and the port's feed carried "13.6 ha changed from a land signature
+    to a water signature" at high severity four times in a fortnight.
+    """
+    demo = sites.load("mundra")
+    #: The scripted congestion episode runs 2026-05-11 to 2026-05-26, so the
+    #: comparison spanning its end is where the merged departures happen.
+    before, after = _pick(provider, demo, date(2026, 5, 10), date(2026, 6, 5))
+    result = _compare(provider, demo, before, after)
+    assert result.usable, result.refusal
+
+    big_water = [e for e in result.events
+                 if e.change_type is ChangeType.INUNDATION and e.area_m2 > 40_000]
+    assert not big_water, [e.explanation for e in big_water]
+
+    merged = [e for e in result.movements if e.area_m2 > 40_000]
+    if merged:
+        assert any("several moving together" in e.explanation for e in merged)
+
+
 def test_sar_finds_a_new_building_when_optical_is_blind(provider):
     """The monsoon case, and the reason SAR is in the constellation mix."""
     demo = sites.load("kutch")

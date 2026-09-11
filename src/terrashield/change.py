@@ -51,6 +51,10 @@ MODEL_VERSION = "ts-change-1.3.0"
 #: 900 m2 is one small building at Sentinel-2 resolution.
 MIN_CHANGE_AREA_M2 = 900.0
 
+#: Largest share of an AOI a change can occupy and still be read as objects on
+#: the water rather than as the water itself moving.
+OBJECT_AREA_FRACTION = 0.02
+
 #: Changes that are an object moving rather than the ground changing. Routed to
 #: `ChangeResult.movements` and counted, never filed as change events.
 MOVEMENT_TYPES = frozenset({
@@ -403,7 +407,7 @@ def _describe(aoi: Aoi, before_scene: Scene, after_scene: Scene,
     kind, explanation = _classify(
         area, elong, fill, signed, magnitude, tex_ratio,
         before_level, after_level, was_water, is_water, afloat,
-        after_scene.sensor)
+        after_scene.sensor, aoi.area_km2 * 1_000_000)
 
     #: Confidence from how far above the noise floor the change sits and how
     #: much of it there is. Area matters because a 4.5-sigma excursion over
@@ -464,7 +468,8 @@ def _fraction_true(mask: Mask | None, cells: list[tuple[int, int]]) -> float:
 def _classify(area: float, elong: float, fill: float, signed: float,
               magnitude: float, tex_ratio: float, before_level: float,
               after_level: float, was_water: float, is_water: float,
-              afloat: float, sensor: Sensor) -> tuple[ChangeType, str]:
+              afloat: float, sensor: Sensor,
+              aoi_area_m2: float) -> tuple[ChangeType, str]:
     """Name the change, and say in one sentence what the measurement was.
 
     The brightness *direction* deliberately does not decide between "something
@@ -511,15 +516,36 @@ def _classify(area: float, elong: float, fill: float, signed: float,
     #: Without this test every vessel arrival at a container terminal is
     #: reported as a hectare of flooding, which is how a maritime feed becomes
     #: unreadable in its first week.
-    if afloat > 0.75 and area <= 60_000:
+    #:
+    #: Scale relative to the AOI, not absolute size. A fixed six-hectare cap
+    #: was the first attempt and it failed both ways: berthed vessels cluster,
+    #: so a row of them leaving during a congestion episode merges into one
+    #: thirteen-hectare region that is still ringed by water, and the cap sent
+    #: exactly those to the inundation branch -- the port's feed carried "13.6
+    #: ha changed from a land signature to a water signature", at high
+    #: severity, four times in a fortnight.
+    #:
+    #: Removing the cap entirely failed the other way: a reservoir drawdown is
+    #: a long strip that touches land along one short side and is surrounded by
+    #: water everywhere else, so the perimeter test alone called 1.8 km2 of
+    #: exposed bank a departing object.
+    #:
+    #: Objects on water cannot be a substantial fraction of a monitored area.
+    #: A change in water extent can be, and usually is. Two percent separates
+    #: the two cases here by more than an order of magnitude in both
+    #: directions, which is the kind of margin a threshold needs to survive
+    #: contact with a different estate.
+    if afloat > 0.75 and area < OBJECT_AREA_FRACTION * aoi_area_m2:
+        plural = (" The footprint is larger than a single vessel, so this is "
+                  "probably several moving together." if area > 40_000 else "")
         if became_water or signed < 0:
             return (ChangeType.OBJECT_DEPARTED,
                     f"a {major_m(area, elong):.0f} m object on the water in the "
                     "earlier scene is absent in the later one; routine vessel "
-                    "movement unless the berth is under watch")
+                    "movement unless the berth is under watch." + plural)
         return (ChangeType.OBJECT_APPEARED,
                 f"a {major_m(area, elong):.0f} m object is present on the water "
-                "in the later scene and absent in the earlier one")
+                "in the later scene and absent in the earlier one." + plural)
     if became_water and area >= 5000:
         return (ChangeType.INUNDATION,
                 f"{area / 10_000:.1f} ha changed from a land signature "
