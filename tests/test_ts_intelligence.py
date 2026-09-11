@@ -15,6 +15,7 @@ import pytest
 
 from terrashield import alerts as alert_engine
 from terrashield import geo, risk
+from terrashield.world import Rng, seed_of
 from terrashield.anomaly import MetricReading, assess, headline
 from terrashield.baseline import (
     MIN_SAMPLES, Observation, build, build_all, trend,
@@ -550,10 +551,19 @@ def test_every_tracked_class_is_either_scored_or_declared_structural():
 # ---------------------------------------------------------------------------
 
 def _ramp(metric="truck_count", start_value=20.0, per_day=0.6, days=90,
-          start=date(2026, 1, 1)):
-    """History that climbs steadily, with no single day out of the ordinary."""
+          start=date(2026, 1, 1), noise=3.0):
+    """History that climbs steadily, with no single day out of the ordinary.
+
+    The day-to-day noise matters. Without it the only variation in the series
+    *is* the ramp, so the robust scale is set by the ramp itself and the rise
+    measures the same number of deviations whatever the slope — which makes
+    the fixture insensitive to the thing it is meant to test. Real metrics
+    wobble around a trend, and it is the wobble that sets the scale.
+    """
+    rng = Rng(seed_of(metric, "ramp"))
     return [Observation("AOI-T", metric, start + timedelta(days=i),
-                        start_value + per_day * i)
+                        max(0.0, start_value + per_day * i
+                            + rng.gauss(0.0, noise)))
             for i in range(days)]
 
 
@@ -576,7 +586,7 @@ def test_a_gradual_build_up_scores_even_though_no_day_stands_out():
 
 def test_a_climb_nobody_could_see_in_one_day_says_so():
     """The phrase is earned only when today's value alone would not have scored."""
-    rows = _ramp(per_day=0.35)
+    rows = _ramp(per_day=1.2)
     today = date(2026, 1, 1) + timedelta(days=90)
     baselines = build_all(rows, today, AOI.fingerprint)
     median = baselines["truck_count"].stat_for(today).median
@@ -589,12 +599,14 @@ def test_a_climb_nobody_could_see_in_one_day_says_so():
     assert any("no single day in it stands out" in r for r in a.finding.reasons)
 
 
-def test_a_flat_history_contributes_no_trend():
+def test_a_flat_history_contributes_no_meaningful_trend():
+    """Noise fits a slope of its own; it must not amount to anything."""
     rows = _ramp(per_day=0.0)
     today = date(2026, 1, 1) + timedelta(days=90)
     a = assess(AOI, today, {"truck_count": MetricReading("truck_count", 20.0)},
                build_all(rows, today, AOI.fingerprint), rows)
-    assert "truck_count:trend" not in a.finding.contributions
+    assert a.finding.contributions.get("truck_count:trend", 0.0) < 0.08
+    assert a.finding.score < 15
 
 
 def test_a_declining_trend_is_not_an_anomaly():
@@ -631,3 +643,47 @@ def test_a_trend_contributes_less_than_a_same_day_excursion():
                      {"truck_count": MetricReading("truck_count", 400.0)},
                      baselines, rows)
     assert spiking.finding.score > trending.finding.score
+
+
+def test_a_steeper_climb_scores_higher_than_a_shallow_one():
+    """Against realistic day-to-day noise, the slope has to matter."""
+    today = date(2026, 1, 1) + timedelta(days=90)
+    scores = []
+    for per_day in (0.05, 0.30, 1.20):
+        rows = _ramp(per_day=per_day)
+        baselines = build_all(rows, today, AOI.fingerprint)
+        median = baselines["truck_count"].stat_for(today).median
+        a = assess(AOI, today,
+                   {"truck_count": MetricReading("truck_count", median)},
+                   baselines, rows)
+        scores.append(a.finding.score)
+    assert scores == sorted(scores), scores
+    assert scores[0] < scores[-1]
+
+
+def test_a_sustained_climb_can_reach_a_reportable_score_on_its_own():
+    """A trend that cannot change an outcome would be decoration."""
+    today = date(2026, 1, 1) + timedelta(days=90)
+    rows = _ramp(per_day=1.2) + _ramp(metric="vessel_count", start_value=6.0,
+                                      per_day=0.4, noise=1.2)
+    baselines = build_all(rows, today, AOI.fingerprint)
+    readings = {m: MetricReading(m, baselines[m].stat_for(today).median)
+                for m in ("truck_count", "vessel_count")}
+    a = assess(AOI, today, readings, baselines, rows)
+    assert not any(k in a.finding.contributions
+                   for k in ("truck_count", "vessel_count")), "no day stands out"
+    assert a.finding.score >= 40, a.finding.contributions
+    assert "deviation" in headline(a).lower()
+
+
+def test_a_trend_driven_headline_reads_as_a_sentence():
+    """The key stays machine-readable; the alert line should not."""
+    rows = _ramp(per_day=1.2)
+    today = date(2026, 1, 1) + timedelta(days=90)
+    baselines = build_all(rows, today, AOI.fingerprint)
+    median = baselines["truck_count"].stat_for(today).median
+    a = assess(AOI, today, {"truck_count": MetricReading("truck_count", median)},
+               baselines, rows)
+    line = headline(a)
+    assert "a sustained rise in truck count" in line
+    assert ":trend" not in line

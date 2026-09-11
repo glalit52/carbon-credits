@@ -76,11 +76,21 @@ STRUCTURAL_METRICS = frozenset({
 FULL_HISTORY = 4 * MIN_SAMPLES
 
 #: How much of a metric's weight a sustained trend can contribute, relative to
-#: a same-day excursion. Less, because a slope is weaker evidence about today
-#: than a value is -- but not zero, because a build-up gradual enough that no
-#: single day is unusual is exactly what a same-day test cannot see, and is
-#: the case pattern-of-life monitoring is sold on.
-TREND_WEIGHT = 0.6
+#: a same-day excursion.
+#:
+#: Nearly all of it, and the first attempt at 0.6 was wrong for a reason worth
+#: recording: it capped a single trending metric at 33 out of 100, below the
+#: threshold at which anything is even described as a deviation, so the
+#: feature could never do anything except adjust a score that some other
+#: metric had already raised. A capability that cannot change an outcome is
+#: decoration.
+#:
+#: A sustained two-deviation rise across sixty days is not weaker evidence
+#: than one unusual day -- it is arguably stronger, because a single day's
+#: excursion can be one thin cloud or one busy Tuesday and a slope cannot. It
+#: is discounted only because it says less about *today* specifically, which
+#: is what an analyst is being asked to look at.
+TREND_WEIGHT = 0.85
 
 #: Rise over the trend window, in robust deviations, at which a trend
 #: contributes its full share. Two means the metric has moved two deviations
@@ -279,7 +289,15 @@ def headline(assessment: Assessment) -> str:
     if f.score < 40:
         return "Within normal range for this site"
     top = sorted(f.contributions.items(), key=lambda kv: -kv[1])
-    driver = top[0][0].replace("_", " ") if top else "multiple metrics"
+    if not top:
+        driver = "multiple metrics"
+    else:
+        key = top[0][0]
+        #: A trend driver is stored as "metric:trend" so that the score's
+        #: working stays machine-readable. A person reading an alert wants the
+        #: sentence, not the key.
+        driver = (f"a sustained rise in {key[:-6].replace('_', ' ')}"
+                  if key.endswith(":trend") else key.replace("_", " "))
     band = {
         Severity.CRITICAL: "Large deviation",
         Severity.HIGH: "Significant deviation",
