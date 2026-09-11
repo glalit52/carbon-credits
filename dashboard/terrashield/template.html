@@ -209,8 +209,9 @@
 <section>
   <div class="sec-head">
     <h2>Monitored estate</h2>
-    <p class="note">Status is derived from each site's own history, not from a
-      fixed threshold. Select a site to open it below.</p>
+    <p class="note">Status describes the last three weeks of each site's own
+      record, measured against that site's own history rather than a fixed
+      threshold. Select a site to open it below.</p>
   </div>
   <div class="mapgrid">
     <div class="panel" style="padding:10px"><svg class="estate" id="estate"
@@ -340,7 +341,8 @@
     const mid=el("span");
     mid.appendChild(el("div","nm",s.name));
     mid.appendChild(el("div","sub",
-      s.kind.replace(/_/g," ")+" · "+s.area_km2+" km² · "+s.id));
+      s.kind.replace(/_/g," ")+" · "+s.area_km2+" km² · "+
+      s.monitored_from+" → "+s.monitored_to));
     row.appendChild(mid);
     const rt=el("span","rt");
     rt.innerHTML = s.change_count+" chg<br>"+s.alert_count+" alerts";
@@ -560,7 +562,9 @@
     document.querySelectorAll(".siterow").forEach(r=>
       r.setAttribute("aria-current", String(r.dataset.id===site.id)));
     $("#site-title").textContent = site.name;
-    $("#site-note").textContent = site.headline || site.description;
+    $("#site-note").textContent = (site.headline || site.description) +
+      " · monitored " + site.monitored_from + " to " + site.monitored_to +
+      ", and assessed as of the end of its own record.";
 
     const body=$("#site-body"); body.innerHTML="";
 

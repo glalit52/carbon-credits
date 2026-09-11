@@ -34,6 +34,12 @@ from terrashield.raster import (                             # noqa: E402
 )
 from terrashield.store import Store                          # noqa: E402
 
+#: How far back a site's headline status looks. Three weeks is about four
+#: Sentinel-2 revisits at these latitudes -- long enough that one cloudy
+#: fortnight does not reset a site to normal, short enough that the status
+#: still describes today.
+CURRENT_CONDITION_DAYS = 21
+
 STATUS_FOR = {
     SiteStatus.ANOMALOUS: "anomalous", SiteStatus.WATCH: "watch",
     SiteStatus.NORMAL: "normal", SiteStatus.STALE: "stale",
@@ -192,18 +198,40 @@ def build(db_path: str, org_id: str, out: Path, as_of: date,
         #: 144-day gap without a usable look describes the enrolment date
         #: rather than the monitoring.
         observed_from = min((s.acquired_on for s in scenes), default=window_start)
+        #: Each site is assessed as of the end of its own record, not as of the
+        #: estate's report date. "Monitored and not seen for three weeks" and
+        #: "the monitoring window for this site closed in May" are different
+        #: facts, and only the first is staleness. Judging both against one
+        #: global date reports a site nobody is currently watching as a site
+        #: that has gone dark, which is the more alarming of the two readings
+        #: and the wrong one.
+        observed_to = max((s.acquired_on for s in scenes), default=as_of)
         changes = store.list_changes(aoi.id, start=window_start, end=as_of,
                                      limit=2000)
         anomalies = [a for a in store.list_anomalies(aoi.id, limit=2000)
                      if window_start <= a.observed_at.date() <= as_of]
         alerts = [a for a in all_alerts if a["aoi_id"] == aoi.id]
-        cov = coverage(aoi.id, scenes, observed_from, as_of)
+        cov = coverage(aoi.id, scenes, observed_from, observed_to)
         peak = max((a.score for a in anomalies), default=0.0)
-        status = (SiteStatus.ANOMALOUS if peak >= 65
-                  or any(a["priority"] <= 2 for a in alerts)
-                  else SiteStatus.WATCH if alerts or peak >= 40
+
+        #: Status is a statement about *now*, not about whether anything ever
+        #: happened. Computed over the whole window every site that had one
+        #: interesting fortnight in three months reads "anomalous" for the
+        #: remaining ten weeks, and a status field that is the same on every
+        #: row tells an operations manager nothing about where to look today.
+        recent_from = observed_to - timedelta(days=CURRENT_CONDITION_DAYS)
+        recent_alerts = [a for a in alerts
+                         if a["created_at"][:10] >= recent_from.isoformat()]
+        recent_peak = max((a.score for a in anomalies
+                           if a.observed_at.date() >= recent_from), default=0.0)
+        status = (SiteStatus.ANOMALOUS if recent_peak >= 65
+                  or any(a["priority"] <= 2 for a in recent_alerts)
+                  else SiteStatus.WATCH if recent_alerts or recent_peak >= 40
                   else SiteStatus.NORMAL)
-        if cov.last_usable is None or (as_of - cov.last_usable).days > 21:
+        if cov.last_usable is None or (observed_to - cov.last_usable).days > 21:
+            #: Acquisitions are arriving and none of them is usable. That is
+            #: the real stale case: the constellation is looking and the
+            #: weather is winning.
             status = SiteStatus.STALE
 
         notable = sorted(changes,
@@ -237,8 +265,13 @@ def build(db_path: str, org_id: str, out: Path, as_of: date,
             "bbox": [round(v, 5) for v in aoi.bbox],
             "fingerprint": aoi.fingerprint,
             "headline": demo.headline if demo else "",
+            "monitored_from": observed_from.isoformat(),
+            "monitored_to": observed_to.isoformat(),
             "status": STATUS_FOR[status],
+            "status_window_days": CURRENT_CONDITION_DAYS,
             "peak_anomaly_score": round(peak, 1),
+            "recent_anomaly_score": round(recent_peak, 1),
+            "recent_alert_count": len(recent_alerts),
             "coverage": cov.to_dict(),
             "coverage_by_month": month_coverage(scenes),
             "change_count": len(changes),
