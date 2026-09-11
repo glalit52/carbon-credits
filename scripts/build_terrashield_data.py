@@ -287,6 +287,7 @@ def build(db_path: str, org_id: str, out: Path, as_of: date,
              "evidence_id": a["evidence_id"],
              "rule": (a.get("payload") or {}).get("rule_name", ""),
              "rule_text": (a.get("payload") or {}).get("rule", ""),
+             "matched_rules": (a.get("payload") or {}).get("matched_rules", []),
              "risk": (a.get("payload") or {}).get("risk") or {},
              "held": (a.get("payload") or {}).get("held_for_confirmation", ""),
              "review_status": a["review_status"]}
