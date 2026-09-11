@@ -234,6 +234,56 @@ payment raised against it; the 2026 vintage carries the no-dry-down warning and
 is **held**, not waved through. The coffee block has no settled vintage at all
 yet — on a removal pathway that wait is the pathway, not a delay.
 
+## Deploying
+
+The repo is configured for Vercel. From a clone with the Vercel CLI installed
+and logged in:
+
+```bash
+npx vercel link      # once, to attach the repo to a project
+npx vercel --prod
+```
+
+Or import `glalit52/carbon-credits` at vercel.com/new — `vercel.json` supplies
+the build command, output directory and routing, so there is nothing to
+configure in the UI.
+
+What gets published:
+
+| Path | What |
+|---|---|
+| `/` | the dashboard, data embedded, no network needed |
+| `/packs/<site>/` | the evidence packs, so a VVB can be sent a URL |
+| `/api/...` | the read API over a committed demo database |
+
+### The deployment is read-only, and says so
+
+Vercel's filesystem is ephemeral and per-invocation. A write to SQLite there
+would return 200 and then vanish when the container recycled — a vintage that
+approves itself and later un-approves itself is far worse than one that
+refuses. So **every POST returns 503** naming the reason and the fix:
+
+```json
+{
+  "error": "this deployment is read-only",
+  "reason": "Serverless storage here is ephemeral, so a write would look like
+             it succeeded and then disappear. Refusing is the honest answer.",
+  "fix": "Point the store at durable storage (Postgres, Turso, or managed
+          SQLite), or run `carbonstack serve` on a host with a real disk."
+}
+```
+
+Two ways to make writes real, when you want them:
+
+1. **Keep serverless, move the storage.** `store/repo.py` is the only module
+   that touches SQL. Swapping its connection for Postgres or Turso is a
+   contained change, and the schema in `store/schema.py` is ordinary SQL.
+2. **Run it on a real disk.** `carbonstack serve` on any small VM or container
+   host works today with no changes — the API is the same code either way.
+
+The static dashboard is unaffected by this: it embeds its data and needs no
+backend at all.
+
 ## What is deliberately not real yet
 
 Three placeholders are marked in the source and must be replaced before any
