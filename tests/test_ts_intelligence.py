@@ -492,3 +492,54 @@ def test_condition_operators_behave():
     assert not Condition("missing", Op.EQ, 1).holds(facts)
     # A type mismatch is False, never a crash mid-pipeline.
     assert not Condition("b", Op.GT, 5).holds(facts)
+
+
+# ---------------------------------------------------------------------------
+# Coverage of the enums
+# ---------------------------------------------------------------------------
+#
+# These catch a specific and easy kind of drift: someone adds a member to an
+# enum and wires it into one place. A change type the classifier can never
+# produce is dead vocabulary in the interface; an object class with no detector
+# profile is a class the product claims and cannot find; a rule whose condition
+# names a value no enum has is a rule that silently never fires.
+
+def test_every_change_type_is_reachable_from_the_classifier():
+    import pathlib
+    from terrashield.domain import ChangeType
+    source = (pathlib.Path(__file__).resolve().parents[1]
+              / "src" / "terrashield" / "change.py").read_text()
+    missing = [t.name for t in ChangeType if f"ChangeType.{t.name}" not in source]
+    assert missing == [], f"never produced by change.py: {missing}"
+
+
+def test_every_object_class_has_a_detector_profile():
+    from terrashield.detect import PROFILES
+    from terrashield.domain import ObjectClass
+    covered = {p.object_class for p in PROFILES}
+    assert sorted(c.value for c in ObjectClass if c not in covered) == []
+
+
+def test_every_default_rule_condition_names_a_real_value():
+    """A rule naming a value no enum has is a rule that never fires."""
+    from terrashield.domain import AoiKind, ChangeType, Severity
+    known = ({e.value for e in ChangeType} | {e.value for e in AoiKind}
+             | {e.value for e in Severity} | {"change", "anomaly"})
+    for rule in alert_engine.default_rules("org"):
+        for kind in rule.aoi_kinds:
+            assert kind in {e.value for e in AoiKind}, rule.id
+        for condition in rule.conditions:
+            values = (condition.value if isinstance(condition.value, list)
+                      else [condition.value])
+            for value in values:
+                if isinstance(value, str):
+                    assert value in known, f"{rule.id}: {value!r}"
+
+
+def test_every_tracked_class_is_either_scored_or_declared_structural():
+    """A metric the pipeline records but the scorer ignores silently is a gap."""
+    from terrashield.anomaly import STRUCTURAL_METRICS, WEIGHTS
+    from terrashield.pipeline import TRACKED
+    for klass in TRACKED:
+        metric = f"{klass.value}_count"
+        assert metric in WEIGHTS or metric in STRUCTURAL_METRICS, metric
