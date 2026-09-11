@@ -372,6 +372,27 @@ def _ring_cells(comp: Component, width: int, height: int,
     return sorted(ring)
 
 
+#: Inner radius of the neighbourhood edge_drop compares against, in cells.
+#:
+#: 1 means "everything outside the component", including the shell immediately
+#: against it; 2 and above make it a true annulus with a gap.
+#:
+#: The annulus is the tidier idea and it measures worse. Against the demo
+#: estate, excluding the adjacent shell costs three points of recall, all of it
+#: at the two sites with water — a hull or a quay sits against a dark, flat
+#: background, and the cells right beside it are where the contrast actually
+#: falls away. Skipping them samples further out, where the background has
+#: already recovered, which makes every object look less sharply bounded than
+#: it is.
+#:
+#: Worth being explicit that the original code arrived here by accident: its
+#: exclusion was applied per source cell rather than against the whole
+#: component, so for anything larger than a few cells it excluded nothing. The
+#: value is kept because it measures better, not because it was inherited, and
+#: `terrashield evaluate` is how to re-decide it on other imagery.
+EDGE_RING_INNER = 1
+
+
 def edge_drop(comp: Component, contrast: Raster) -> float:
     """How sharply the component's contrast falls away at its own boundary.
 
@@ -389,7 +410,8 @@ def edge_drop(comp: Component, contrast: Raster) -> float:
     inside = sum(abs(contrast.get(c, r)) for c, r in comp.cells) / comp.pixel_count
     if inside < 1e-9:
         return 0.0
-    ring = _ring_cells(comp, contrast.width, contrast.height)
+    ring = _ring_cells(comp, contrast.width, contrast.height,
+                       inner=EDGE_RING_INNER)
     if not ring:
         return 0.0
     outside = sum(abs(contrast.get(c, r)) for c, r in ring) / len(ring)
