@@ -83,6 +83,21 @@ material is mostly not built, and is marked so.
 | AI summaries | `copilot.py`, `reports.py`, `anomaly.headline` |
 | Evidence viewer | `terrashield explain`, `/api/evidence/{id}`, console evidence panels |
 
+## A choice worth flagging, not a gap
+
+A structure that stays put is re-confirmed on every subsequent comparison, and
+each confirmation raises a fresh alert once the rule's suppression window has
+elapsed. On the Kutch sector that is one alert every six days for a building
+that is not going anywhere.
+
+That is deliberate for a sector under watch — "still there, and here is this
+week's evidence for it" is a row an analyst may want — but it is a defensible
+place to disagree. The alternative is to scale the suppression window by
+persistence, so that the better established a finding is the less often it
+re-alerts, on the grounds that alerting exists to say something new. That would
+be a few lines in `alerts.evaluate`, and the right way to settle it is with an
+analyst watching their own queue for a fortnight rather than by argument.
+
 ## Not built, and worth naming
 
 - **AIS ingest**, and therefore the AIS/satellite discrepancy detection that is
