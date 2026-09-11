@@ -196,9 +196,7 @@
       <h1>Terra<em>Shield</em></h1>
       <span class="tag">Space intelligence · mission ready</span>
     </div>
-    <p class="lede">AI-powered Earth observation over four monitored areas.
-      Detection, change, pattern-of-life deviation and ranked alerts — each one
-      carrying the imagery and the working behind it.</p>
+    <p class="lede" id="lede"></p>
     <div class="stamp" id="stamp"></div>
     <div class="metrics" id="metrics"></div>
   </div>
@@ -276,8 +274,24 @@
 
   /* ---- masthead ---- */
   const t = DATA.totals;
+  const n = DATA.sites.length;
+  const areas = n===1 ? "one monitored area" :
+    (["", "one", "two", "three", "four", "five", "six"][n] || String(n))+
+    " monitored areas";
+  $("#lede").textContent =
+    "AI-powered Earth observation over "+areas+". Detection, change, "+
+    "pattern-of-life deviation and ranked alerts — each one carrying the "+
+    "imagery and the working behind it.";
+
+  //: Each site carries its own monitored period, so a single estate-wide
+  //: window would be a number that applies to none of them.
+  const spans = DATA.sites.map(s=>[s.monitored_from, s.monitored_to]);
+  const record = spans.length
+    ? spans.reduce((a,b)=>[a[0]<b[0]?a[0]:b[0], a[1]>b[1]?a[1]:b[1]])
+    : null;
   const stamp = $("#stamp");
-  [["as of", DATA.as_of], ["window", DATA.window_days+" days"],
+  [["report date", DATA.as_of],
+   ["record", record ? record[0]+" to "+record[1] : "empty"],
    ["organisation", DATA.organisation],
    ["built", DATA.generated_at.slice(0,16).replace("T"," ")+"Z"]
   ].forEach(([k,v],i)=>{
