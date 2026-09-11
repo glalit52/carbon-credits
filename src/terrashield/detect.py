@@ -357,10 +357,9 @@ def _ring_cells(comp: Component, width: int, height: int,
     """
     own = {(c, r) for c, r in comp.cells}
     ring: set[tuple[int, int]] = set()
-    reach = max(1, outer - 1)
-    for bc, br in comp.outside_neighbours:
-        for dc in range(-reach, reach + 1):
-            for dr in range(-reach, reach + 1):
+    for bc, br in comp.boundary_cells:
+        for dc in range(-outer, outer + 1):
+            for dr in range(-outer, outer + 1):
                 p = (bc + dc, br + dr)
                 if p in own or not (0 <= p[0] < width and 0 <= p[1] < height):
                     continue

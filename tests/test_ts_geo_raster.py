@@ -9,6 +9,7 @@ import zlib
 import pytest
 
 from terrashield import geo
+from terrashield.detect import _ring_cells
 from terrashield.raster import (
     Mask, Raster, encode_png, label_components, percentile, render_png,
     threshold,
@@ -138,18 +139,84 @@ def test_connected_components_are_four_connected():
     assert len(comps) == 2
 
 
-def test_outside_neighbours_is_the_rim_and_only_the_rim():
+def test_boundary_cells_are_the_component_cells_that_touch_outside():
     r = Raster(20, 20, 1.0, 0, 0)
     for row in range(5, 15):
         for col in range(5, 15):
             r.set(col, row, 1.0)
     [comp] = label_components(threshold(r, 0.5))
-    rim = comp.outside_neighbours
-    assert (4, 4) in rim and (15, 15) in rim      # diagonal corners count
-    assert (7, 7) not in rim                      # interior
-    assert (3, 3) not in rim                      # two cells out
-    # A 10x10 square has a 12x12 ring around it, less nothing.
-    assert len(rim) == 12 * 12 - 10 * 10
+    boundary = set(comp.boundary_cells)
+    assert (5, 5) in boundary and (14, 14) in boundary   # corners
+    assert (9, 9) not in boundary                        # interior
+    assert (4, 4) not in boundary                        # outside entirely
+    # A solid 10x10 square has an 8x8 interior, so 36 cells on its rim.
+    assert len(boundary) == 10 * 10 - 8 * 8
+
+
+def _reference_interior(comp, margin):
+    """The straightforward O(81n) definition, kept as the thing to match."""
+    own = {(c, r) for c, r in comp.cells}
+    return sorted(
+        (c, r) for c, r in comp.cells
+        if all((c + dc, r + dr) in own
+               for dc in range(-margin, margin + 1)
+               for dr in range(-margin, margin + 1)))
+
+
+def _ragged_components(seed: int):
+    """Blobs with holes punched in them — where a rim shortcut goes wrong."""
+    import random
+    rng = random.Random(seed)
+    r = Raster(40, 40, 10.0, 0, 0)
+    for _ in range(rng.randint(1, 3)):
+        c0, r0 = rng.randint(3, 30), rng.randint(3, 30)
+        for col in range(c0, min(39, c0 + rng.randint(2, 9))):
+            for row in range(r0, min(39, r0 + rng.randint(2, 9))):
+                if rng.random() > 0.12:
+                    r.set(col, row, 1.0)
+    return label_components(threshold(r, 0.5))
+
+
+def test_interior_matches_the_straightforward_definition():
+    """The fast version grows from the inner boundary. It has to agree exactly.
+
+    Growing from the cells just *outside* instead — the first attempt — shifts
+    everything one step inward and drops the outermost shell, which is invisible
+    on a solid square and wrong on anything ragged.
+    """
+    from terrashield.change import interior
+
+    compared = 0
+    for seed in range(12):
+        for comp in _ragged_components(seed):
+            compared += 1
+            for margin in (2, 4):
+                assert sorted(interior(comp, margin)) == \
+                    _reference_interior(comp, margin), (seed, margin)
+    assert compared > 20, "fixture produced too few components to conclude"
+
+
+def test_the_ring_excludes_the_shell_next_to_the_component():
+    """A ring that includes the adjacent cells is not an annulus.
+
+    edge_drop compares contrast inside a component with contrast around it, and
+    the cells immediately outside still carry most of the object's signal. An
+    inner radius that does not actually exclude them measures the object
+    against itself.
+    """
+    r = Raster(30, 30, 10.0, 0, 0)
+    for col in range(12, 18):
+        for row in range(12, 18):
+            r.set(col, row, 1.0)
+    [comp] = label_components(threshold(r, 0.5))
+    own = {(c, r_) for c, r_ in comp.cells}
+    ring = set(_ring_cells(comp, 30, 30, inner=2, outer=4))
+
+    assert ring
+    assert not (ring & own)
+    for c, row in ring:
+        nearest = min(max(abs(c - oc), abs(row - orow)) for oc, orow in own)
+        assert 2 <= nearest <= 4, ((c, row), nearest)
 
 
 def test_neighbourhood_helpers_scale_to_a_large_region():

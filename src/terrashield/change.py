@@ -370,11 +370,19 @@ def interior(comp: Component, margin: int = 2) -> list[tuple[int, int]]:
     #: Grown inward from the rim rather than testing each cell against its own
     #: 81-cell neighbourhood: the same answer, and it does not turn a large
     #: region into millions of set lookups.
+    own = {(c, r) for c, r in comp.cells}
     near: set[tuple[int, int]] = set()
-    for oc, orr in comp.outside_neighbours:
+    for bc, br in comp.boundary_cells:
         for dc in range(-margin, margin + 1):
             for dr in range(-margin, margin + 1):
-                near.add((oc + dc, orr + dr))
+                p = (bc + dc, br + dr)
+                if p not in own:
+                    #: A component cell is non-interior when something outside
+                    #: sits within `margin` of it, so mark the cells around
+                    #: each outside cell rather than around the boundary.
+                    for ec in range(-margin, margin + 1):
+                        for er in range(-margin, margin + 1):
+                            near.add((p[0] + ec, p[1] + er))
     return [(c, r) for c, r in comp.cells if (c, r) not in near]
 
 
@@ -448,13 +456,18 @@ def _ring(comp: Component, width: int, height: int,
     """The annulus around a component, grown from its rim."""
     own = {(c, r) for c, r in comp.cells}
     out: set[tuple[int, int]] = set()
-    reach = max(1, outer - 1)
-    for bc, br in comp.outside_neighbours:
-        for dc in range(-reach, reach + 1):
-            for dr in range(-reach, reach + 1):
+    for bc, br in comp.boundary_cells:
+        for dc in range(-outer, outer + 1):
+            for dr in range(-outer, outer + 1):
                 p = (bc + dc, br + dr)
-                if p not in own and 0 <= p[0] < width and 0 <= p[1] < height:
-                    out.add(p)
+                if p in own or not (0 <= p[0] < width and 0 <= p[1] < height):
+                    continue
+                if inner > 1 and any(
+                        (p[0] + ec, p[1] + er) in own
+                        for ec in range(-(inner - 1), inner)
+                        for er in range(-(inner - 1), inner)):
+                    continue
+                out.add(p)
     return sorted(out)
 
 

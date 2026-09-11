@@ -452,10 +452,10 @@ class Component:
         return min(1.0, self.area_m2 / max(major * minor, 1e-9))
 
     @property
-    def outside_neighbours(self) -> set[tuple[int, int]]:
-        """Cells just outside the component, touching it.
+    def boundary_cells(self) -> list[tuple[int, int]]:
+        """Component cells that touch something outside it.
 
-        The basis of every neighbourhood measurement in the engines, and the
+        The anchor for every neighbourhood measurement in the engines, and the
         reason they scale. Asking "are all 81 cells within four of this one
         also mine?" for every cell is O(81n), and at the whole-scene detection
         scale a component can be sixty thousand cells -- five million set
@@ -463,19 +463,21 @@ class Component:
         scene. A reservoir drawdown brought a six-month run to a crawl in
         exactly this way.
 
-        Only the rim matters. Any cell outside the component but within a few
-        cells of it is within a few cells of one of these, because the straight
-        line from an interior cell to an outside cell has to cross the rim.
+        The *inner* boundary is the right anchor, and getting that wrong is
+        subtle enough to be worth spelling out. For any cell outside the
+        component, its nearest component cell is necessarily on this boundary
+        -- if it were an interior cell, the straight path in would have entered
+        the component sooner. So growing outward from here reaches exactly the
+        same cells as growing from every cell, at a fraction of the cost.
+        Growing from the cells just *outside* instead, as a first attempt did,
+        silently shifts everything one step inward and drops the outermost
+        shell, which biases every edge measurement that uses it.
         """
         own = {(c, r) for c, r in self.cells}
-        out: set[tuple[int, int]] = set()
-        for c, r in self.cells:
-            for dc, dr in ((-1, 0), (1, 0), (0, -1), (0, 1),
-                           (-1, -1), (1, 1), (-1, 1), (1, -1)):
-                p = (c + dc, r + dr)
-                if p not in own:
-                    out.add(p)
-        return out
+        return [(c, r) for c, r in self.cells
+                if any((c + dc, r + dr) not in own
+                       for dc, dr in ((-1, 0), (1, 0), (0, -1), (0, 1),
+                                      (-1, -1), (1, 1), (-1, 1), (1, -1)))]
 
     @property
     def bbox_fill(self) -> float:
