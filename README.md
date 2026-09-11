@@ -10,7 +10,10 @@ financial model that gates it, and `carbonstack`, the dMRV core it runs on.
 | `docs/research/` | Teardown of Mitti Labs and Varaha, and what it implies for us |
 | `model/carbon_model.py` | Portfolio cashflow model — the go/no-go gate |
 | `src/carbonstack/` | The product: quantification, monitoring, audit trail |
-| `tests/` | 63 tests, stdlib only |
+| `src/carbonstack/sites.py` | The two pilot sites — real places, real climatology |
+| `src/carbonstack/feed.py` | Simulated monitoring on the real 5-day revisit cadence |
+| `dashboard/` | The live MRV dashboard and its dataset |
+| `tests/` | 85 tests, stdlib only |
 
 ## The two numbers that shape everything
 
@@ -37,7 +40,7 @@ python3 model/carbon_model.py            # cashflow, peak funding need, sensitiv
 
 ```bash
 pip install -e ".[dev]"
-python -m pytest                         # 63 tests
+python -m pytest                         # 85 tests
 
 python -m carbonstack demo               # both tracks against synthetic monitoring
 python -m carbonstack export estate --out project.json
@@ -113,6 +116,38 @@ carbonstack/
 
 The core is stdlib-only and installs anywhere — the same code has to run in a
 notebook, a batch job and a field laptop.
+
+## The two pilot sites
+
+| | **Vallam, Thanjavur** | **Gatugi, Nyeri** |
+|---|---|---|
+| Where | Cauvery delta, Tamil Nadu | Central Highlands, Kenya |
+| Size | 2.49 ha | 2.87 ha |
+| Crop | Paddy rice, two seasons | Arabica under Grevillea shade |
+| Pathway | Methane avoidance via AWD | Removal via shade agroforestry |
+| Methodology | VM0042 | VM0047 |
+| Credits at maturity | 1.17 tCO2e/yr | 57.2 tCO2e/yr |
+| Gross revenue | **$14/yr** | **$1,487/yr** |
+| MRV budget | **$2.53/ha/yr** | **$207/ha/yr** |
+| Verdict | **−$39/yr** — never viable at any scale | **+$520/yr** — viable, needs ~1,050 ha |
+
+Rice was chosen because it is India's single largest agricultural methane
+source, so it is the highest-value place to prove an avoidance pathway. The
+result is that at plot scale it does not pay for its own supervision: the
+whole developer margin on that hectare is **$2.53 a year** against an assumed
+$18 monitoring cost. Coffee agroforestry is the opposite — 20 tCO2e/ha at
+maturity against a $207/ha monitoring budget.
+
+Locations, climatology, crop calendars and methodology mechanics are real.
+**Boundaries are drawn rather than surveyed and every monitored value is
+simulated** on the real 5-day Sentinel-2 revisit cadence. No imagery was
+retrieved. The feed is deterministic and runs past today, so each revisit date
+that passes reveals a reading that was not previously visible.
+
+```bash
+python3 scripts/build_dashboard_data.py   # run the feed + engine, write data.json
+python3 scripts/build_dashboard.py        # inline it into dashboard/index.html
+```
 
 ## What is deliberately not real yet
 

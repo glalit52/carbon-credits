@@ -1,0 +1,1175 @@
+<title>Vallam and Gatugi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap">
+<style>
+  :root{
+    color-scheme:light;
+    --ground:#EDF0ED; --surface:#FBFCFB; --surface-2:#E3E8E4; --sunken:#E7EBE8;
+    --ink:#16211F; --ink-2:#3C4A46; --muted:#6B7A75;
+    --line:#D2DAD6; --line-soft:#E0E5E2;
+    --accent:#0F6B62; --accent-soft:#0f6b6214;
+    --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a;
+    --s1-soft:#2a78d61f; --s2-soft:#eb68341f;
+    --ref:#8A9691;
+    --ok:#0F6B62; --ok-soft:#0f6b6216;
+    --warn:#B26A00; --warn-soft:#b26a0016;
+    --block:#C0392B; --block-soft:#c0392b16;
+    --f-display:"Newsreader",Georgia,serif;
+    --f-body:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --ground:#0F1512; --surface:#161E1B; --surface-2:#1D2723; --sunken:#121917;
+      --ink:#E5EBE7; --ink-2:#BAC6C1; --muted:#8B9A94;
+      --line:#2A3531; --line-soft:#222C29;
+      --accent:#57C3B3; --accent-soft:#57c3b31a;
+      --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+      --s1-soft:#3987e526; --s2-soft:#d9592626;
+      --ref:#75837E;
+      --ok:#57C3B3; --ok-soft:#57c3b31a;
+      --warn:#D99A3C; --warn-soft:#d99a3c1a;
+      --block:#E0705F; --block-soft:#e0705f1a;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --ground:#0F1512; --surface:#161E1B; --surface-2:#1D2723; --sunken:#121917;
+    --ink:#E5EBE7; --ink-2:#BAC6C1; --muted:#8B9A94;
+    --line:#2A3531; --line-soft:#222C29;
+    --accent:#57C3B3; --accent-soft:#57c3b31a;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+    --s1-soft:#3987e526; --s2-soft:#d9592626;
+    --ref:#75837E;
+    --ok:#57C3B3; --ok-soft:#57c3b31a;
+    --warn:#D99A3C; --warn-soft:#d99a3c1a;
+    --block:#E0705F; --block-soft:#e0705f1a;
+  }
+
+  *{box-sizing:border-box}
+  body{background:var(--ground);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55}
+  .wrap{max-width:1140px;margin:0 auto;padding-inline:18px;padding-block:0 64px}
+  h1,h2,h3{text-wrap:balance}
+  a{color:var(--accent)}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  /* ---------- status bar ---------- */
+  .statusbar{
+    position:sticky;top:0;z-index:30;background:var(--ground);
+    border-bottom:1px solid var(--line);
+    display:flex;flex-wrap:wrap;gap:8px 22px;align-items:center;
+    padding-block:11px;margin-bottom:26px;
+    font-family:var(--f-mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;
+    color:var(--muted);
+  }
+  .pulse{width:7px;height:7px;border-radius:50%;background:var(--ok);
+    box-shadow:0 0 0 0 var(--ok);animation:pulse 2.6s ease-out infinite;flex:none}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 var(--ok-soft)}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+  @media (prefers-reduced-motion:reduce){.pulse{animation:none}}
+  .statusbar b{color:var(--ink);font-weight:600}
+  .statusbar .sep{flex:1}
+
+  /* ---------- masthead ---------- */
+  header.mast{padding-block:10px 26px}
+  h1{font-family:var(--f-display);font-weight:500;font-size:clamp(1.9rem,5vw,2.7rem);
+    line-height:1.06;letter-spacing:-.018em;margin:0 0 12px}
+  .sub{color:var(--ink-2);max-width:64ch;margin:0}
+
+  .provenance{
+    margin-top:18px;border:1px solid var(--line);border-left:2px solid var(--warn);
+    background:var(--warn-soft);border-radius:0 3px 3px 0;padding:13px 17px;
+    font-size:.86rem;line-height:1.5;color:var(--ink-2);
+  }
+  .provenance b{color:var(--ink)}
+  .provenance dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+    gap:4px 24px;margin:9px 0 0}
+  .provenance dl div{display:flex;gap:7px;font-family:var(--f-mono);font-size:11px}
+  .provenance dt{color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  .provenance dd{margin:0;color:var(--ink-2)}
+
+  /* ---------- tabs ---------- */
+  .tabs{display:flex;gap:2px;margin:30px 0 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .tab{
+    appearance:none;background:none;border:0;border-bottom:2px solid transparent;
+    font-family:var(--f-body);font-size:.94rem;font-weight:500;color:var(--muted);
+    padding:10px 15px;cursor:pointer;margin-bottom:-1px;display:flex;align-items:center;gap:8px;
+  }
+  .tab:hover{color:var(--ink)}
+  .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+  .tab .dot{width:8px;height:8px;border-radius:2px;flex:none}
+
+  /* ---------- panels ---------- */
+  .panel{padding-top:28px}
+  .panel[hidden]{display:none!important}
+
+  .sitehead{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:start;
+    padding-bottom:22px;border-bottom:1px solid var(--line-soft)}
+  @media (max-width:700px){.sitehead{grid-template-columns:1fr}}
+  .sitehead h2{font-family:var(--f-display);font-weight:500;font-size:1.6rem;
+    line-height:1.12;margin:0 0 5px}
+  .where{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);letter-spacing:.03em}
+  .sitehead p{margin:11px 0 0;color:var(--ink-2);font-size:.92rem;max-width:60ch}
+  .minimap{border:1px solid var(--line);border-radius:3px;background:var(--surface);padding:9px}
+  .minimap figcaption{font-family:var(--f-mono);font-size:10px;color:var(--muted);
+    text-align:center;margin-top:5px;letter-spacing:.04em}
+
+  /* ---------- stat row ---------- */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));
+    gap:1px;background:var(--line);border:1px solid var(--line);border-radius:3px;
+    overflow:hidden;margin:24px 0}
+  .stat{background:var(--surface);padding:15px 16px 14px}
+  .stat .k{font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--muted);display:block;margin-bottom:7px}
+  .stat .v{font-family:var(--f-display);font-size:1.55rem;line-height:1;display:block;
+    font-variant-numeric:tabular-nums;margin-bottom:4px}
+  .stat .s{font-size:.79rem;color:var(--muted);display:block;line-height:1.35}
+  .stat.neg .v{color:var(--block)}
+  .stat.pos .v{color:var(--ok)}
+
+  /* ---------- figures ---------- */
+  figure{margin:0 0 22px;background:var(--surface);border:1px solid var(--line);
+    border-radius:3px;padding:18px 18px 14px}
+  .figtop{display:flex;flex-wrap:wrap;justify-content:space-between;gap:7px 18px;
+    align-items:baseline;margin-bottom:4px}
+  .figtop h3{font-family:var(--f-body);font-size:.95rem;font-weight:600;margin:0}
+  .figtop .note{font-size:.8rem;color:var(--muted)}
+  .legend{display:flex;flex-wrap:wrap;gap:6px 15px;margin:9px 0 12px;
+    font-family:var(--f-mono);font-size:10.5px;color:var(--ink-2);letter-spacing:.02em}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:13px;height:3px;border-radius:2px;display:block;flex:none}
+  .legend i.dash{background:repeating-linear-gradient(90deg,var(--ref) 0 4px,transparent 4px 7px);height:2px}
+  .legend i.sq{width:9px;height:9px;border-radius:2px}
+  .chart{position:relative}
+  .chart svg{display:block}
+  .chart text{font-family:var(--f-mono);fill:var(--muted)}
+
+  .tip{position:absolute;pointer-events:none;opacity:0;transition:opacity .09s;
+    background:var(--surface);border:1px solid var(--line);border-radius:3px;
+    padding:8px 10px;font-family:var(--f-mono);font-size:11px;line-height:1.5;
+    box-shadow:0 3px 12px rgba(0,0,0,.13);z-index:5;min-width:132px;color:var(--ink)}
+  .tip.on{opacity:1}
+  .tip .d{color:var(--muted);margin-bottom:4px;letter-spacing:.03em}
+  .tip .row{display:flex;justify-content:space-between;gap:14px}
+  .tip .row b{font-weight:600}
+  .tip .fl{color:var(--warn);margin-top:5px;white-space:normal;max-width:210px;font-size:10.5px}
+
+  /* ---------- coverage strip ---------- */
+  .coverage{display:flex;gap:1px;margin-top:2px;height:13px;border-radius:2px;overflow:hidden}
+  .coverage i{flex:1 1 0;min-width:0}
+  .covnote{font-family:var(--f-mono);font-size:10px;color:var(--muted);margin-top:7px;
+    display:flex;flex-wrap:wrap;gap:5px 15px}
+
+  /* ---------- tables ---------- */
+  .tscroll{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;min-width:600px;font-size:.87rem}
+  th,td{text-align:right;padding:10px 13px;border-bottom:1px solid var(--line-soft);
+    font-variant-numeric:tabular-nums;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left;padding-left:0}
+  th:last-child,td:last-child{padding-right:0}
+  thead th{border-bottom:1px solid var(--line);font-family:var(--f-mono);font-size:10px;
+    letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:500}
+  tbody tr:last-child td{border-bottom:0}
+  td.ded{color:var(--muted)}
+  td.net{font-weight:600}
+  tr.projected td{color:var(--muted)}
+  tr.projected td.net{font-weight:500}
+
+  .chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--f-mono);
+    font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;
+    border-radius:2px;white-space:nowrap}
+  .chip.ok{background:var(--ok-soft);color:var(--ok)}
+  .chip.warn{background:var(--warn-soft);color:var(--warn)}
+  .chip.block{background:var(--block-soft);color:var(--block)}
+  .chip.idle{background:var(--surface-2);color:var(--muted)}
+
+  /* ---------- review ---------- */
+  .review{border:1px solid var(--line);border-radius:3px;background:var(--surface);
+    padding:17px 18px;margin-bottom:22px}
+  .review h3{font-family:var(--f-body);font-size:.95rem;font-weight:600;margin:0 0 4px}
+  .review .lead{font-size:.85rem;color:var(--muted);margin:0 0 14px;max-width:62ch}
+  .qrow{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;
+    padding:11px 0;border-top:1px solid var(--line-soft)}
+  .qrow:first-of-type{border-top:0}
+  .qmeta{min-width:0}
+  .qmeta .t{font-family:var(--f-mono);font-size:12.5px;display:flex;flex-wrap:wrap;
+    gap:5px 11px;align-items:center}
+  .qmeta .w{font-size:.82rem;color:var(--warn);margin-top:4px;line-height:1.45}
+  .qmeta .by{font-size:.78rem;color:var(--muted);margin-top:3px}
+  .acts{display:flex;gap:6px;flex-wrap:wrap}
+  button.act{appearance:none;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.06em;
+    text-transform:uppercase;padding:6px 11px;border-radius:2px;cursor:pointer;
+    border:1px solid var(--line);background:var(--surface);color:var(--ink-2)}
+  button.act:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+  button.act[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+  button.act:disabled{opacity:.45;cursor:not-allowed}
+  .dbstate{font-family:var(--f-mono);font-size:10.5px;color:var(--muted);margin-top:13px;
+    padding-top:11px;border-top:1px solid var(--line-soft)}
+
+  /* ---------- portfolio ---------- */
+  .portfolio{margin-top:46px;padding-top:30px;border-top:1px solid var(--line)}
+  .portfolio h2{font-family:var(--f-display);font-weight:500;font-size:1.6rem;margin:0 0 10px}
+  .portfolio > p{color:var(--ink-2);max-width:66ch;margin:0 0 22px}
+  .verdicts{display:grid;grid-template-columns:repeat(auto-fit,minmax(266px,1fr));gap:16px;margin-bottom:26px}
+  .verdict{border:1px solid var(--line);border-radius:3px;background:var(--surface);padding:18px}
+  .verdict h3{font-family:var(--f-body);font-size:.92rem;font-weight:600;margin:0 0 3px;
+    display:flex;align-items:center;gap:8px}
+  .verdict h3 .dot{width:9px;height:9px;border-radius:2px;flex:none}
+  .verdict .big{font-family:var(--f-display);font-size:2rem;line-height:1.05;margin:13px 0 5px;
+    font-variant-numeric:tabular-nums}
+  .verdict .big.neg{color:var(--block)}
+  .verdict .big.pos{color:var(--ok)}
+  .verdict p{margin:0;font-size:.85rem;color:var(--ink-2);line-height:1.5}
+  .verdict dl{margin:14px 0 0;display:grid;gap:0}
+  .verdict dl div{display:flex;justify-content:space-between;gap:12px;padding:6px 0;
+    border-top:1px solid var(--line-soft);font-family:var(--f-mono);font-size:11px}
+  .verdict dt{color:var(--muted)}
+  .verdict dd{margin:0;font-variant-numeric:tabular-nums}
+
+  footer{margin-top:42px;padding-top:22px;border-top:1px solid var(--line);
+    font-size:.83rem;color:var(--muted);line-height:1.6;max-width:76ch}
+</style>
+
+<div class="wrap">
+
+  <div class="statusbar">
+    <span class="pulse" aria-hidden="true"></span>
+    <span>Feed live &middot; <b id="clock">--:--:--</b></span>
+    <span>Last pass <b id="lastpass">-</b></span>
+    <span>Next pass <b id="nextpass">-</b></span>
+    <span class="sep"></span>
+    <span id="revcount">-</span>
+  </div>
+
+  <header class="mast">
+    <h1>Two pilot plots, monitored end to end</h1>
+    <p class="sub">A 2.5&nbsp;ha paddy block in the Cauvery delta and a 2.9&nbsp;ha shade-coffee block in the Kenyan highlands, run through the same quantification engine. Both are deliberately tiny, because the first thing a pilot has to answer is whether the arithmetic survives at plot scale.</p>
+
+    <div class="provenance">
+      <b>What is real here, and what is not.</b> The locations, climatology, crop
+      calendars and methodology mechanics are real. The plot boundaries are drawn
+      rather than surveyed, and <b>every monitored value is simulated</b> on the real
+      5-day Sentinel-2 revisit cadence &mdash; no satellite imagery was retrieved. The
+      feed is deterministic and runs ahead of today, so each real revisit date that
+      passes reveals a reading that was not visible before. Prices, costs and
+      emission factors are placeholders.
+      <dl id="prov"></dl>
+    </div>
+  </header>
+
+  <div class="tabs" role="tablist" id="tabs"></div>
+  <div id="panels"></div>
+
+  <section class="portfolio">
+    <h2>What one plot is worth, and what it would take</h2>
+    <p>Both plots run the same fixed machinery &mdash; validation, verification, registry
+      fees, project operations. That cost does not care how much land sits inside the
+      project, which is why plot-scale economics decide everything downstream.</p>
+    <div class="verdicts" id="verdicts"></div>
+    <div class="tscroll" id="econtable"></div>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+
+<script type="application/json" id="payload">__DATA__</script>
+<script>
+(function () {
+  "use strict";
+
+  var DATA = JSON.parse(document.getElementById("payload").textContent);
+  var NOW = new Date();
+  var SERIES = ["--s1", "--s2", "--s3"];
+
+  // ---- small helpers ------------------------------------------------------
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  function css(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+  function parseDay(s) { var p = s.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function fmtDay(d) {
+    return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  }
+  function shortDay(d) {
+    return d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  }
+  function money(n, dp) {
+    return "$" + n.toLocaleString(undefined, {
+      minimumFractionDigits: dp == null ? 2 : dp, maximumFractionDigits: dp == null ? 2 : dp });
+  }
+  function num(n, dp) {
+    return n.toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
+  }
+  function revealed(readings) {
+    return readings.filter(function (r) { return parseDay(r.day) <= NOW; });
+  }
+
+  // ---- charting -----------------------------------------------------------
+  // Rendered at the container's true pixel width and re-rendered on resize, so
+  // type stays at its real size instead of scaling with a viewBox.
+  var SVGNS = "http://www.w3.org/2000/svg";
+  function svgEl(tag, attrs) {
+    var n = document.createElementNS(SVGNS, tag);
+    for (var k in attrs) if (attrs[k] != null) n.setAttribute(k, attrs[k]);
+    return n;
+  }
+
+  function TimeChart(host, cfg) {
+    var tip = el("div", "tip");
+    host.appendChild(tip);
+    var frame = null;
+
+    function render() {
+      var w = Math.max(280, host.clientWidth);
+      var h = cfg.height || 210;
+      var padL = 46, padR = 14, padT = 10, padB = 24;
+      var iw = w - padL - padR, ih = h - padT - padB;
+
+      var all = [];
+      cfg.series.forEach(function (s) { s.values.forEach(function (v) { all.push(v); }); });
+      if (cfg.band) cfg.band.forEach(function (v) { all.push({ x: v.x, y: v.hi }, { x: v.x, y: v.lo }); });
+      if (!all.length) { host.querySelectorAll("svg").forEach(function (n) { n.remove(); }); return; }
+
+      var x0 = cfg.xMin || Math.min.apply(null, all.map(function (v) { return +v.x; }));
+      var x1 = cfg.xMax || Math.max.apply(null, all.map(function (v) { return +v.x; }));
+      var y0 = cfg.yMin != null ? cfg.yMin : 0;
+      var y1 = cfg.yMax != null ? cfg.yMax
+        : Math.max.apply(null, all.map(function (v) { return v.y; })) * 1.12 || 1;
+      if (y1 === y0) y1 = y0 + 1;
+
+      var sx = function (v) { return padL + (x1 === x0 ? 0 : (+v - x0) / (x1 - x0) * iw); };
+      var sy = function (v) { return padT + ih - (v - y0) / (y1 - y0) * ih; };
+
+      var old = host.querySelector("svg");
+      if (old) old.remove();
+      var svg = svgEl("svg", { width: w, height: h, role: "img",
+                               "aria-label": cfg.label || "time series" });
+
+      // y grid + ticks
+      var ticks = cfg.yTicks || 4;
+      for (var i = 0; i <= ticks; i++) {
+        var yv = y0 + (y1 - y0) * i / ticks, yy = sy(yv);
+        svg.appendChild(svgEl("line", { x1: padL, x2: w - padR, y1: yy, y2: yy,
+          stroke: css("--line-soft"), "stroke-width": 1 }));
+        var t = svgEl("text", { x: padL - 7, y: yy + 3.5, "text-anchor": "end", "font-size": 10 });
+        t.textContent = cfg.yFmt ? cfg.yFmt(yv) : num(yv, 1);
+        svg.appendChild(t);
+      }
+      // x ticks: one per quarter
+      var seen = {};
+      for (var tms = x0; tms <= x1; tms += 86400000 * 30) {
+        var d = new Date(tms), key = d.getFullYear() + "-" + Math.floor(d.getMonth() / 3);
+        if (seen[key]) continue;
+        seen[key] = 1;
+        var xx = sx(new Date(d.getFullYear(), Math.floor(d.getMonth() / 3) * 3, 1));
+        if (xx < padL - 1 || xx > w - padR + 1) continue;
+        var lbl = svgEl("text", { x: xx, y: h - 6, "text-anchor": "middle", "font-size": 10 });
+        lbl.textContent = d.toLocaleDateString(undefined, { month: "short" }) +
+          (d.getMonth() < 3 ? " " + String(d.getFullYear()).slice(2) : "");
+        svg.appendChild(lbl);
+      }
+
+      // "today" rule — everything right of it is projection
+      if (cfg.showNow && +NOW > x0 && +NOW < x1) {
+        var nx = sx(NOW);
+        svg.appendChild(svgEl("line", { x1: nx, x2: nx, y1: padT, y2: padT + ih,
+          stroke: css("--muted"), "stroke-width": 1, "stroke-dasharray": "2 3" }));
+        var nl = svgEl("text", { x: nx + 4, y: padT + 9, "font-size": 9.5 });
+        nl.textContent = "today";
+        svg.appendChild(nl);
+      }
+
+      // uncertainty band
+      if (cfg.band && cfg.band.length) {
+        var up = cfg.band.map(function (v) { return sx(v.x) + "," + sy(v.hi); });
+        var dn = cfg.band.slice().reverse().map(function (v) { return sx(v.x) + "," + sy(v.lo); });
+        svg.appendChild(svgEl("polygon", { points: up.concat(dn).join(" "),
+          fill: css(cfg.bandColor || "--s2-soft"), stroke: "none" }));
+      }
+
+      // series
+      cfg.series.forEach(function (s) {
+        if (!s.values.length) return;
+        var d = s.values.map(function (v, i) {
+          return (i ? "L" : "M") + sx(v.x).toFixed(1) + "," + sy(v.y).toFixed(1);
+        }).join(" ");
+        svg.appendChild(svgEl("path", { d: d, fill: "none",
+          stroke: css(s.color), "stroke-width": s.width || 2,
+          "stroke-dasharray": s.dashed ? "4 3" : null,
+          "stroke-linejoin": "round", "stroke-linecap": "round",
+          opacity: s.faint ? 0.75 : 1 }));
+      });
+
+      // event markers
+      (cfg.markers || []).forEach(function (m) {
+        svg.appendChild(svgEl("circle", { cx: sx(m.x), cy: sy(m.y), r: 3.4,
+          fill: css(m.color || "--s1"), stroke: css("--surface"), "stroke-width": 2 }));
+      });
+
+      // hover layer
+      var cross = svgEl("line", { y1: padT, y2: padT + ih, stroke: css("--muted"),
+        "stroke-width": 1, opacity: 0 });
+      svg.appendChild(cross);
+      var dots = svgEl("g", { opacity: 0 });
+      svg.appendChild(dots);
+
+      var hit = svgEl("rect", { x: padL, y: padT, width: iw, height: ih,
+        fill: "transparent", style: "cursor:crosshair" });
+      svg.appendChild(hit);
+
+      var base = cfg.series[0];
+      function move(ev) {
+        var box = svg.getBoundingClientRect();
+        var px = (ev.touches ? ev.touches[0].clientX : ev.clientX) - box.left;
+        var t = x0 + (px - padL) / iw * (x1 - x0);
+        var best = null, bd = Infinity;
+        base.values.forEach(function (v, i) {
+          var dd = Math.abs(+v.x - t);
+          if (dd < bd) { bd = dd; best = i; }
+        });
+        if (best == null) return;
+        var bx = sx(base.values[best].x);
+        cross.setAttribute("x1", bx); cross.setAttribute("x2", bx);
+        cross.setAttribute("opacity", 0.45);
+
+        while (dots.firstChild) dots.removeChild(dots.firstChild);
+        var rows = "";
+        cfg.series.forEach(function (s) {
+          var v = s.values[best];
+          if (!v) return;
+          dots.appendChild(svgEl("circle", { cx: sx(v.x), cy: sy(v.y), r: 4,
+            fill: css(s.color), stroke: css("--surface"), "stroke-width": 2 }));
+          rows += '<div class="row"><span>' + s.label + '</span><b>' +
+            (cfg.tipFmt ? cfg.tipFmt(v.y) : num(v.y, 2)) + "</b></div>";
+        });
+        dots.setAttribute("opacity", 1);
+
+        var extra = cfg.tipExtra ? cfg.tipExtra(best) : "";
+        tip.innerHTML = '<div class="d">' + fmtDay(base.values[best].x) + "</div>" + rows + extra;
+        tip.classList.add("on");
+        var tw = tip.offsetWidth;
+        tip.style.left = Math.min(Math.max(4, bx - tw / 2), w - tw - 4) + "px";
+        tip.style.top = (padT + 4) + "px";
+      }
+      function leave() {
+        cross.setAttribute("opacity", 0);
+        dots.setAttribute("opacity", 0);
+        tip.classList.remove("on");
+      }
+      hit.addEventListener("mousemove", move);
+      hit.addEventListener("touchmove", function (e) { e.preventDefault(); move(e); }, { passive: false });
+      hit.addEventListener("mouseleave", leave);
+      hit.addEventListener("touchend", leave);
+
+      host.insertBefore(svg, tip);
+    }
+
+    function schedule() {
+      if (frame) cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(function () { frame = null; render(); });
+    }
+    render();
+    if (window.ResizeObserver) new ResizeObserver(schedule).observe(host);
+    else window.addEventListener("resize", schedule);
+    var mq = window.matchMedia("(prefers-color-scheme: dark)");
+    if (mq.addEventListener) mq.addEventListener("change", schedule);
+    return { rerender: schedule };
+  }
+
+  function BarChart(host, cfg) {
+    var tip = el("div", "tip");
+    host.appendChild(tip);
+
+    function render() {
+      var w = Math.max(280, host.clientWidth);
+      var h = cfg.height || 190;
+      var padL = 46, padR = 14, padT = 10, padB = 26;
+      var iw = w - padL - padR, ih = h - padT - padB;
+      var old = host.querySelector("svg");
+      if (old) old.remove();
+
+      var max = Math.max.apply(null, cfg.bars.map(function (b) { return b.gross; })) || 1;
+      max *= 1.14;
+      var svg = svgEl("svg", { width: w, height: h, role: "img",
+                               "aria-label": cfg.label || "credits by vintage" });
+
+      for (var i = 0; i <= 4; i++) {
+        var yv = max * i / 4, yy = padT + ih - (yv / max) * ih;
+        svg.appendChild(svgEl("line", { x1: padL, x2: w - padR, y1: yy, y2: yy,
+          stroke: css("--line-soft"), "stroke-width": 1 }));
+        var t = svgEl("text", { x: padL - 7, y: yy + 3.5, "text-anchor": "end", "font-size": 10 });
+        t.textContent = num(yv, yv < 10 ? 1 : 0);
+        svg.appendChild(t);
+      }
+
+      var slot = iw / cfg.bars.length;
+      var bw = Math.min(38, slot * 0.52);
+      cfg.bars.forEach(function (b, i) {
+        var cx = padL + slot * (i + 0.5);
+        var gh = (b.gross / max) * ih, nh = (b.net / max) * ih;
+        // gross sits behind as a recessive outline; net is the solid mark
+        svg.appendChild(svgEl("rect", { x: cx - bw / 2, y: padT + ih - gh, width: bw, height: gh,
+          rx: 3, fill: "none", stroke: css("--line"), "stroke-width": 1,
+          "stroke-dasharray": b.projected ? "3 3" : null }));
+        if (nh > 0) {
+          svg.appendChild(svgEl("rect", { x: cx - bw / 2 + 2, y: padT + ih - nh,
+            width: bw - 4, height: Math.max(nh, 1.5), rx: 3,
+            fill: css(cfg.color), opacity: b.projected ? 0.42 : 1 }));
+        }
+        var lbl = svgEl("text", { x: cx, y: h - 11, "text-anchor": "middle", "font-size": 10 });
+        lbl.textContent = b.year;
+        svg.appendChild(lbl);
+        if (b.projected && i === cfg.bars.findIndex(function (x) { return x.projected; })) {
+          var pj = svgEl("text", { x: cx, y: h - 1, "text-anchor": "start", "font-size": 9 });
+          pj.textContent = "projected →";
+          svg.appendChild(pj);
+        }
+        var hit = svgEl("rect", { x: cx - slot / 2, y: padT, width: slot, height: ih,
+          fill: "transparent", style: "cursor:pointer" });
+        hit.addEventListener("mouseenter", function () {
+          tip.innerHTML = '<div class="d">vintage ' + b.year +
+            (b.projected ? " (projected)" : "") + "</div>" +
+            '<div class="row"><span>gross</span><b>' + num(b.gross, 2) + "</b></div>" +
+            '<div class="row"><span>issuable</span><b>' + num(b.net, 2) + "</b></div>" +
+            '<div class="row"><span>withheld</span><b>' + num(b.gross - b.net, 2) + "</b></div>";
+          tip.classList.add("on");
+          var tw = tip.offsetWidth;
+          tip.style.left = Math.min(Math.max(4, cx - tw / 2), w - tw - 4) + "px";
+          tip.style.top = padT + "px";
+        });
+        hit.addEventListener("mouseleave", function () { tip.classList.remove("on"); });
+        svg.appendChild(hit);
+      });
+      host.insertBefore(svg, tip);
+    }
+    render();
+    if (window.ResizeObserver) new ResizeObserver(function () { render(); }).observe(host);
+    var mq = window.matchMedia("(prefers-color-scheme: dark)");
+    if (mq.addEventListener) mq.addEventListener("change", render);
+  }
+
+  function miniMap(boundary, lat, lon) {
+    var W = 132, H = 104, pad = 11;
+    var lons = boundary.map(function (p) { return p[0]; });
+    var lats = boundary.map(function (p) { return p[1]; });
+    var mnx = Math.min.apply(null, lons), mxx = Math.max.apply(null, lons);
+    var mny = Math.min.apply(null, lats), mxy = Math.max.apply(null, lats);
+    var sx = function (v) { return pad + (mxx === mnx ? 0 : (v - mnx) / (mxx - mnx)) * (W - pad * 2); };
+    var sy = function (v) { return H - pad - (mxy === mny ? 0 : (v - mny) / (mxy - mny)) * (H - pad * 2); };
+
+    var fig = el("figure", "minimap");
+    fig.style.margin = "0";
+    fig.style.padding = "9px";
+    var svg = svgEl("svg", { width: W, height: H, role: "img",
+      "aria-label": "plot boundary at " + lat.toFixed(4) + ", " + lon.toFixed(4) });
+    svg.appendChild(svgEl("polygon", {
+      points: boundary.map(function (p) { return sx(p[0]) + "," + sy(p[1]); }).join(" "),
+      fill: css("--accent-soft"), stroke: css("--accent"), "stroke-width": 1.5,
+      "stroke-linejoin": "round" }));
+    boundary.forEach(function (p) {
+      svg.appendChild(svgEl("circle", { cx: sx(p[0]), cy: sy(p[1]), r: 2,
+        fill: css("--accent") }));
+    });
+    fig.appendChild(svg);
+    var cap = el("figcaption");
+    cap.textContent = lat.toFixed(4) + ", " + lon.toFixed(4);
+    fig.appendChild(cap);
+    return fig;
+  }
+
+  // ---- review state (db) --------------------------------------------------
+  var reviews = {};
+  var dbRef = null;
+  var dbNote = null;
+
+  function reviewKey(siteId, year) { return siteId + "__" + year; }
+
+  function paintReviews() {
+    document.querySelectorAll("[data-review]").forEach(function (row) {
+      var key = row.getAttribute("data-review");
+      var state = reviews[key];
+      row.querySelectorAll("button.act").forEach(function (b) {
+        b.setAttribute("aria-pressed", String(state && state.status === b.dataset.status));
+      });
+      var by = row.querySelector(".by");
+      if (by) {
+        by.textContent = state
+          ? (state.status === "approved" ? "Approved for issuance" : "Held")
+            + (state.at ? " · " + new Date(state.at).toLocaleString() : "")
+          : "No decision recorded";
+      }
+    });
+  }
+
+  function setDbNote(text) {
+    dbNote = text;
+    document.querySelectorAll(".dbstate").forEach(function (n) { n.textContent = text; });
+  }
+
+  function decide(key, status) {
+    if (!dbRef) return;
+    var body = { status: status, at: new Date().toISOString() };
+    reviews[key] = body;
+    paintReviews();
+    dbRef.doc("reviews/" + key).set(body).catch(function (e) {
+      setDbNote("Could not save that decision (" + (e && e.code) + "). It is shown "
+        + "locally but not shared.");
+    });
+  }
+
+  function initDb() {
+    if (!(window.claude && typeof window.claude.use === "function")) {
+      setDbNote("Shared review state is unavailable in this view. Decisions below are "
+        + "disabled.");
+      return;
+    }
+    window.claude.use("db").then(function (db) {
+      if (!db) {
+        setDbNote("Shared review state is unavailable in this view. Decisions below are "
+          + "disabled.");
+        return;
+      }
+      dbRef = db;
+      document.querySelectorAll("button.act").forEach(function (b) { b.disabled = false; });
+      setDbNote("Review decisions are shared — anyone with this page sees them live.");
+      db.collection("reviews").onSnapshot(function (snap) {
+        reviews = {};
+        snap.docs.forEach(function (d) { reviews[d.id] = d.data(); });
+        paintReviews();
+      }, function (e) {
+        setDbNote("Live review sync stopped (" + e.code + "). Reload to resume.");
+      });
+    }).catch(function () {
+      setDbNote("Shared review state is unavailable in this view.");
+    });
+  }
+
+  // ---- panels -------------------------------------------------------------
+  function statusFor(v) {
+    if ((v.warnings || []).length) return { cls: "warn", text: "needs review" };
+    if (v.net_t <= 0) return { cls: "block", text: "no credits" };
+    if (!v.complete) return { cls: "idle", text: "projected" };
+    return { cls: "ok", text: "settled" };
+  }
+
+  function buildPanel(block, idx) {
+    var site = block.site;
+    var isRice = site.track === "rice";
+    var colorVar = isRice ? "--s1" : "--s2";
+    var panel = el("div", "panel");
+    panel.id = "panel-" + site.id;
+    panel.setAttribute("role", "tabpanel");
+
+    // head
+    var head = el("div", "sitehead");
+    var left = el("div");
+    left.appendChild(el("h2", null, site.label));
+    var where = el("div", "where");
+    where.textContent = site.admin + "  ·  " + site.country + "  ·  " +
+      site.area_ha.toFixed(2) + " ha  ·  enrolled " + fmtDay(parseDay(site.enrolled_on));
+    left.appendChild(where);
+    var p = el("p");
+    p.textContent = site.crop + ". " + site.intervention + ". " + site.notes;
+    left.appendChild(p);
+    head.appendChild(left);
+    head.appendChild(miniMap(site.boundary, site.lat, site.lon));
+    panel.appendChild(head);
+
+    // stats
+    var rev = revealed(block.readings);
+    var econ = DATA.economics.per_site.filter(function (e) { return e.site_id === site.id; })[0];
+    var settledV = block.vintages.filter(function (v) { return v.complete; });
+    var lastSettled = settledV.length ? settledV[settledV.length - 1] : null;
+
+    var stats = el("div", "stats");
+    function stat(k, v, s, cls) {
+      var n = el("div", "stat" + (cls ? " " + cls : ""));
+      n.appendChild(el("span", "k", k));
+      n.appendChild(el("span", "v", v));
+      n.appendChild(el("span", "s", s));
+      stats.appendChild(n);
+    }
+    stat("Plot", site.area_ha.toFixed(2) + " ha", "single holding, " + site.farmer);
+    stat("Revisits captured", String(rev.length),
+         rev.filter(function (r) { return r.ndvi === null; }).length + " lost to cloud");
+    stat("Last settled vintage",
+         lastSettled ? num(lastSettled.net_t, 2) : "—",
+         lastSettled ? "tCO2e issuable, " + lastSettled.year : "none settled yet");
+    stat("At maturity", num(econ.mature.credits, 1),
+         "tCO2e in " + econ.mature_year + " · " + econ.credits_per_ha_mature.toFixed(2) + "/ha");
+    stat("Gross at maturity", money(econ.mature.gross_revenue, 0),
+         "per year at " + money(econ.price, 0) + "/credit");
+    stat("MRV budget", money(econ.breakeven_mrv_per_ha, 2),
+         "per ha/yr available vs " + money(econ.mrv_cost_per_ha_yr, 0) + " assumed",
+         econ.mrv_headroom < 0 ? "neg" : "pos");
+    panel.appendChild(stats);
+
+    // Plot from enrolment to a little past today. The feed runs to 2027 so new
+    // passes keep appearing, but charting 15 months of blank future just to
+    // prove it is there wastes most of the width.
+    var xMin = +parseDay(block.readings[0].day);
+    var lastDay = +parseDay(block.readings[block.readings.length - 1].day);
+    var xMax = Math.min(lastDay, +NOW + 60 * 86400000);
+    var inWindow = block.readings.filter(function (r) {
+      var t = +parseDay(r.day);
+      return t >= xMin && t <= xMax;
+    });
+
+    // --- evidence chart ---
+    var fig1 = el("figure");
+    var top1 = el("div", "figtop");
+    top1.appendChild(el("h3", null, isRice
+      ? "The evidence: is the field being dried?"
+      : "The evidence: is the shade canopy growing?"));
+    top1.appendChild(el("span", "note", isRice
+      ? "Surface water fraction from SAR. Each dip is a dry-down."
+      : "Canopy height with its 1σ retrieval band."));
+    fig1.appendChild(top1);
+
+    var leg1 = el("div", "legend");
+    if (isRice) {
+      leg1.innerHTML =
+        '<span><i style="background:var(--s1)"></i>surface water fraction</span>' +
+        '<span><i class="sq" style="background:var(--s1)"></i>dry-down detected</span>';
+    } else {
+      leg1.innerHTML =
+        '<span><i style="background:var(--s2)"></i>canopy height</span>' +
+        '<span><i class="sq" style="background:var(--s2-soft);border:1px solid var(--s2)"></i>retrieval uncertainty</span>';
+    }
+    fig1.appendChild(leg1);
+
+    var c1 = el("div", "chart");
+    fig1.appendChild(c1);
+
+    // coverage strip, sharing the x range
+    var strip = el("div", "coverage");
+    inWindow.forEach(function (r) {
+      var i = el("i");
+      var future = parseDay(r.day) > NOW;
+      i.style.background = future ? "var(--sunken)"
+        : (r.ndvi === null ? "var(--warn-soft)" : "var(--accent-soft)");
+      if (!future && r.ndvi !== null) i.style.background = "var(--accent)";
+      else if (!future) i.style.background = "var(--warn)";
+      i.title = r.day + (r.ndvi === null ? " — cloud" : " — clear");
+      strip.appendChild(i);
+    });
+    fig1.appendChild(strip);
+    var cov = el("div", "covnote");
+    var lost = rev.filter(function (r) { return r.ndvi === null; }).length;
+    cov.innerHTML = "<span>optical coverage, one tick per 5-day pass</span>" +
+      "<span>" + (rev.length ? Math.round((1 - lost / rev.length) * 100) : 0) +
+      "% clear · " + lost + " lost to cloud</span>" +
+      "<span>cloudy passes fall back to SAR</span>";
+    fig1.appendChild(cov);
+    panel.appendChild(fig1);
+
+    if (isRice) {
+      var water = rev.map(function (r) {
+        return { x: parseDay(r.day), y: r.surface_water_frac == null ? 0 : r.surface_water_frac };
+      });
+      var marks = rev.filter(function (r) { return r.dry_down; }).map(function (r) {
+        return { x: parseDay(r.day), y: r.surface_water_frac, color: "--s1" };
+      });
+      TimeChart(c1, {
+        height: 200, xMin: xMin, xMax: xMax, yMin: 0, yMax: 1, yTicks: 4,
+        showNow: true, label: "surface water fraction over time",
+        yFmt: function (v) { return (v * 100).toFixed(0) + "%"; },
+        tipFmt: function (v) { return (v * 100).toFixed(0) + "%"; },
+        series: [{ key: "water", label: "water", color: "--s1", values: water }],
+        markers: marks,
+        tipExtra: function (i) {
+          var r = rev[i];
+          if (!r) return "";
+          var s = '<div class="row"><span>season</span><b>' + (r.season || "—") + "</b></div>";
+          s += '<div class="row"><span>rain</span><b>' + num(r.rain_mm, 1) + " mm</b></div>";
+          if (r.dry_down) s += '<div class="row"><span>dry-down</span><b>yes</b></div>';
+          if (r.flags && r.flags.length) s += '<div class="fl">' + r.flags.join("; ") + "</div>";
+          return s;
+        }
+      });
+
+      var fig2 = el("figure");
+      var top2 = el("div", "figtop");
+      top2.appendChild(el("h3", null, "What that is worth in methane"));
+      top2.appendChild(el("span", "note",
+        "Baseline is continuous flooding — the counterfactual, not a measurement."));
+      fig2.appendChild(top2);
+      var leg2 = el("div", "legend");
+      leg2.innerHTML =
+        '<span><i class="dash"></i>baseline, continuous flooding</span>' +
+        '<span><i style="background:var(--s1)"></i>with wetting and drying</span>';
+      fig2.appendChild(leg2);
+      var c2 = el("div", "chart");
+      fig2.appendChild(c2);
+      panel.appendChild(fig2);
+
+      TimeChart(c2, {
+        height: 190, xMin: xMin, xMax: xMax, yTicks: 4, showNow: true,
+        label: "methane flux, baseline against project",
+        yFmt: function (v) { return num(v, 2); },
+        tipFmt: function (v) { return num(v, 3) + " kg"; },
+        series: [
+          { key: "proj", label: "project", color: "--s1",
+            values: rev.map(function (r) {
+              return { x: parseDay(r.day), y: r.ch4_project_kg_ha_day || 0 }; }) },
+          { key: "base", label: "baseline", color: "--ref", dashed: true, width: 1.7,
+            values: rev.map(function (r) {
+              return { x: parseDay(r.day), y: r.ch4_baseline_kg_ha_day || 0 }; }) }
+        ],
+        tipExtra: function () { return '<div class="d" style="margin:5px 0 0">kg CH₄/ha/day</div>'; }
+      });
+    } else {
+      var withH = rev.filter(function (r) { return r.canopy_height_m != null; });
+      TimeChart(c1, {
+        height: 200, xMin: xMin, xMax: xMax, yTicks: 4, showNow: true,
+        label: "shade canopy height over time",
+        yFmt: function (v) { return num(v, 1) + " m"; },
+        tipFmt: function (v) { return num(v, 2) + " m"; },
+        band: withH.map(function (r) {
+          return { x: parseDay(r.day), hi: r.canopy_height_m + r.canopy_uncertainty_m,
+                   lo: Math.max(0, r.canopy_height_m - r.canopy_uncertainty_m) };
+        }),
+        bandColor: "--s2-soft",
+        series: [{ key: "h", label: "canopy", color: "--s2",
+          values: withH.map(function (r) {
+            return { x: parseDay(r.day), y: r.canopy_height_m }; }) }],
+        tipExtra: function (i) {
+          var r = withH[i];
+          if (!r) return "";
+          var s = '<div class="row"><span>± 1σ</span><b>' +
+            num(r.canopy_uncertainty_m, 2) + " m</b></div>";
+          if (r.flags && r.flags.length) s += '<div class="fl">' + r.flags.join("; ") + "</div>";
+          return s;
+        }
+      });
+
+      var fig3 = el("figure");
+      var top3 = el("div", "figtop");
+      top3.appendChild(el("h3", null, "Standing carbon, and how little of it is certain"));
+      top3.appendChild(el("span", "note",
+        "A generic allometry carries 25% error before the satellite adds any."));
+      fig3.appendChild(top3);
+      var leg3 = el("div", "legend");
+      leg3.innerHTML =
+        '<span><i style="background:var(--s2)"></i>standing stock</span>' +
+        '<span><i class="sq" style="background:var(--s2-soft);border:1px solid var(--s2)"></i>1σ range</span>';
+      fig3.appendChild(leg3);
+      var c3 = el("div", "chart");
+      fig3.appendChild(c3);
+      panel.appendChild(fig3);
+
+      var stock = (block.standing_stock || []).filter(function (s) {
+        return parseDay(s.day) <= NOW; });
+      TimeChart(c3, {
+        height: 190, xMin: xMin, xMax: xMax, yTicks: 4, showNow: true,
+        label: "standing carbon stock per hectare",
+        yFmt: function (v) { return num(v, 0); },
+        tipFmt: function (v) { return num(v, 1) + " t"; },
+        band: stock.map(function (s) {
+          return { x: parseDay(s.day), hi: s.tco2e_ha + s.sigma,
+                   lo: Math.max(0, s.tco2e_ha - s.sigma) }; }),
+        bandColor: "--s2-soft",
+        series: [{ key: "stock", label: "tCO₂e/ha", color: "--s2",
+          values: stock.map(function (s) {
+            return { x: parseDay(s.day), y: s.tco2e_ha }; }) }]
+      });
+    }
+
+    // --- credits by vintage ---
+    var fig4 = el("figure");
+    var top4 = el("div", "figtop");
+    top4.appendChild(el("h3", null, "Credits by vintage"));
+    top4.appendChild(el("span", "note", "Outline is gross abatement; fill is what survives deductions."));
+    fig4.appendChild(top4);
+    var leg4 = el("div", "legend");
+    leg4.innerHTML =
+      '<span><i class="sq" style="border:1px solid var(--line);background:transparent"></i>gross abatement</span>' +
+      '<span><i class="sq" style="background:var(' + colorVar + ')"></i>issuable after deductions</span>' +
+      '<span><i class="sq" style="background:var(' + colorVar + ');opacity:.42"></i>projected</span>';
+    fig4.appendChild(leg4);
+    var c4 = el("div", "chart");
+    fig4.appendChild(c4);
+    panel.appendChild(fig4);
+
+    BarChart(c4, {
+      height: 195, color: colorVar, label: "credits by vintage",
+      bars: block.vintages.map(function (v) {
+        return { year: v.year, gross: v.gross_t, net: v.net_t, projected: !v.complete };
+      })
+    });
+
+    // --- ledger ---
+    var fig5 = el("figure");
+    var top5 = el("div", "figtop");
+    top5.appendChild(el("h3", null, "The ledger"));
+    top5.appendChild(el("span", "note", "Deductions apply in order, each to the running remainder."));
+    fig5.appendChild(top5);
+    var scroll = el("div", "tscroll");
+    var table = el("table");
+    var dedNames = [];
+    block.vintages.forEach(function (v) {
+      (v.deductions || []).forEach(function (d) {
+        if (dedNames.indexOf(d.name) < 0) dedNames.push(d.name);
+      });
+    });
+    var thead = el("thead"), hr = el("tr");
+    hr.appendChild(el("th", null, "Vintage"));
+    hr.appendChild(el("th", null, "Gross tCO2e"));
+    dedNames.forEach(function (n) { hr.appendChild(el("th", null, "− " + n)); });
+    hr.appendChild(el("th", null, "Issuable"));
+    hr.appendChild(el("th", null, "Status"));
+    thead.appendChild(hr);
+    table.appendChild(thead);
+    var tbody = el("tbody");
+    // Settled vintages always, then six years of projection. The tail of a
+    // thirty-year crediting period is a scroll, not information.
+    var horizon = NOW.getFullYear() + 6;
+    var ledgerRows = block.vintages.filter(function (v) {
+      return v.complete || v.year <= horizon;
+    });
+    var hidden = block.vintages.length - ledgerRows.length;
+    ledgerRows.forEach(function (v) {
+      var tr = el("tr");
+      if (!v.complete) tr.className = "projected";
+      tr.appendChild(el("td", null, String(v.year) + (v.complete ? "" : " · proj")));
+      tr.appendChild(el("td", null, num(v.gross_t, 2)));
+      dedNames.forEach(function (n) {
+        var d = (v.deductions || []).filter(function (x) { return x.name === n; })[0];
+        var td = el("td", "ded", d ? num(d.amount_t, 2) + "  (" + (d.fraction * 100).toFixed(0) + "%)" : "—");
+        tr.appendChild(td);
+      });
+      tr.appendChild(el("td", "net", num(v.net_t, 2)));
+      var st = statusFor(v);
+      var tdS = el("td");
+      var chip = el("span", "chip " + st.cls, st.text);
+      tdS.appendChild(chip);
+      tr.appendChild(tdS);
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    scroll.appendChild(table);
+    fig5.appendChild(scroll);
+    if (hidden > 0) {
+      var more = el("div", "covnote");
+      more.innerHTML = "<span>" + hidden + " further projected vintage" +
+        (hidden === 1 ? "" : "s") + " to " +
+        block.vintages[block.vintages.length - 1].year +
+        " not shown &mdash; the chart above carries the full curve</span>";
+      fig5.appendChild(more);
+    }
+    panel.appendChild(fig5);
+
+    // --- review queue ---
+    var flagged = block.vintages.filter(function (v) {
+      return (v.warnings || []).length || v.net_t <= 0;
+    });
+    var review = el("div", "review");
+    review.appendChild(el("h3", null, "Verification queue"));
+    var lead = el("p", "lead");
+    lead.textContent = flagged.length
+      ? "Vintages the engine will not pass without a human looking. A decision here is shared with everyone who opens this page."
+      : "Nothing flagged. Vintages still need a decision before issuance.";
+    review.appendChild(lead);
+
+    var queue = flagged.length ? flagged : block.vintages.filter(function (v) { return v.complete; });
+    if (!queue.length) queue = block.vintages.slice(0, 2);
+
+    queue.forEach(function (v) {
+      var key = reviewKey(site.id, v.year);
+      var row = el("div", "qrow");
+      row.setAttribute("data-review", key);
+      var meta = el("div", "qmeta");
+      var t = el("div", "t");
+      t.innerHTML = "<span>vintage <b>" + v.year + "</b></span>" +
+        "<span>" + num(v.net_t, 2) + " tCO₂e issuable</span>" +
+        '<span class="chip ' + statusFor(v).cls + '">' + statusFor(v).text + "</span>";
+      meta.appendChild(t);
+      (v.warnings || []).forEach(function (wtext) {
+        meta.appendChild(el("div", "w", wtext));
+      });
+      meta.appendChild(el("div", "by", "No decision recorded"));
+      row.appendChild(meta);
+
+      var acts = el("div", "acts");
+      [["approved", "Approve"], ["held", "Hold"]].forEach(function (pair) {
+        var b = el("button", "act", pair[1]);
+        b.type = "button";
+        b.dataset.status = pair[0];
+        b.id = "act-" + key + "-" + pair[0];
+        b.disabled = true;
+        b.setAttribute("aria-pressed", "false");
+        b.addEventListener("click", function () { decide(key, pair[0]); });
+        acts.appendChild(b);
+      });
+      row.appendChild(acts);
+      review.appendChild(row);
+    });
+    var ds = el("div", "dbstate", dbNote || "Connecting to shared review state…");
+    review.appendChild(ds);
+    panel.appendChild(review);
+
+    return panel;
+  }
+
+  // ---- build --------------------------------------------------------------
+  var provDl = document.getElementById("prov");
+  Object.keys(DATA.provenance).forEach(function (k) {
+    var d = el("div");
+    d.appendChild(el("dt", null, k.replace(/_/g, " ")));
+    d.appendChild(el("dd", null, DATA.provenance[k]));
+    provDl.appendChild(d);
+  });
+
+  var tabsEl = document.getElementById("tabs");
+  var panelsEl = document.getElementById("panels");
+  var panels = [];
+
+  DATA.blocks.forEach(function (block, i) {
+    var site = block.site;
+    var tab = el("button", "tab");
+    tab.type = "button";
+    tab.setAttribute("role", "tab");
+    tab.id = "tab-" + site.id;
+    tab.setAttribute("aria-selected", String(i === 0));
+    var dot = el("span", "dot");
+    dot.style.background = "var(" + SERIES[i] + ")";
+    tab.appendChild(dot);
+    tab.appendChild(document.createTextNode(
+      site.label + "  ·  " + site.country));
+    tabsEl.appendChild(tab);
+
+    var panel = buildPanel(block, i);
+    panel.hidden = i !== 0;
+    panel.setAttribute("aria-labelledby", tab.id);
+    panelsEl.appendChild(panel);
+    panels.push(panel);
+
+    tab.addEventListener("click", function () {
+      panels.forEach(function (p, j) { p.hidden = j !== i; });
+      tabsEl.querySelectorAll(".tab").forEach(function (t, j) {
+        t.setAttribute("aria-selected", String(j === i));
+      });
+      window.dispatchEvent(new Event("resize"));
+    });
+  });
+
+  // ---- portfolio ----------------------------------------------------------
+  var verdicts = document.getElementById("verdicts");
+  DATA.economics.per_site.forEach(function (e, i) {
+    var sc = DATA.economics.scaling.filter(function (s) { return s.site_id === e.site_id; })[0];
+    var v = el("div", "verdict");
+    var h = el("h3");
+    var dot = el("span", "dot");
+    dot.style.background = "var(" + SERIES[i] + ")";
+    h.appendChild(dot);
+    h.appendChild(document.createTextNode(e.label));
+    v.appendChild(h);
+
+    var margin = e.mature.net_of_mrv;
+    var big = el("div", "big " + (margin > 0 ? "pos" : "neg"),
+      (margin > 0 ? "+" : "−") + money(Math.abs(margin), 0));
+    v.appendChild(big);
+    v.appendChild(el("p", null, margin > 0
+      ? "left over each year at maturity, after the farmer's share and after monitoring this plot. The pathway pays for its own supervision."
+      : "short each year at maturity, after the farmer's share and after monitoring this plot. No number of plots fixes a negative margin — monitoring cost has to fall first."));
+
+    var dl = el("dl");
+    function row(k, val) {
+      var d = el("div");
+      d.appendChild(el("dt", null, k));
+      d.appendChild(el("dd", null, val));
+      dl.appendChild(d);
+    }
+    row("credits at maturity", num(e.mature.credits, 1) + " t");
+    row("gross revenue", money(e.mature.gross_revenue, 0));
+    row("to the farmer", money(e.mature.to_farmer, 0) + "  (" + (e.farmer_share_pct * 100).toFixed(0) + "%)");
+    row("monitoring cost", money(e.mrv_cost, 0));
+    row("MRV budget per ha", money(e.breakeven_mrv_per_ha, 2));
+    row("land to carry fixed cost", sc.hectares_to_cover_fixed_cost
+      ? sc.hectares_to_cover_fixed_cost.toLocaleString() + " ha"
+      : "not reachable");
+    v.appendChild(dl);
+    verdicts.appendChild(v);
+  });
+
+  var et = document.getElementById("econtable");
+  var t = el("table");
+  t.innerHTML =
+    "<thead><tr><th>Per plot per year, at maturity</th>" +
+    DATA.economics.per_site.map(function (e) { return "<th>" + e.label + "</th>"; }).join("") +
+    "</tr></thead>";
+  var tb = el("tbody");
+  var rows = [
+    ["Area", function (e) { return e.area_ha.toFixed(2) + " ha"; }],
+    ["Credits issuable", function (e) { return num(e.mature.credits, 2) + " t"; }],
+    ["Per hectare", function (e) { return num(e.credits_per_ha_mature, 2) + " t/ha"; }],
+    ["Price assumed", function (e) { return money(e.price, 0); }],
+    ["Gross revenue", function (e) { return money(e.mature.gross_revenue); }],
+    ["To the farmer", function (e) { return money(e.mature.to_farmer); }],
+    ["To the developer", function (e) { return money(e.mature.to_developer); }],
+    ["Monitoring cost", function (e) { return money(e.mrv_cost); }],
+    ["Margin after monitoring", function (e) { return money(e.mature.net_of_mrv); }],
+    ["MRV budget per ha/yr", function (e) { return money(e.breakeven_mrv_per_ha); }],
+    ["Headroom vs assumed MRV", function (e) { return money(e.mrv_headroom); }]
+  ];
+  rows.forEach(function (r) {
+    var tr = el("tr");
+    tr.appendChild(el("td", null, r[0]));
+    DATA.economics.per_site.forEach(function (e) {
+      var td = el("td", null, r[1](e));
+      if (r[0].indexOf("Margin") === 0 || r[0].indexOf("Headroom") === 0) {
+        td.style.color = (e.mature.net_of_mrv > 0 && e.mrv_headroom > 0)
+          ? "var(--ok)" : "var(--block)";
+        td.style.fontWeight = "600";
+      }
+      tr.appendChild(td);
+    });
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb);
+  et.appendChild(t);
+
+  // ---- status bar ---------------------------------------------------------
+  var allReadings = [];
+  DATA.blocks.forEach(function (b) { b.readings.forEach(function (r) { allReadings.push(r); }); });
+  allReadings.sort(function (a, b) { return a.day < b.day ? -1 : 1; });
+  var past = allReadings.filter(function (r) { return parseDay(r.day) <= NOW; });
+  var future = allReadings.filter(function (r) { return parseDay(r.day) > NOW; });
+
+  document.getElementById("lastpass").textContent =
+    past.length ? shortDay(parseDay(past[past.length - 1].day)) : "—";
+  if (future.length) {
+    var days = Math.max(0, Math.ceil((parseDay(future[0].day) - NOW) / 86400000));
+    document.getElementById("nextpass").textContent =
+      days === 0 ? "today" : days === 1 ? "tomorrow" : "in " + days + " days";
+  } else {
+    document.getElementById("nextpass").textContent = "—";
+  }
+  document.getElementById("revcount").textContent =
+    past.length.toLocaleString() + " of " + allReadings.length.toLocaleString() +
+    " passes captured · built " + DATA.generated_at;
+
+  function tick() {
+    document.getElementById("clock").textContent =
+      new Date().toLocaleTimeString(undefined, { hour12: false });
+  }
+  tick();
+  setInterval(tick, 1000);
+
+  document.getElementById("foot").innerHTML =
+    "Quantification runs on the same engine as the command line: VM0047 area-based " +
+    "for the agroforestry block, VM0042 practice-based for the paddy. Deductions, " +
+    "uncertainty propagation and eligibility gates are the engine's, not the " +
+    "dashboard's. Three inputs are marked placeholders in the source and must be " +
+    "replaced before any issuance: the allometric equation, the performance " +
+    "benchmark, and the monitoring provider itself.";
+
+  initDb();
+})();
+</script>
