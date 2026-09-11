@@ -62,7 +62,13 @@ class RiskScore:
             "confidence": round(self.confidence, 3),
             "novelty": round(self.novelty, 3),
             "persistence": round(self.persistence, 3),
-            "spatial": round(self.spatial, 3),
+            #: Five places, not three. The other four dimensions span 0..1
+            #: and three is plenty; spatial is a share of an entire monitored
+            #: area, so a building-sized footprint is legitimately around one
+            #: part in ten thousand. Rounded to three it becomes exactly zero
+            #: and the console prints "0.00%", which reads as "none" for a
+            #: change that is small but certainly there.
+            "spatial": round(self.spatial, 5),
             "looks": self.looks,
             "composite": self.composite,
         }
@@ -87,7 +93,16 @@ class RiskScore:
             out.append("persistence not yet established: this is the only "
                        "comparison covering this place, so a transient object "
                        "has not been ruled out")
-        out.append(f"spatial reach {self.spatial:.1%} of the monitored area")
+        #: A footprint that is a ten-thousandth of an AOI is still a real
+        #: footprint, so the wording degrades rather than rounding to "0.0%".
+        if self.spatial >= 0.001:
+            out.append(f"spatial reach {self.spatial:.1%} of the monitored area")
+        elif self.spatial > 0:
+            out.append("spatial reach under a tenth of a percent of the "
+                       "monitored area")
+        else:
+            out.append("spatial reach too small to express as a share of the "
+                       "monitored area")
         return out
 
 
@@ -181,7 +196,7 @@ def score_change(event: ChangeEvent, aoi: Aoi,
         confidence=event.confidence,
         novelty=novelty_of(event, history),
         persistence=persistence,
-        spatial=round(spatial, 4),
+        spatial=round(spatial, 5),
         looks=looks,
     )
 

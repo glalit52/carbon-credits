@@ -1,7 +1,13 @@
 <title>TerraShield Console</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<!--
+  No webfont, and no other outbound request of any kind. This console is meant
+  to open from a filesystem inside a facility that may have no route to the
+  internet at all, so a stylesheet fetched from a third party is broken exactly
+  where the product is supposed to work. It is also a disclosure: every analyst
+  opening the page would announce to a font CDN that they had done so, from
+  which network, and when. The font stacks below resolve locally on every
+  platform this will be opened on.
+-->
 <style>
   :root{
     color-scheme:dark;
@@ -14,8 +20,10 @@
     --medium:#4FB3F5; --medium-soft:#4fb3f518;
     --low:#7B8B9C; --low-soft:#7b8b9c18;
     --sar:#C77DFF; --optical:#4FB3F5; --cloud:#3A4757;
-    --f-body:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-    --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --f-body:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+    --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,
+              "DejaVu Sans Mono",monospace;
   }
   *{box-sizing:border-box}
   body{background:var(--ground);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;margin:0}

@@ -309,6 +309,26 @@ def test_confidence_scales_the_composite_within_its_severity_band():
         Severity.CRITICAL, 0.95, 0.5, 0.5, 0.01).composite
 
 
+def test_a_small_footprint_keeps_a_nonzero_spatial_share():
+    """A building in a whole AOI is about one part in ten thousand.
+
+    Rounded to three places that is exactly zero, and the console renders it
+    as "0.00%" -- which an analyst reads as "none" for a change that is small
+    but certainly there. The dimension has to survive serialisation.
+    """
+    score = risk.RiskScore(Severity.MEDIUM, 0.9, 0.0, 0.5, 0.00018)
+    assert score.to_dict()["spatial"] > 0.0
+    assert f"{score.to_dict()['spatial'] * 100:.2f}%" != "0.00%"
+
+    text = " ".join(score.explain())
+    assert "0.0%" not in text, text
+    assert "tenth of a percent" in text
+
+    #: Genuinely zero still says so, rather than implying a measurement.
+    nothing = " ".join(risk.RiskScore(Severity.MEDIUM, 0.9, 0.0, 0.5, 0.0).explain())
+    assert "too small to express" in nothing
+
+
 def test_risk_explanation_names_every_dimension():
     text = " ".join(risk.RiskScore(Severity.HIGH, 0.9, 0.9, 0.0, 0.02).explain())
     for word in ("severity", "confidence", "novelty", "persistence", "spatial"):
