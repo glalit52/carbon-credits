@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-09-11T21:22:09.558873+00:00",
+ "generated_at": "2026-09-11T21:45:22.715093+00:00",
  "as_of": "2026-09-11",
  "organisation": "org-sensegrass-demo",
  "window_days": 210,
@@ -2395,7 +2395,7 @@
     "confidence": 0.97,
     "novelty": 1.0,
     "persistence": 0.0,
-    "spatial": 0.018,
+    "spatial": 0.01842,
     "looks": 1,
     "composite": 72.6
    },
@@ -2421,7 +2421,7 @@
     "confidence": 0.97,
     "novelty": 0.0,
     "persistence": 0.25,
-    "spatial": 0.015,
+    "spatial": 0.01493,
     "looks": 5,
     "composite": 61.9
    },
@@ -2447,7 +2447,7 @@
     "confidence": 0.97,
     "novelty": 1.0,
     "persistence": 0.0,
-    "spatial": 0.0,
+    "spatial": 0.00039,
     "looks": 3,
     "composite": 72.5
    },
@@ -2474,7 +2474,7 @@
     "confidence": 0.935,
     "novelty": 0.0,
     "persistence": 0.5,
-    "spatial": 0.0,
+    "spatial": 0.00018,
     "looks": 3,
     "composite": 63.3
    },
@@ -2501,7 +2501,7 @@
     "confidence": 0.933,
     "novelty": 0.0,
     "persistence": 0.667,
-    "spatial": 0.0,
+    "spatial": 0.00018,
     "looks": 4,
     "composite": 65.0
    },
@@ -2528,7 +2528,7 @@
     "confidence": 0.935,
     "novelty": 0.0,
     "persistence": 0.75,
-    "spatial": 0.0,
+    "spatial": 0.00018,
     "looks": 5,
     "composite": 65.9
    },
@@ -2555,7 +2555,7 @@
     "confidence": 0.886,
     "novelty": 0.0,
     "persistence": 0.25,
-    "spatial": 0.0,
+    "spatial": 0.00015,
     "looks": 5,
     "composite": 59.4
    },
@@ -2581,7 +2581,7 @@
     "confidence": 0.9,
     "novelty": 0.0,
     "persistence": 0.0,
-    "spatial": 0.0,
+    "spatial": 0.00013,
     "looks": 3,
     "composite": 38.2
    },
@@ -2607,7 +2607,7 @@
     "confidence": 0.97,
     "novelty": 1.0,
     "persistence": 0.0,
-    "spatial": 0.13,
+    "spatial": 0.13009,
     "looks": 4,
     "composite": 48.9
    },
@@ -2633,7 +2633,7 @@
     "confidence": 0.943,
     "novelty": 1.0,
     "persistence": 0.0,
-    "spatial": 0.0,
+    "spatial": 0.00024,
     "looks": 1,
     "composite": 47.7
    },
@@ -2659,7 +2659,7 @@
     "confidence": 0.9,
     "novelty": 1.0,
     "persistence": 0.0,
-    "spatial": 0.0,
+    "spatial": 0.00012,
     "looks": 1,
     "composite": 46.8
    },
@@ -2685,7 +2685,7 @@
     "confidence": 0.97,
     "novelty": 0.479,
     "persistence": 0.0,
-    "spatial": 0.001,
+    "spatial": 0.00059,
     "looks": 5,
     "composite": 43.7
    },
@@ -2711,7 +2711,7 @@
     "confidence": 0.852,
     "novelty": 0.0,
     "persistence": 1.0,
-    "spatial": 0.0,
+    "spatial": 0.00013,
     "looks": 2,
     "composite": 43.9
    },
@@ -2737,7 +2737,7 @@
     "confidence": 0.922,
     "novelty": 1.0,
     "persistence": 0.0,
-    "spatial": 0.0,
+    "spatial": 0.00017,
     "looks": 3,
     "composite": 47.3
    },
@@ -2763,7 +2763,7 @@
     "confidence": 0.764,
     "novelty": 0.626,
     "persistence": 0.25,
-    "spatial": 0.001,
+    "spatial": 0.00132,
     "looks": 5,
     "composite": 42.4
    },
@@ -2789,7 +2789,7 @@
     "confidence": 0.87,
     "novelty": 0.0,
     "persistence": 0.333,
-    "spatial": 0.0,
+    "spatial": 0.00011,
     "looks": 7,
     "composite": 39.9
    },
@@ -2815,7 +2815,7 @@
     "confidence": 0.97,
     "novelty": 0.17,
     "persistence": 0.143,
-    "spatial": 0.002,
+    "spatial": 0.00153,
     "looks": 8,
     "composite": 42.0
    },
@@ -2841,7 +2841,7 @@
     "confidence": 0.961,
     "novelty": 0.0,
     "persistence": 0.143,
-    "spatial": 0.001,
+    "spatial": 0.00077,
     "looks": 8,
     "composite": 40.3
    },
@@ -2867,7 +2867,7 @@
     "confidence": 0.97,
     "novelty": 0.066,
     "persistence": 0.0,
-    "spatial": 0.023,
+    "spatial": 0.02288,
     "looks": 8,
     "composite": 40.1
    },
@@ -2893,7 +2893,7 @@
     "confidence": 0.826,
     "novelty": 0.0,
     "persistence": 0.0,
-    "spatial": 0.0,
+    "spatial": 0.00021,
     "looks": 9,
     "composite": 36.9
    },
@@ -2919,7 +2919,7 @@
     "confidence": 0.908,
     "novelty": 0.0,
     "persistence": 0.429,
-    "spatial": 0.0,
+    "spatial": 0.00013,
     "looks": 8,
     "composite": 41.2
    },
@@ -2945,7 +2945,7 @@
     "confidence": 0.807,
     "novelty": 0.0,
     "persistence": 0.1,
-    "spatial": 0.0,
+    "spatial": 0.00013,
     "looks": 11,
     "composite": 37.2
    },
@@ -2972,7 +2972,7 @@
     "confidence": 0.927,
     "novelty": 1.0,
     "persistence": 0.0,
-    "spatial": 0.0,
+    "spatial": 0.00016,
     "looks": 2,
     "composite": 71.1
    },
@@ -2999,7 +2999,7 @@
     "confidence": 0.91,
     "novelty": 0.0,
     "persistence": 0.0,
-    "spatial": 0.0,
+    "spatial": 0.00015,
     "looks": 3,
     "composite": 57.6
    },
@@ -3026,7 +3026,7 @@
     "confidence": 0.699,
     "novelty": 0.067,
     "persistence": 0.5,
-    "spatial": 0.0,
+    "spatial": 8e-05,
     "looks": 3,
     "composite": 38.1
    },
@@ -3052,7 +3052,7 @@
     "confidence": 0.624,
     "novelty": 0.026,
     "persistence": 0.0,
-    "spatial": 0.0,
+    "spatial": 0.00021,
     "looks": 6,
     "composite": 33.4
    },
