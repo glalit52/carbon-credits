@@ -166,6 +166,27 @@ class Raster:
                 out.cells[row * w + col] = self.cells[base + src_col]
         return out
 
+    def crop(self, c0: int, r0: int, c1: int, r1: int) -> "Raster":
+        """A sub-window, clamped to the grid, keeping its true georeference.
+
+        Used for the detail view of a finding. The crop is not resampled: a
+        small change stays a small number of pixels, and the interface scales
+        it with nearest-neighbour so the analyst sees the resolution they
+        actually have rather than a smooth picture implying one they do not.
+        """
+        c0 = max(0, min(self.width - 1, c0))
+        r0 = max(0, min(self.height - 1, r0))
+        c1 = max(c0 + 1, min(self.width, c1))
+        r1 = max(r0 + 1, min(self.height, r1))
+        out = Raster(c1 - c0, r1 - r0, self.gsd_m,
+                     self.origin_e + c0 * self.gsd_m,
+                     self.origin_n - r0 * self.gsd_m, band=self.band)
+        for row in range(r0, r1):
+            src = row * self.width
+            dst = (row - r0) * out.width
+            out.cells[dst:dst + out.width] = self.cells[src + c0:src + c1]
+        return out
+
     def shifted(self, d_col: int, d_row: int) -> "Raster":
         """Translate by whole cells, edge-extending rather than zero-filling.
 
@@ -313,6 +334,20 @@ class Mask:
                         r2, c2 = row + dr, col + dc
                         if 0 <= r2 < self.height and 0 <= c2 < self.width:
                             out.set(c2, r2, True)
+        return out
+
+    def crop(self, c0: int, r0: int, c1: int, r1: int) -> "Mask":
+        c0 = max(0, min(self.width - 1, c0))
+        r0 = max(0, min(self.height - 1, r0))
+        c1 = max(c0 + 1, min(self.width, c1))
+        r1 = max(r0 + 1, min(self.height, r1))
+        out = Mask(c1 - c0, r1 - r0, self.gsd_m,
+                   self.origin_e + c0 * self.gsd_m,
+                   self.origin_n - r0 * self.gsd_m,
+                   [False] * ((c1 - c0) * (r1 - r0)))
+        for row in range(r0, r1):
+            for col in range(c0, c1):
+                out.set(col - c0, row - r0, self.get(col, row))
         return out
 
     def opened(self, radius: int = 1) -> "Mask":
@@ -584,11 +619,31 @@ def render_png(r: Raster, palette: list[tuple[int, int, int]] | None = None,
     return encode_png(r.width, r.height, bytes(buf))
 
 
+def shared_stretch(*rasters: Raster) -> tuple[float, float]:
+    """One display range covering several scenes.
+
+    A before/after pair must be stretched together. Stretched apart, each panel
+    is normalised to its own percentiles, so a sunnier acquisition is rendered
+    back down to the same mid-grey and the analyst compares two images that
+    have each been told to look average. Worse, the reverse happens too: a
+    difference in display gain reads as a difference on the ground, which is
+    the one thing a change viewer must never manufacture.
+    """
+    lows, highs = [], []
+    for r in rasters:
+        lo, hi = _stretch(r, None, None)
+        lows.append(lo)
+        highs.append(hi)
+    return min(lows), max(highs)
+
+
 def render_overlay_png(base: Raster, mask: Mask,
                        colour: tuple[int, int, int] = (255, 170, 40),
-                       alpha: float = 0.55) -> bytes:
+                       alpha: float = 0.55,
+                       lo: float | None = None,
+                       hi: float | None = None) -> bytes:
     """The after-scene with the change mask burned in. The analyst's main view."""
-    lo, hi = _stretch(base, None, None)
+    lo, hi = _stretch(base, lo, hi)
     span = max(hi - lo, 1e-9)
     buf = bytearray()
     for i, v in enumerate(base.cells):

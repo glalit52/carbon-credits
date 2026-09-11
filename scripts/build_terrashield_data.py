@@ -29,7 +29,9 @@ sys.path.insert(0, str(ROOT / "src"))
 from terrashield import change, sites                       # noqa: E402
 from terrashield.catalog import SyntheticProvider, coverage  # noqa: E402
 from terrashield.domain import Role, SiteStatus              # noqa: E402
-from terrashield.raster import render_overlay_png, render_png  # noqa: E402
+from terrashield.raster import (                             # noqa: E402
+    render_overlay_png, render_png, shared_stretch,
+)
 from terrashield.store import Store                          # noqa: E402
 
 STATUS_FOR = {
@@ -60,6 +62,55 @@ def month_coverage(scenes) -> list[dict]:
     return [buckets[k] for k in sorted(buckets)]
 
 
+def _event_window(full, event, aoi, pad_factor: float = 1.6):
+    """Cell bounds of a window around the event, with context around it."""
+    from terrashield.geo import bbox, frame_for
+
+    frame = frame_for(aoi.boundary)
+    min_lon, min_lat, max_lon, max_lat = bbox(event.geometry)
+    west, south = frame.to_m((min_lon, min_lat))
+    east, north = frame.to_m((max_lon, max_lat))
+    c0 = int((west - full.origin_e) / full.gsd_m)
+    c1 = int((east - full.origin_e) / full.gsd_m)
+    r0 = int((full.origin_n - north) / full.gsd_m)
+    r1 = int((full.origin_n - south) / full.gsd_m)
+    #: At least 60 cells of context around the finding, so a small change is
+    #: not a four-pixel thumbnail with nothing around it to place it by.
+    pad_c = max(30, int((c1 - c0) * pad_factor / 2))
+    pad_r = max(30, int((r1 - r0) * pad_factor / 2))
+    return c0 - pad_c, r0 - pad_r, c1 + pad_c, r1 + pad_r
+
+
+def _event_mask(full, event, aoi):
+    """The comparison's mask, restricted to this finding's own footprint.
+
+    The full mask carries everything the threshold flagged across the AOI --
+    at a working port that is twenty ships that moved overnight. Showing it
+    beside a panel captioned "new structure, 3,000 m2" asks the analyst to
+    guess which of the twenty highlighted things the caption is about. The
+    answer is: this one.
+    """
+    from terrashield.geo import bbox, frame_for
+    from terrashield.raster import Mask
+
+    frame = frame_for(aoi.boundary)
+    min_lon, min_lat, max_lon, max_lat = bbox(event.geometry)
+    west, south = frame.to_m((min_lon, min_lat))
+    east, north = frame.to_m((max_lon, max_lat))
+    c0 = int((west - full.origin_e) / full.gsd_m)
+    c1 = int((east - full.origin_e) / full.gsd_m)
+    r0 = int((full.origin_n - north) / full.gsd_m)
+    r1 = int((full.origin_n - south) / full.gsd_m)
+
+    out = Mask(full.width, full.height, full.gsd_m, full.origin_e,
+               full.origin_n, [False] * len(full.bits))
+    for row in range(max(0, r0), min(full.height, r1 + 1)):
+        for col in range(max(0, c0), min(full.width, c1 + 1)):
+            if full.get(col, row):
+                out.set(col, row, True)
+    return out
+
+
 def chip_set(prov, aoi, event, out_dir: Path) -> dict | None:
     """Re-render the before/after pair behind one change event, plus its mask."""
     scenes = {s.id: s for s in prov.search(
@@ -77,11 +128,27 @@ def chip_set(prov, aoi, event, out_dir: Path) -> dict | None:
         return None
 
     stem = event.id.replace(":", "_")
+    scoped = _event_mask(result.mask, event, aoi)
+    window = _event_window(result.mask, event, aoi)
+    #: One display range across the pair, and a second across the two crops.
+    #: Stretching each panel to its own percentiles makes a sunnier day look
+    #: identical to a duller one and turns a display difference into an
+    #: apparent change on the ground.
+    full_lo, full_hi = shared_stretch(rb, ra)
+    cb, ca = rb.crop(*window), ra.crop(*window)
+    det_lo, det_hi = shared_stretch(cb, ca)
     names = {}
     for label, blob in (
-        ("before", render_png(rb)),
-        ("after", render_png(ra)),
-        ("mask", render_overlay_png(ra, result.mask)),
+        ("before", render_png(rb, lo=full_lo, hi=full_hi)),
+        ("after", render_png(ra, lo=full_lo, hi=full_hi)),
+        ("mask", render_overlay_png(ra, scoped, lo=full_lo, hi=full_hi)),
+        #: The same three, cropped to the finding. A 3,000 m2 change is thirty
+        #: cells in a 420 x 320 scene -- visible only if you already know where
+        #: to look, which is the one thing the analyst does not.
+        ("detail_before", render_png(cb, lo=det_lo, hi=det_hi)),
+        ("detail_after", render_png(ca, lo=det_lo, hi=det_hi)),
+        ("detail_mask", render_overlay_png(ca, scoped.crop(*window),
+                                           lo=det_lo, hi=det_hi)),
     ):
         name = f"{stem}-{label}.png"
         (out_dir / name).write_bytes(blob)
@@ -96,6 +163,7 @@ def chip_set(prov, aoi, event, out_dir: Path) -> dict | None:
         "sensor": after.sensor.value,
         "gsd_m": after.gsd_m,
         "width": rb.width, "height": rb.height,
+        "detail_cells": [window[2] - window[0], window[3] - window[1]],
         "registration_shift": list(result.registration_shift),
         "noise_floor": round(result.noise_floor, 5),
         "obscured_fraction": round(result.obscured_fraction, 4),
@@ -118,12 +186,18 @@ def build(db_path: str, org_id: str, out: Path, as_of: date,
 
     for aoi in store.list_aois():
         scenes = store.list_scenes(aoi.id, window_start, as_of)
+        #: Measure coverage over the period the catalogue actually covers, not
+        #: over the nominal window. A site enrolled two months ago has no
+        #: acquisitions from before it was enrolled, and calling that a
+        #: 144-day gap without a usable look describes the enrolment date
+        #: rather than the monitoring.
+        observed_from = min((s.acquired_on for s in scenes), default=window_start)
         changes = store.list_changes(aoi.id, start=window_start, end=as_of,
                                      limit=2000)
         anomalies = [a for a in store.list_anomalies(aoi.id, limit=2000)
                      if window_start <= a.observed_at.date() <= as_of]
         alerts = [a for a in all_alerts if a["aoi_id"] == aoi.id]
-        cov = coverage(aoi.id, scenes, window_start, as_of)
+        cov = coverage(aoi.id, scenes, observed_from, as_of)
         peak = max((a.score for a in anomalies), default=0.0)
         status = (SiteStatus.ANOMALOUS if peak >= 65
                   or any(a["priority"] <= 2 for a in alerts)
