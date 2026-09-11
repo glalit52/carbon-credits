@@ -1,0 +1,41 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # The core has no dependencies on purpose, so there is nothing to
+      # install but the test runner itself.
+      - run: pip install pytest
+      - run: python -m pytest -q
+
+      # The dashboard is committed rather than built on deploy, so it can
+      # drift from the code that generates it. This rebuilds and compares.
+      #
+      # Not a plain `git diff`: the governance section is read back from a real
+      # database run, so it carries wall-clock timestamps, uuid4 ids and hashes
+      # over both. Those differ every run by design. The checker normalises
+      # exactly those and compares everything else strictly.
+      - name: dashboard is in sync with the code that generates it
+        run: python3 scripts/check_dashboard_fresh.py
+
+      # The TerraShield console cannot be regenerated in CI -- that means six
+      # months of the monitoring pipeline over four sites -- so this checks the
+      # drift that actually happens instead: a rebuilt dataset with a stale
+      # page, or a chip referenced but not committed.
+      - name: terrashield console is consistent with its dataset
+        run: python3 scripts/check_terrashield_dashboard.py
+
+      - name: static build succeeds
+        run: bash scripts/build_static.sh
