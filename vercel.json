@@ -4,15 +4,35 @@
   "outputDirectory": "public",
   "framework": null,
   "rewrites": [
-    { "source": "/api", "destination": "/api/index?p=health" },
-    { "source": "/api/(.*)", "destination": "/api/index?p=$1" }
+    {
+      "source": "/cio/api",
+      "destination": "/api/cio?p=health"
+    },
+    {
+      "source": "/cio/api/(.*)",
+      "destination": "/api/cio?p=$1"
+    },
+    {
+      "source": "/api",
+      "destination": "/api/index?p=health"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index?p=$1"
+    }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "same-origin" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "same-origin"
+        }
       ]
     }
   ]

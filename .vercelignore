@@ -2,6 +2,7 @@ tests/
 model/
 docs/
 scripts/build_dashboard*.py
+scripts/build_aicio_dashboard.py
 dashboard/template.html
 __pycache__/
 *.pyc
