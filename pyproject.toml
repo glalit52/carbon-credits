@@ -14,13 +14,9 @@ dev = ["pytest>=8"]
 
 [project.scripts]
 carbonstack = "carbonstack.cli:main"
-aicio = "aicio.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-# The dashboard template ships inside the package: it is data the build script
-# reads, not something to be regenerated at install time.
-

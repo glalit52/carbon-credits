@@ -30,14 +30,5 @@ jobs:
       - name: dashboard is in sync with the code that generates it
         run: python3 scripts/check_dashboard_fresh.py
 
-      # The financial AI evaluation suite is a release gate, not a report. A
-      # regression in calculation accuracy, grounding, suitability or
-      # prompt-injection resistance fails the build; the softer categories
-      # print and are watched.
-      - name: financial AI evals
-        run: python3 -m aicio evals
-        env:
-          PYTHONPATH: src
-
       - name: static build succeeds
         run: bash scripts/build_static.sh

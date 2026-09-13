@@ -1,17 +1,7 @@
 # carbon-credits
 
-Two products share this repository.
-
-**`carbonstack`** — a carbon credit and reforestation project: the research
-behind it, the financial model that gates it, and the dMRV core it runs on.
-Everything below the first divider.
-
-**`aicio`** — Personal AI CIO, an AI-native private investment banker built to
-the PRD in `docs/aicio/`. It shares this repository's conventions (standard
-library only, audited calculations, a generated static dashboard) and shares
-nothing else with `carbonstack`: separate package, separate database, separate
-deployment path under `/cio`. See [Personal AI CIO](#personal-ai-cio) and
-[docs/aicio/architecture.md](docs/aicio/architecture.md).
+A carbon credit and reforestation project: the research behind it, the
+financial model that gates it, and `carbonstack`, the dMRV core it runs on.
 
 ## Where things are
 
@@ -24,10 +14,7 @@ deployment path under `/cio`. See [Personal AI CIO](#personal-ai-cio) and
 | `src/carbonstack/feed.py` | Simulated monitoring on the real 5-day revisit cadence |
 | `dashboard/` | The live MRV dashboard, its dataset and example evidence packs |
 | `scripts/` | Build the dashboard dataset and page |
-| `src/aicio/` | Personal AI CIO — the second product, mapped below |
-| `aicio_dashboard/` | Its generated dashboard, published under `/cio` |
-| `docs/aicio/architecture.md` | Why the AI CIO is built the way it is |
-| `tests/` | 481 tests, stdlib only |
+| `tests/` | 140 tests, stdlib only |
 
 ## The two numbers that shape everything
 
@@ -322,137 +309,3 @@ carrying Tier 1 uncertainty, which the engine already charges for.
 Reforestation is unfinanceable without provable long-horizon land rights, and
 `eligibility` is built to enforce that. Which landscape, how many hectares,
 and what tenure evidence exists is the input nothing else can substitute for.
-
-
----
-
-# Personal AI CIO
-
-An AI-native private investment banker. Not an investment-discovery app with a
-chatbot attached: a system that continuously turns one person's whole financial
-picture into a small number of explainable decisions, and that is willing to
-conclude that no decision is needed.
-
-```
-python3 -m aicio demo            # seed a portfolio and run the whole product
-python3 -m aicio evals           # the financial AI evaluation suite
-python3 -m aicio serve           # the HTTP API on :8787
-```
-
-`demo` needs no configuration, no API key and no network.
-
-## What it actually does
-
-Run against the demo portfolio — ₹1.19 crore across six funds, three direct
-stocks, EPF, gold and idle cash — it finds things a holdings screen cannot:
-
-```
-[high  ] REVIEW  Mirae Asset ELSS Tax Saver and UTI Nifty 50 Index Fund
-                 overlap 100% -- you are paying twice for one exposure
-[high  ] REVIEW  'Second home' has a 7% chance of being met on the current plan
-[medium] REVIEW  Debt is -5.6% outside its band -- point contributions here
-                 rather than selling elsewhere
-[medium] REDUCE  Parag Parikh Flexi Cap is 16.5% of the portfolio
-[low   ] REVIEW  Axis Bluechip no longer earns its place on the evidence
-```
-
-Ask it anything and the answer comes from the same engine output:
-
-```
-$ python3 -m aicio ask "what do I actually own?"
-Your largest single-company exposure is HDFCBANK at 8.6% of the portfolio,
-reaching you through 5 separate holdings. By sector: Fixed Income 17%,
-Financials 9%, Energy 7%. Mirae Asset ELSS Tax Saver and UTI Nifty 50 Index
-Fund overlap 100% of their disclosed holdings, so you are paying two expense
-ratios for close to one exposure. Look-through covers 58% of your portfolio;
-the remainder sits in funds that publish only their largest positions.
-```
-
-That 8.6% in one bank across five holdings is invisible on every holdings
-screen the user owns. Finding it is the product.
-
-## Structure
-
-| Module | What it is |
-|---|---|
-| `domain.py` | The entities a personal balance sheet is made of |
-| `provenance.py` | Where every number came from, and how old it is |
-| `money.py` | Decimal amounts, Indian numbering, one-way float boundary |
-| `ips.py` | Financial DNA → Investment Policy Statement → suitability gate |
-| `engine/` | Deterministic finance: returns, risk, allocation, X-ray, tax lots, goals, health, SIP optimiser |
-| `ingest/` | CSV, XLSX, PDF and CAMS/KFintech CAS parsing, with exceptions |
-| `market/` | Provider-abstracted market data; broker and aggregator connectors |
-| `analysis.py` | One deterministic pass → the single source of truth |
-| `decisions/` | Named rules → suitability gate → de-duplication → ranking |
-| `alerts.py` | Proactive monitoring that stays quiet |
-| `reports.py` | Daily brief, weekly report, monthly investment committee |
-| `ai/` | Grounded AI banker: gateway, tools, versioned prompts, safety |
-| `evals/` | Eleven synthetic investors and an adversarial corpus |
-| `crypto.py` | ChaCha20-Poly1305 (RFC 8439) for statements and tokens |
-| `store/` | SQLite with a hash-chained audit log |
-| `api.py`, `cli.py`, `web/` | HTTP API, command line, generated dashboard |
-
-## The rules that hold it together
-
-**The language model is never the calculator.** `aicio/engine/` is a purity
-boundary enforced by a test: no network, no LLM, no clock. Every number a user
-sees comes out of it carrying a provenance record.
-
-**Recommending and executing are separate systems.** Nothing in this package
-places a trade. Approving a recommendation records an approval.
-
-**A recommendation that cannot argue against itself does not ship.** The domain
-model refuses to validate a material action without evidence, risks and
-counterarguments.
-
-**Doing nothing is a conclusion, not a fallback.** The `balanced` eval scenario
-exists to catch a system that always finds something to say.
-
-## The evals
-
-```
-$ python3 -m aicio evals
-  adversarial   10/10 (critical)
-  calculation    4/4  (critical)
-  consistency   11/11
-  detection     18/18
-  grounding      7/7  (critical)
-  no_action      1/1
-  schema        11/11
-  suitability   11/11 (critical)
-  uncertainty    2/2
-
-75/75 passed · OK
-```
-
-Four categories fail CI. Failing a build on a judgement call trains people to
-skip the suite; failing it on a wrong number is the entire point.
-
-The adversarial cases are the interesting ones. Injected instructions inside an
-uploaded statement are stripped and cannot change an answer, and a reply
-containing a figure with no fact behind it — or a guarantee, or certainty about
-a future price — is replaced rather than shown:
-
-```
-I could not answer that safely. My draft contained claims that cannot be made:
-a guaranteed return; figures not present in the data: 9,99,99,999. This product
-does not show figures it cannot trace to your own data.
-```
-
-## Integrations
-
-Zerodha Kite, Upstox, Angel One, RBI Account Aggregator, Plaid, SnapTrade, and a
-sandbox connector that follows exactly the same consent rules. Market data from
-AMFI (authoritative for Indian mutual funds, keyless) with Yahoo, Finnhub,
-Twelve Data and Alpha Vantage behind one interface.
-
-`python3 -m aicio connectors` lists them all with what each still needs. They
-register whether or not keys are present, because a connection screen should say
-"Zerodha is supported and needs setup" rather than hiding it.
-
-## What is deliberately not built
-
-Execution, regulated advice, autonomy and real-time data — for reasons set out
-in [docs/aicio/architecture.md](docs/aicio/architecture.md#6-what-is-deliberately-not-built).
-The operating model has to be settled with specialist counsel before launch, and
-the product is analytics with disclosures until it is.

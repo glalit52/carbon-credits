@@ -19,15 +19,6 @@ if [ -d dashboard/packs ]; then
   cp -r dashboard/packs public/packs
 fi
 
-# The Personal AI CIO dashboard is a separate product in this repository and
-# publishes under /cio. Same rule as above: built and reviewed locally,
-# committed, shipped as-is.
-if [ -d aicio_dashboard ]; then
-  mkdir -p public/cio
-  cp aicio_dashboard/index.html public/cio/index.html
-  cp aicio_dashboard/data.json  public/cio/data.json
-fi
-
 cat > public/robots.txt <<'EOF'
 User-agent: *
 Disallow: /
