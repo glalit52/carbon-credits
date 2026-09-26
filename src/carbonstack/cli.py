@@ -25,12 +25,16 @@ import sys
 from datetime import date, timedelta
 from pathlib import Path
 
-from . import evidence, ledger, methodology, payments, pipeline, scenario, serialize, sites
+from . import (
+    evidence, ledger, methodology, payments, pipeline, scenario, serialize,
+    sites, stacking,
+)
 from .feed import (
     FeedProvider, season_warnings, series, summarise_seasons, year_confidence,
 )
 from .methodology.vm0042 import EmissionFactor
 from .methodology.vm0047 import PerformanceBenchmark
+from .methodology.vm0051 import CommonPractice, RiceEmissionFactor
 from .remote_sensing import SyntheticProvider
 from .store import Store
 from .store.repo import StoreError
@@ -94,7 +98,11 @@ def cmd_init(args) -> int:
 def cmd_enroll(args) -> int:
     site = _site(args.site)
     project = sites.as_project(site)
-    meth = "VM0042" if site.track.value in ("rice", "cropland") else "VM0047"
+    # Rice goes to VM0051, the purpose-built rice methodology, not VM0042.
+    # VM0042 covers rice but is an agricultural land management methodology;
+    # VM0051 replaces CDM AMS-III.AU and is CORSIA eligible.
+    meth = {"rice": "VM0051", "cropland": "VM0042"}.get(
+        site.track.value, "VM0047")
     with _store(args) as store:
         store.save_project(project, methodology_id=meth)
         print(f"enrolled {project.id} — {project.name}")
@@ -149,7 +157,25 @@ def cmd_quantify(args) -> int:
 
         if site is not None:
             provider, readings = _feed_provider(site, max(end, date.today()))
-            if meta["methodology_id"] == "VM0042":
+            if meta["methodology_id"] == "VM0051":
+                ss = [s for s in summarise_seasons(readings) if s.year == args.year]
+                if not ss:
+                    raise SystemExit(f"no seasons found for {args.year}")
+                baseline = sum(s.baseline_ch4_kg_ha for s in ss) / max(len(ss), 1)
+                project_ch4 = sum(s.project_ch4_kg_ha for s in ss) / max(len(ss), 1)
+                factor = RiceEmissionFactor(
+                    baseline_ch4_kg_ha_season=baseline,
+                    project_ch4_kg_ha_season=project_ch4,
+                    seasons_per_year=len(ss),
+                    tier=args.tier,
+                    source=(f"measured from {sum(s.revisits for s in ss)} "
+                            f"revisits across {len(ss)} season(s)"))
+                meth = methodology.get(
+                    "VM0051", factors={"awd": factor},
+                    common_practice=CommonPractice(
+                        jurisdiction=args.jurisdiction or site.admin,
+                        awd_penetration=args.awd_penetration))
+            elif meta["methodology_id"] == "VM0042":
                 ss = [s for s in summarise_seasons(readings) if s.year == args.year]
                 if not ss:
                     raise SystemExit(f"no seasons found for {args.year}")
@@ -314,6 +340,12 @@ def cmd_eligibility(args) -> int:
             print("\n  blocking reasons, most common first:")
             for reason, count in sorted(reasons.items(), key=lambda kv: -kv[1]):
                 print(f"    {count:>5,}  {reason}")
+        programme = project.programme_issues()
+        if programme:
+            print("\n  blocking the whole project, not any one plot:")
+            for problem in programme:
+                print(f"    ! {problem}")
+
         if args.verbose:
             print()
             for plot_id, problems in sorted(issues.items()):
@@ -342,6 +374,42 @@ def cmd_status(args) -> int:
                 print(f"    {v.year}  {v.status.value:<13} {v.net_t:>10,.3f} tCO2e"
                       f"  {v.issuable_whole:>6,} credits")
         print(f"  buffer held          {ledger.buffer_balance(store, args.project_id)['held_t']:>10,.4f} tCO2e")
+    return 0
+
+
+def cmd_stack(args) -> int:
+    with _store(args) as store:
+        if args.stack_command == "add":
+            actor = _require_actor(args)
+            geometry = None
+            if args.geometry:
+                geometry = [tuple(float(x) for x in pair.split(","))
+                            for pair in args.geometry.split(";")]
+            c = stacking.register_claim(
+                store, args.project_id, args.plot_id,
+                pillar=stacking.Pillar(args.pillar),
+                methodology_id=args.methodology, area_ha=args.area,
+                geometry=geometry, actor=actor)
+            print(f"{c.pillar.value} claimed on {c.plot_id} under "
+                  f"{c.methodology_id}")
+            print(f"  pools    {', '.join(sorted(p.value for p in c.pools))}")
+            print(f"  area     {c.area_ha:,.4f} ha")
+            print(f"  boundary {'own sub-plot' if c.has_own_geometry else 'whole plot'}")
+        elif args.stack_command == "audit":
+            report = stacking.audit(store, args.project_id)
+            print(f"{args.project_id}")
+            print(f"  claims           {report['claims']:>8,}")
+            print(f"  plots claimed    {report['plots_with_claims']:>8,}")
+            print(f"  stacked plots    {report['stacked_plots']:>8,}")
+            print(f"  stacked area     {report['stacked_ha']:>8,.2f} ha "
+                  f"({report['stacked_share']:.0%} of the project)")
+            if report["clean"]:
+                print("  no hectare is claimed twice")
+            else:
+                print(f"\n  {len(report['conflicts'])} conflict(s):")
+                for c in report["conflicts"]:
+                    print(f"    [{c['kind']}] {c['detail']}")
+                return 1
     return 0
 
 
@@ -479,6 +547,11 @@ def build_parser() -> argparse.ArgumentParser:
                    help="emission factor tier for practice-based methodologies")
     p.add_argument("--benchmark", type=float, default=0.6,
                    help="performance benchmark, tCO2e/ha/yr, for ARR")
+    p.add_argument("--awd-penetration", type=float, default=0.04,
+                   help="share of rice area already on AWD in the jurisdiction; "
+                        "VM0051 ties additionality to it")
+    p.add_argument("--jurisdiction", default="",
+                   help="jurisdiction the common-practice figure applies to")
     p.set_defaults(func=cmd_quantify)
 
     p = sub.add_parser("queue", help="vintages waiting on a human")
@@ -528,6 +601,22 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("status", help="is this project healthy")
     p.add_argument("project_id")
     p.set_defaults(func=cmd_status)
+
+    p = sub.add_parser("stack", parents=[actor_opt],
+                       help="pillar claims and double-counting control")
+    ssub = p.add_subparsers(dest="stack_command", required=True)
+    q = ssub.add_parser("add", parents=[actor_opt], help="claim a pillar on a plot")
+    q.add_argument("project_id")
+    q.add_argument("plot_id")
+    q.add_argument("--pillar", required=True,
+                   choices=[x.value for x in stacking.Pillar])
+    q.add_argument("--methodology", required=True)
+    q.add_argument("--area", type=float, required=True)
+    q.add_argument("--geometry", default="",
+                   help="sub-plot boundary as 'lon,lat;lon,lat;...'")
+    r = ssub.add_parser("audit", help="is any hectare claimed twice")
+    r.add_argument("project_id")
+    p.set_defaults(func=cmd_stack)
 
     p = sub.add_parser("evidence", help="build the verification pack")
     p.add_argument("project_id")

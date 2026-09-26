@@ -5,7 +5,7 @@ import pytest
 from carbonstack import methodology
 from carbonstack.biomass import Allometry, co2e_per_ha
 from carbonstack.domain import (
-    Enrollment, Farmer, Plot, Project, TenureBasis, TrackKind,
+    CarbonRights, Enrollment, Farmer, Plot, Project, TenureBasis, TrackKind,
 )
 from carbonstack.methodology.base import (
     Deduction, apply_deductions, combine_uncertainty, uncertainty_deduction,
@@ -51,7 +51,7 @@ def test_combined_uncertainty_of_nothing_is_zero():
 
 
 def test_registry_resolves_and_rejects():
-    assert set(methodology.available()) == {"VM0047", "VM0042"}
+    assert set(methodology.available()) == {"VM0047", "VM0042", "VM0051"}
     assert methodology.get("vm0047").id == "VM0047"
     with pytest.raises(KeyError):
         methodology.get("VM9999")
@@ -70,12 +70,19 @@ def build(n=4, practice="block_planting", track=TrackKind.AGROFORESTRY,
     for i in range(n):
         f = p.add_farmer(Farmer(id=f"F{i}", name="A", village="V", district="D",
                                 state="S", consent_on=date(2025, 6, 1),
-                                consent_reference=f"C/{i}"))
+                                consent_reference=f"C/{i}",
+                                carbon_rights=CarbonRights(
+                                    agreement_reference=f"CRA/{i}",
+                                    signed_on=date(2025, 6, 1),
+                                    holder="proponent",
+                                    reversal_clause_ack=True)))
         plot = p.add_plot(Plot(id=f"P{i}", farmer_id=f.id,
                                boundary=square(80 + i * 0.01, 16.3),
                                tenure=tenure, tenure_reference="RoR/1"))
         p.enroll(Enrollment(plot_id=plot.id, project_id=p.id,
-                            enrolled_on=date(2025, 7, 15), practice=practice))
+                            enrolled_on=date(2025, 7, 15), practice=practice,
+                            baseline_captured_on=date(2025, 6, 20),
+                            practice_started_on=date(2025, 7, 15)))
     return p
 
 

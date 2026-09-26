@@ -248,3 +248,109 @@ def test_evidence_plot_register_names_the_exclusion_reason(tmp_path):
         assert "creditable" in register
         assert "undocumented" in register
         assert ",no," in register or register.rstrip().endswith("undocumented")
+
+
+# --- stacking through the API ----------------------------------------------
+
+def rice_store():
+    from carbonstack.sites import THANJAVUR
+    s = Store(":memory:", actor="tester")
+    s.save_project(as_project(THANJAVUR), methodology_id="VM0051")
+    return s, THANJAVUR.id, f"{THANJAVUR.id}-P1"
+
+
+BED = [[79.1378, 10.7867], [79.1396, 10.7867],
+       [79.1396, 10.7877], [79.1378, 10.7877]]
+BUND = [[79.1378, 10.7877], [79.1396, 10.7877],
+        [79.1396, 10.7878], [79.1378, 10.7878]]
+
+
+def test_api_stacking_audit_starts_clean():
+    s, pid, _ = rice_store()
+    status, body = dispatch(s, "GET", f"/api/projects/{pid}/stacking", {}, {})
+    assert status == 200
+    assert body["clean"] is True and body["claims"] == 0
+
+
+def test_api_registers_a_lawful_stack():
+    s, pid, plot = rice_store()
+    for pillar, meth, area, geom in (("methane", "VM0051", 2.2, BED),
+                                     ("trees", "VM0047", 0.25, BUND)):
+        status, body = dispatch(s, "POST", f"/api/projects/{pid}/stacking", {}, {
+            "actor": "ops", "plot_id": plot, "pillar": pillar,
+            "methodology_id": meth, "area_ha": area, "geometry": geom})
+        assert status == 200, body
+    audit = dispatch(s, "GET", f"/api/projects/{pid}/stacking", {}, {})[1]
+    assert audit["clean"] is True and audit["stacked_plots"] == 1
+
+
+def test_api_refuses_double_counting_with_409():
+    """A refusal is the caller's state assumption being wrong, which is worth
+    saying precisely rather than as a 500."""
+    s, pid, plot = rice_store()
+    dispatch(s, "POST", f"/api/projects/{pid}/stacking", {}, {
+        "actor": "ops", "plot_id": plot, "pillar": "methane",
+        "methodology_id": "VM0051", "area_ha": 2.2, "geometry": BED})
+    status, body = dispatch(s, "POST", f"/api/projects/{pid}/stacking", {}, {
+        "actor": "ops", "plot_id": plot, "pillar": "soil_carbon",
+        "methodology_id": "VM0042", "area_ha": 0.2, "geometry": BUND})
+    assert status == 409
+    assert "twice" in body["error"]
+
+
+def test_api_stacking_write_demands_an_actor_and_a_plot():
+    s, pid, plot = rice_store()
+    status, body = dispatch(s, "POST", f"/api/projects/{pid}/stacking", {}, {
+        "plot_id": plot, "pillar": "methane", "methodology_id": "VM0051",
+        "area_ha": 1.0})
+    assert status == 400 and "actor" in body["error"]
+
+    status, body = dispatch(s, "POST", f"/api/projects/{pid}/stacking", {}, {
+        "actor": "ops", "pillar": "methane", "methodology_id": "VM0051",
+        "area_ha": 1.0})
+    assert status == 400 and "plot_id" in body["error"]
+
+
+def test_api_eligibility_separates_programme_blockers():
+    s, pid, _ = rice_store()
+    body = dispatch(s, "GET", f"/api/projects/{pid}/eligibility", {}, {})[1]
+    assert "programme_issues" in body
+    assert body["methodology_version"] == "VM0051 v1.1"
+
+
+# --- evidence carries the governance record --------------------------------
+
+def test_evidence_pack_carries_carbon_rights_and_consultation(tmp_path):
+    from carbonstack.sites import THANJAVUR
+
+    s, pid, plot = rice_store()
+    out = evidence.build(s, pid, tmp_path / "pack")
+
+    register = (out / "plot_register.csv").read_text()
+    assert "carbon_rights_reference" in register
+    assert "reversal_clause_ack" in register
+    assert "rice_ecosystem" in register
+    assert "irrigated_lowland" in register
+
+    manifest = json.loads((out / "manifest.json").read_text())
+    assert manifest["project"]["methodology_version"] == "VM0051 v1.1"
+    assert manifest["governance"]["stakeholder_consultation"] is not None
+    assert manifest["governance"]["farmers_with_carbon_rights"] == 1
+    assert manifest["governance"]["programme_issues"] == []
+
+    summary = (out / "SUMMARY.md").read_text()
+    assert "Governance" in summary and "Stacking" in summary
+    assert "grievance channel" in summary
+
+
+def test_evidence_pack_ships_the_stacking_audit(tmp_path):
+    s, pid, plot = rice_store()
+    dispatch(s, "POST", f"/api/projects/{pid}/stacking", {}, {
+        "actor": "ops", "plot_id": plot, "pillar": "methane",
+        "methodology_id": "VM0051", "area_ha": 2.2, "geometry": BED})
+    out = evidence.build(s, pid, tmp_path / "pack")
+
+    audit = json.loads((out / "stacking_audit.json").read_text())
+    assert audit["clean"] is True
+    assert audit["claims"] == 1
+    assert "none found" in (out / "SUMMARY.md").read_text()

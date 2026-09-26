@@ -23,7 +23,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable
 from urllib.parse import parse_qs, urlparse
 
-from . import ledger, payments
+from . import ledger, payments, stacking
 from .pipeline import health
 from .store.repo import Store, StoreError
 
@@ -120,8 +120,43 @@ def api_eligibility(store: Store, project_id: str, **_) -> dict:
         "creditable_ha": round(project.creditable_area_ha(), 4),
         "blocked_plots": len(issues),
         "reasons": dict(sorted(reasons.items(), key=lambda kv: -kv[1])),
+        # Reported apart from the per-plot findings because these block every
+        # hectare at once, and repeating them per plot would bury the rest.
+        "programme_issues": project.programme_issues(),
+        "methodology_version": store.project_meta(project_id)["methodology_version"],
         "detail": issues,
     }
+
+
+@route("GET", "/api/projects/{project_id}/stacking")
+def api_stacking(store: Store, project_id: str, **_) -> dict:
+    """Is any hectare claimed twice. Read this before issuing on a stacked plot."""
+    return stacking.audit(store, project_id)
+
+
+@route("POST", "/api/projects/{project_id}/stacking")
+def api_register_claim(store: Store, project_id: str, body: dict, **_) -> dict:
+    try:
+        pillar = stacking.Pillar(body["pillar"])
+        methodology_id = body["methodology_id"]
+        area_ha = float(body["area_ha"])
+    except KeyError as exc:
+        raise ApiError(400, f"missing field: {exc.args[0]}") from None
+    except ValueError as exc:
+        raise ApiError(400, str(exc)) from None
+
+    plot_id = body.get("plot_id")
+    if not plot_id:
+        raise ApiError(400, "missing field: plot_id")
+
+    geometry = body.get("geometry")
+    if geometry is not None:
+        geometry = [tuple(v) for v in geometry]
+
+    return stacking.register_claim(
+        store, project_id, plot_id, pillar=pillar,
+        methodology_id=methodology_id, area_ha=area_ha, geometry=geometry,
+        actor=_actor(body)).to_dict()
 
 
 @route("GET", "/api/projects/{project_id}/vintages")

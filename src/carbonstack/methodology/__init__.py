@@ -17,10 +17,12 @@ from .base import (
 )
 from .vm0042 import VM0042
 from .vm0047 import VM0047
+from .vm0051 import VM0051
 
 _REGISTRY: dict[str, type] = {
     VM0047.id: VM0047,
     VM0042.id: VM0042,
+    VM0051.id: VM0051,
 }
 
 
@@ -40,6 +42,6 @@ def available() -> list[str]:
 
 __all__ = [
     "get", "available", "Methodology", "VintageResult", "Deduction",
-    "VM0047", "VM0042", "uncertainty_deduction", "combine_uncertainty",
+    "VM0047", "VM0042", "VM0051", "uncertainty_deduction", "combine_uncertainty",
     "apply_deductions",
 ]

@@ -1,15 +1,34 @@
 {
-  "generated_at": "2026-09-11T09:00:45+00:00",
+  "generated_at": "2026-09-26T17:55:02+00:00",
   "project": {
     "id": "IN-TNJ-01",
     "name": "Vallam paddy block, Thanjavur district, Tamil Nadu",
     "track": "rice",
     "country": "India",
     "start_date": "2025-06-01",
-    "methodology": "VM0042",
+    "methodology": "VM0051",
+    "methodology_version": "VM0051 v1.1",
     "registry": null,
     "registry_ref": null,
     "crediting_period_yrs": 30
+  },
+  "governance": {
+    "programme_issues": [],
+    "stakeholder_consultation": {
+      "held_on": "2025-06-01",
+      "record_reference": "CONSULT/IN-TNJ-01/001",
+      "participants": 34,
+      "grievance_channel": "village committee, monthly; SMS to +91 80000 00000"
+    },
+    "farmers_with_carbon_rights": 1,
+    "farmers_total": 1
+  },
+  "stacking": {
+    "claims": 0,
+    "stacked_plots": 0,
+    "stacked_ha": 0,
+    "clean": true,
+    "conflicts": 0
   },
   "area": {
     "enrolled_ha": 2.4918,
@@ -28,12 +47,12 @@
   "credits": {
     "vintages": 1,
     "gross_tco2e": 2.1172,
-    "net_tco2e": 1.1698,
+    "net_tco2e": 1.3762,
     "issued_credits": 1.0,
     "buffer": {
-      "held_t": 0.2064,
+      "held_t": 0,
       "released_t": 0,
-      "entries": 1
+      "entries": 0
     }
   },
   "payments": {
@@ -50,7 +69,7 @@
     "event_count": 7,
     "chain_intact": true,
     "first_bad_event": null,
-    "head_hash": "ee6a843fc79e54e9e4bd9d29c30fba9f01b35ed598ee571010dcbb36d02ff5a8"
+    "head_hash": "1856712564518098b58f4c02c7b35fd68f375aef0b71947c13c037061576475e"
   },
   "files": [
     "SUMMARY.md",
@@ -61,6 +80,7 @@
     "observations.csv",
     "payments.csv",
     "plot_register.csv",
+    "stacking_audit.json",
     "vintages.csv"
   ],
   "caveats": [

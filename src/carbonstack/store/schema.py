@@ -157,6 +157,37 @@ MIGRATIONS: list[tuple[int, str]] = [
     );
     CREATE INDEX idx_events_subject ON events(subject_type, subject_id);
     """),
+    (2, """
+    -- Registry-blocking records the first schema had no room for. Each one
+    -- is something a validation and verification body asks for and the
+    -- product could not answer: which version of the rules a number was
+    -- computed under, who holds the right to the credits, whether the
+    -- baseline predates the practice change, and whether the field is the
+    -- kind of rice a rice methodology will credit at all.
+    ALTER TABLE projects    ADD COLUMN methodology_version TEXT NOT NULL DEFAULT '';
+    ALTER TABLE projects    ADD COLUMN consultation_json   TEXT;
+    ALTER TABLE farmers     ADD COLUMN carbon_rights_json  TEXT;
+    ALTER TABLE enrollments ADD COLUMN baseline_captured_on TEXT;
+    ALTER TABLE enrollments ADD COLUMN practice_started_on  TEXT;
+    ALTER TABLE enrollments ADD COLUMN ecosystem            TEXT;
+    ALTER TABLE enrollments ADD COLUMN water_control        TEXT;
+
+    -- Stacking. A hectare may carry more than one pillar only on separate
+    -- geometry and under methodologies that do not credit the same pool.
+    CREATE TABLE pillar_claims (
+        id             TEXT PRIMARY KEY,
+        project_id     TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        plot_id        TEXT NOT NULL REFERENCES plots(id) ON DELETE CASCADE,
+        pillar         TEXT NOT NULL,
+        methodology_id TEXT NOT NULL,
+        carbon_pool    TEXT NOT NULL,
+        area_ha        REAL NOT NULL,
+        geometry_json  TEXT,
+        created_at     TEXT NOT NULL,
+        UNIQUE(plot_id, pillar)
+    );
+    CREATE INDEX idx_pillar_plot ON pillar_claims(plot_id);
+    """),
 ]
 
 LATEST = max(v for v, _ in MIGRATIONS)

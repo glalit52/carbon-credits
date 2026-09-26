@@ -26,7 +26,9 @@ from pathlib import Path
 from typing import Any, Iterator
 
 from ..domain import (
-    Enrollment, Farmer, Observation, Plot, Project, TenureBasis, TrackKind,
+    CarbonRights, Enrollment, Farmer, Observation, Plot, Project,
+    RiceEcosystem, StakeholderConsultation, TenureBasis, TrackKind,
+    WaterControl,
 )
 from .schema import migrate
 
@@ -155,21 +157,42 @@ class Store:
         with self.tx() as conn:
             existing = conn.execute(
                 "SELECT id FROM projects WHERE id = ?", (project.id,)).fetchone()
+            consultation = None
+            if project.consultation is not None:
+                c = project.consultation
+                consultation = _canonical({
+                    "held_on": _s(c.held_on),
+                    "record_reference": c.record_reference,
+                    "participants": c.participants,
+                    "grievance_channel": c.grievance_channel,
+                })
             conn.execute(
                 "INSERT OR REPLACE INTO projects (id, name, track, country,"
                 " start_date, crediting_period_yrs, methodology_id, registry,"
-                " registry_ref, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                " registry_ref, created_at, methodology_version, consultation_json)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
                 (project.id, project.name, project.track.value, project.country,
                  _s(project.start_date), project.crediting_period_yrs,
-                 methodology_id, registry, registry_ref, _now()),
+                 methodology_id, registry, registry_ref, _now(),
+                 project.methodology_version, consultation),
             )
             for f in project.farmers.values():
+                rights = None
+                if f.carbon_rights is not None:
+                    r = f.carbon_rights
+                    rights = _canonical({
+                        "agreement_reference": r.agreement_reference,
+                        "signed_on": _s(r.signed_on),
+                        "holder": r.holder,
+                        "reversal_clause_ack": r.reversal_clause_ack,
+                        "expires_on": _s(r.expires_on),
+                    })
                 conn.execute(
                     "INSERT OR REPLACE INTO farmers (id, project_id, name, village,"
-                    " district, state, consent_on, consent_reference, created_at)"
-                    " VALUES (?,?,?,?,?,?,?,?,?)",
+                    " district, state, consent_on, consent_reference, created_at,"
+                    " carbon_rights_json) VALUES (?,?,?,?,?,?,?,?,?,?)",
                     (f.id, project.id, f.name, f.village, f.district, f.state,
-                     _s(f.consent_on), f.consent_reference, _now()),
+                     _s(f.consent_on), f.consent_reference, _now(), rights),
                 )
             for p in project.plots.values():
                 conn.execute(
@@ -182,11 +205,15 @@ class Store:
                 )
             for e in project.enrollments:
                 conn.execute(
-                    "INSERT OR IGNORE INTO enrollments (project_id, plot_id,"
-                    " enrolled_on, practice, species_json, stems_planted, created_at)"
-                    " VALUES (?,?,?,?,?,?,?)",
+                    "INSERT OR REPLACE INTO enrollments (project_id, plot_id,"
+                    " enrolled_on, practice, species_json, stems_planted, created_at,"
+                    " baseline_captured_on, practice_started_on, ecosystem,"
+                    " water_control) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
                     (project.id, e.plot_id, _s(e.enrolled_on), e.practice,
-                     _canonical(e.species), e.stems_planted, _now()),
+                     _canonical(e.species), e.stems_planted, _now(),
+                     _s(e.baseline_captured_on), _s(e.practice_started_on),
+                     e.ecosystem.value if e.ecosystem else None,
+                     e.water_control.value if e.water_control else None),
                 )
             self.record("project.saved" if existing is None else "project.updated",
                         "project", project.id,
@@ -201,18 +228,37 @@ class Store:
         if row is None:
             raise StoreError(f"no project {project_id!r}")
 
+        consultation = None
+        if row["consultation_json"]:
+            c = json.loads(row["consultation_json"])
+            consultation = StakeholderConsultation(
+                held_on=_d(c["held_on"]), record_reference=c["record_reference"],
+                participants=c["participants"],
+                grievance_channel=c["grievance_channel"])
+
         project = Project(
             id=row["id"], name=row["name"], track=TrackKind(row["track"]),
             country=row["country"], start_date=_d(row["start_date"]),
             crediting_period_yrs=row["crediting_period_yrs"],
+            methodology_version=row["methodology_version"] or "",
+            consultation=consultation,
         )
         for r in self.conn.execute(
                 "SELECT * FROM farmers WHERE project_id = ? ORDER BY id", (project_id,)):
+            rights = None
+            if r["carbon_rights_json"]:
+                cr = json.loads(r["carbon_rights_json"])
+                rights = CarbonRights(
+                    agreement_reference=cr["agreement_reference"],
+                    signed_on=_d(cr["signed_on"]), holder=cr["holder"],
+                    reversal_clause_ack=cr["reversal_clause_ack"],
+                    expires_on=_d(cr.get("expires_on")))
             project.add_farmer(Farmer(
                 id=r["id"], name=r["name"], village=r["village"],
                 district=r["district"], state=r["state"],
                 consent_on=_d(r["consent_on"]),
-                consent_reference=r["consent_reference"]))
+                consent_reference=r["consent_reference"],
+                carbon_rights=rights))
         for r in self.conn.execute(
                 "SELECT * FROM plots WHERE project_id = ? ORDER BY id", (project_id,)):
             project.add_plot(Plot(
@@ -227,7 +273,12 @@ class Store:
                 plot_id=r["plot_id"], project_id=project_id,
                 enrolled_on=_d(r["enrolled_on"]), practice=r["practice"],
                 species=json.loads(r["species_json"]),
-                stems_planted=r["stems_planted"]))
+                stems_planted=r["stems_planted"],
+                baseline_captured_on=_d(r["baseline_captured_on"]),
+                practice_started_on=_d(r["practice_started_on"]),
+                ecosystem=RiceEcosystem(r["ecosystem"]) if r["ecosystem"] else None,
+                water_control=WaterControl(r["water_control"])
+                if r["water_control"] else None))
         for r in self.conn.execute(
                 "SELECT o.* FROM observations o JOIN plots p ON p.id = o.plot_id"
                 " WHERE p.project_id = ? ORDER BY o.observed_on", (project_id,)):

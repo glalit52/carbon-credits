@@ -28,7 +28,9 @@ from carbonstack.feed import (                             # noqa: E402
     CH4_GWP100, FeedProvider, REVISIT_DAYS, series, summarise_seasons,
     year_confidence,
 )
-from carbonstack.methodology.vm0042 import EmissionFactor  # noqa: E402
+from carbonstack.methodology.vm0051 import (                # noqa: E402
+    CommonPractice, RiceEmissionFactor,
+)
 from carbonstack.methodology.vm0047 import PerformanceBenchmark  # noqa: E402
 from carbonstack.sites import NYERI, THANJAVUR, as_project  # noqa: E402
 from carbonstack.store import Store                        # noqa: E402
@@ -74,16 +76,26 @@ def rice_block() -> dict:
         abatement_per_ha = sum(s.abatement_tco2e_ha for s in ss)
         confidence = year_confidence(ss)
 
-        # Quantify through the engine, with this year's measured abatement as
-        # the emission factor so the deductions are the engine's, not ours.
-        factor = EmissionFactor(
-            practice="awd",
-            t_co2e_per_ha_yr=abatement_per_ha,
+        # Quantify through the engine under VM0051, the purpose-built rice
+        # methodology. The prototype used VM0042; two independent methodology
+        # reviews flagged that as wrong. The practical difference is the
+        # buffer: avoided methane is not a stock and cannot reverse, so none
+        # is withheld.
+        baseline = sum(s.baseline_ch4_kg_ha for s in ss) / max(len(ss), 1)
+        project_ch4 = sum(s.project_ch4_kg_ha for s in ss) / max(len(ss), 1)
+        factor = RiceEmissionFactor(
+            baseline_ch4_kg_ha_season=baseline,
+            project_ch4_kg_ha_season=project_ch4,
+            seasons_per_year=len(ss),
             tier=1,
             source=(f"measured from {sum(s.revisits for s in ss)} revisits across "
                     f"{len(ss)} season(s); {CH4_GWP100}x GWP100"),
         )
-        m = methodology.get("VM0042", factors={"awd": factor})
+        m = methodology.get(
+            "VM0051", factors={"awd": factor},
+            common_practice=CommonPractice(
+                jurisdiction="Tamil Nadu", awd_penetration=0.04,
+                source="placeholder -- replace with a cited state-level survey"))
         provider = FeedProvider(readings, season_confidence={year: confidence})
         result = m.quantify(project, provider, year)
 
@@ -127,11 +139,14 @@ def rice_block() -> dict:
         "_results": results,
         "_project": project,
         "methodology": {
-            "id": "VM0042",
-            "name": "Improved Agricultural Land Management / rice water management",
-            "note": ("Abatement is measured from the flux series rather than "
-                     "taken from a table, but the emission factor is still "
-                     "Tier 1 until local flux chambers calibrate it."),
+            "id": "VM0051",
+            "version": "v1.1",
+            "name": "Improved Management in Rice Production Systems",
+            "note": ("The purpose-built rice methodology, replacing CDM "
+                     "AMS-III.AU and CORSIA eligible. No buffer is withheld: "
+                     "avoided methane is not a stock and cannot reverse. The "
+                     "emission factor is still Tier 1 until local flux "
+                     "chambers calibrate it."),
         },
     }
 
@@ -192,6 +207,7 @@ def coffee_block() -> dict:
         "_project": project,
         "methodology": {
             "id": "VM0047",
+            "version": "v1.1",
             "name": "Afforestation, Reforestation and Revegetation (area-based)",
             "note": ("Credits are growth net of a dynamic performance "
                      "benchmark. Both the benchmark and the allometric "
@@ -258,12 +274,20 @@ def economics(blocks: list[dict]) -> dict:
             gross = credits * price
             farmer = gross * share
             developer = gross - farmer
+            # Cost per issued tonne, not per hectare. Deductions and the
+            # buffer decide how many credits actually reach a registry, so a
+            # cheap hectare carrying a large deduction is a worse business
+            # than a dearer one that issues more.
+            cost = mrv + farmer
             return {
                 "credits": round(credits, 3),
                 "gross_revenue": round(gross, 2),
                 "to_farmer": round(farmer, 2),
                 "to_developer": round(developer, 2),
                 "net_of_mrv": round(developer - mrv, 2),
+                "cost_per_issued_tonne": (round(cost / credits, 2)
+                                          if credits > 0 else None),
+                "revenue_per_issued_tonne": price,
             }
 
         # The number the product is built against: what monitoring may cost
@@ -342,7 +366,7 @@ def govern(blocks: list[dict]) -> dict:
             site = block["site"]
             project = block["_project"]
             track = site["track"]
-            meth = "VM0042" if track in ("rice", "cropland") else "VM0047"
+            meth = {"rice": "VM0051", "cropland": "VM0042"}.get(track, "VM0047")
             store.save_project(project, methodology_id=meth)
 
             settled = []

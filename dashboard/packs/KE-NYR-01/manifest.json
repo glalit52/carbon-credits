@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-11T09:00:45+00:00",
+  "generated_at": "2026-09-26T17:55:02+00:00",
   "project": {
     "id": "KE-NYR-01",
     "name": "Gatugi shade-coffee block, Nyeri County, Central Highlands",
@@ -7,9 +7,28 @@
     "country": "Kenya",
     "start_date": "2025-03-20",
     "methodology": "VM0047",
+    "methodology_version": "VM0047 v1.1",
     "registry": null,
     "registry_ref": null,
     "crediting_period_yrs": 30
+  },
+  "governance": {
+    "programme_issues": [],
+    "stakeholder_consultation": {
+      "held_on": "2025-03-20",
+      "record_reference": "CONSULT/KE-NYR-01/001",
+      "participants": 34,
+      "grievance_channel": "village committee, monthly; SMS to +91 80000 00000"
+    },
+    "farmers_with_carbon_rights": 1,
+    "farmers_total": 1
+  },
+  "stacking": {
+    "claims": 0,
+    "stacked_plots": 0,
+    "stacked_ha": 0,
+    "clean": true,
+    "conflicts": 0
   },
   "area": {
     "enrolled_ha": 2.8729,
@@ -50,7 +69,7 @@
     "event_count": 8,
     "chain_intact": true,
     "first_bad_event": null,
-    "head_hash": "fb66f5dc8eea24de7bd0a5a4591973d859e485a545f0669b6dff7b76fa2f98e8"
+    "head_hash": "ecadaf51165f136dcc79e6db648b7f9286c1a5ad2a36f2290a4916a2a7e0c4de"
   },
   "files": [
     "SUMMARY.md",
@@ -61,6 +80,7 @@
     "observations.csv",
     "payments.csv",
     "plot_register.csv",
+    "stacking_audit.json",
     "vintages.csv"
   ],
   "caveats": [

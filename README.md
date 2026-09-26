@@ -14,7 +14,7 @@ financial model that gates it, and `carbonstack`, the dMRV core it runs on.
 | `src/carbonstack/feed.py` | Simulated monitoring on the real 5-day revisit cadence |
 | `dashboard/` | The live MRV dashboard, its dataset and example evidence packs |
 | `scripts/` | Build the dashboard dataset and page |
-| `tests/` | 140 tests, stdlib only |
+| `tests/` | 217 tests, stdlib only |
 
 ## The two numbers that shape everything
 
@@ -41,7 +41,7 @@ python3 model/carbon_model.py            # cashflow, peak funding need, sensitiv
 
 ```bash
 pip install -e ".[dev]"
-python -m pytest                         # 140 tests
+python -m pytest                         # 217 tests
 
 python -m carbonstack demo               # both tracks against synthetic monitoring
 python -m carbonstack export estate --out project.json
@@ -108,7 +108,8 @@ carbonstack/
   remote_sensing.py Provider protocol, synthetic provider, field/satellite reconciliation
   sites.py          the two pilot sites — real places, real climatology
   feed.py           simulated monitoring on the real 5-day revisit cadence
-  methodology/      VM0047 (ARR, dynamic benchmark) and VM0042 (practice-based)
+  methodology/      VM0051 (rice), VM0047 (ARR), VM0042 (cropland + soil)
+  stacking.py       pillar claims per plot, and the double-counting engine
   store/            SQLite schema, migrations, repositories, hash-chained events
   pipeline.py       batch monitoring, quantification, project health
   ledger.py         vintage lifecycle, issuance, serials, buffer pool
@@ -283,6 +284,88 @@ Two ways to make writes real, when you want them:
 
 The static dashboard is unaffected by this: it embeds its data and needs no
 backend at all.
+
+## Methodology review, and what it changed
+
+Four independent reviews of this prototype came back in September 2026. They
+agreed on findings that are now implemented, and the first one says the
+prototype was wrong.
+
+### Rice belongs under VM0051, not VM0042
+
+VM0042 covers rice, but it is an agricultural land management methodology.
+**VM0051** is written for rice, replaces CDM AMS-III.AU in the VCS Program, and
+is CORSIA eligible. Three things follow, and each changes an answer:
+
+| | VM0042 (what the prototype did) | VM0051 (what it does now) |
+|---|---|---|
+| Eligibility | any cropland | irrigated lowland rice only — upland, rainfed and deepwater excluded |
+| Additionality | not tested | fails if AWD penetration in the jurisdiction is already common practice |
+| Buffer pool | 15% withheld | **none** |
+
+The buffer is the practical one. Non-permanence applies to carbon held in a
+stock that can be released; avoided methane was never stored, so it cannot
+reverse. On the Vallam pilot that difference alone takes the 2025 vintage from
+1 issuable credit to 2.
+
+Eligibility is now a gate rather than a note: Verra rejected a run of rice
+projects in 2025 for insufficient additionality evidence, so a field whose
+water regime or drainage control is unrecorded is excluded rather than assumed
+creditable.
+
+### Stacking partitions by carbon pool, not by activity
+
+The differentiator and the biggest audit risk are the same fact. The rule is
+not obvious: **VM0042 credits soil carbon *and* rice methane**. So a paddy
+hectare cannot carry VM0051 methane beside a VM0042 soil claim — the methane
+would be sold twice, even though the two sound like different products.
+
+`stacking.py` refuses that shape at registration rather than at verification:
+
+```
+$ carbonstack stack add IN-TNJ-01 IN-TNJ-01-P1 --pillar soil_carbon     --methodology VM0042 --area 0.2 --actor lalit
+refused: cannot stack soil_carbon on IN-TNJ-01-P1:
+  VM0051 (methane) and VM0042 (soil_carbon) both credit ch4_avoided on the
+  same plot -- the same tonne would be sold twice
+```
+
+Trees stack cleanly with either, because biomass is a pool neither touches —
+but only on **separate geometry**, since a bund planted with trees is not also
+growing rice. `carbonstack stack audit` is the evidence that no hectare is
+claimed twice, and it ships in the evidence pack.
+
+### Records a registry asks for that the product had no room for
+
+Each of these blocked validation and is now enforced:
+
+- **Carbon rights, not just data consent.** Permission to use a farmer's data
+  is not the right to sell their carbon. Enrolment now captures the agreement,
+  the holder, and the farmer's acknowledgement of the reversal clause.
+- **Baseline before practice change.** A farmer already practising AWD has no
+  counterfactual left to measure. The eligible pool shrinks every season this
+  goes uncaptured, so the timing is checked and flagged.
+- **Stakeholder consultation and a grievance channel.** Required by Verra and
+  Gold Standard both. A project can be scientifically perfect and still fail on
+  this.
+- **Methodology version pinned per project.** VM0042 v2.2 took corrections in
+  June 2026 with a major revision in progress; a number that does not say which
+  version produced it cannot be reproduced.
+
+These are reported apart from per-plot findings when they block the whole
+project at once, so they do not bury the rest.
+
+### Cost per issued tonne replaces cost per verified hectare
+
+A cheap hectare carrying a large uncertainty deduction issues few credits and
+is a worse business than a dearer one that issues many. The dashboard and the
+portfolio model both now report the metric that is actually managed:
+
+| | Revenue / issued t | Cost / issued t | Margin |
+|---|---|---|---|
+| Vallam paddy | $12.00 | $39.19 | **−$27.19** |
+| Gatugi coffee | $26.00 | $16.91 | **+$9.09** |
+
+The same finding as before, stated in the unit that decides it.
 
 ## What is deliberately not real yet
 

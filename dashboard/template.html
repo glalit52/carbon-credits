@@ -318,6 +318,11 @@
     <p>Both plots run the same fixed machinery &mdash; validation, verification, registry
       fees, project operations. That cost does not care how much land sits inside the
       project, which is why plot-scale economics decide everything downstream.</p>
+    <p>The bottom three rows are the metric that matters, and it is not cost per
+      hectare. Deductions and the buffer decide how many credits actually reach a
+      registry, so a cheap hectare carrying a large uncertainty deduction is a worse
+      business than a dearer one that issues more. <strong>Cost per issued tonne</strong>
+      is what gets managed.</p>
     <div class="verdicts" id="verdicts"></div>
     <div class="tscroll" id="econtable"></div>
   </section>
@@ -1258,7 +1263,14 @@
     ["Monitoring cost", function (e) { return money(e.mrv_cost); }],
     ["Margin after monitoring", function (e) { return money(e.mature.net_of_mrv); }],
     ["MRV budget per ha/yr", function (e) { return money(e.breakeven_mrv_per_ha); }],
-    ["Headroom vs assumed MRV", function (e) { return money(e.mrv_headroom); }]
+    ["Headroom vs assumed MRV", function (e) { return money(e.mrv_headroom); }],
+    ["Revenue per issued tonne", function (e) { return money(e.price, 0); }],
+    ["Cost per issued tonne", function (e) {
+      return e.mature.cost_per_issued_tonne == null ? "—"
+        : money(e.mature.cost_per_issued_tonne); }],
+    ["Margin per issued tonne", function (e) {
+      return e.mature.cost_per_issued_tonne == null ? "—"
+        : money(e.price - e.mature.cost_per_issued_tonne); }]
   ];
   rows.forEach(function (r) {
     var tr = el("tr");
@@ -1266,8 +1278,11 @@
     DATA.economics.per_site.forEach(function (e) {
       var td = el("td", null, r[1](e));
       if (r[0].indexOf("Margin") === 0 || r[0].indexOf("Headroom") === 0) {
-        td.style.color = (e.mature.net_of_mrv > 0 && e.mrv_headroom > 0)
-          ? "var(--ok)" : "var(--block)";
+        var good = r[0] === "Margin per issued tonne"
+          ? (e.mature.cost_per_issued_tonne != null
+             && e.price - e.mature.cost_per_issued_tonne > 0)
+          : (e.mature.net_of_mrv > 0 && e.mrv_headroom > 0);
+        td.style.color = good ? "var(--ok)" : "var(--block)";
         td.style.fontWeight = "600";
       }
       tr.appendChild(td);

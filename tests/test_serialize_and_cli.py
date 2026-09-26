@@ -101,6 +101,68 @@ def test_cli_refuses_a_write_without_an_actor(tmp_path, capsys):
     assert "actor" in str(exc.value)
 
 
+def test_rice_enrols_under_vm0051_not_vm0042(tmp_path, capsys):
+    """Two independent methodology reviews flagged VM0042 as the wrong choice
+    for paddy. VM0051 is written for rice, replaces CDM AMS-III.AU, and is
+    CORSIA eligible."""
+    db = str(tmp_path / "t.db")
+    assert main(["--db", db, "enroll", "vallam"]) == 0
+    assert "VM0051" in capsys.readouterr().out
+
+
+def test_no_buffer_is_withheld_on_avoided_methane(tmp_path, capsys):
+    """Avoided methane is not a stock and cannot reverse, so the AFOLU
+    non-permanence buffer does not apply. Worth about a fifth of the credits
+    against the ARR pathway, and the practical difference VM0051 makes."""
+    db = str(tmp_path / "t.db")
+    main(["--db", db, "enroll", "vallam"])
+    main(["--db", db, "monitor", "IN-TNJ-01", "--to", "2026-09-11"])
+    capsys.readouterr()
+    main(["--db", db, "quantify", "IN-TNJ-01", "--year", "2025",
+          "--tier", "3", "--actor", "lalit"])
+    out = capsys.readouterr().out
+    assert "buffer pool" in out and "(0%)" in out
+
+
+def test_cli_stack_audit_reports_a_clean_project(tmp_path, capsys):
+    db = str(tmp_path / "t.db")
+    main(["--db", db, "enroll", "vallam"])
+    capsys.readouterr()
+    assert main(["--db", db, "stack", "audit", "IN-TNJ-01"]) == 0
+    assert "no hectare is claimed twice" in capsys.readouterr().out
+
+
+def test_cli_stack_refuses_the_unlawful_shape(tmp_path, capsys):
+    """VM0042 already credits rice methane, so putting it beside VM0051 on the
+    same plot sells that methane twice."""
+    db = str(tmp_path / "t.db")
+    main(["--db", db, "enroll", "vallam"])
+    capsys.readouterr()
+    bed = "79.1378,10.7867;79.1396,10.7867;79.1396,10.7877;79.1378,10.7877"
+    assert main(["--db", db, "stack", "add", "IN-TNJ-01", "IN-TNJ-01-P1",
+                 "--pillar", "methane", "--methodology", "VM0051",
+                 "--area", "2.2", "--geometry", bed, "--actor", "lalit"]) == 0
+    capsys.readouterr()
+    assert main(["--db", db, "stack", "add", "IN-TNJ-01", "IN-TNJ-01-P1",
+                 "--pillar", "soil_carbon", "--methodology", "VM0042",
+                 "--area", "0.2", "--geometry", bed, "--actor", "lalit"]) == 2
+    assert "sold" in capsys.readouterr().err
+
+
+def test_cli_eligibility_reports_programme_level_blockers(tmp_path, capsys):
+    """An unpinned methodology version blocks every hectare at once, so it is
+    reported separately from the per-plot findings."""
+    proj = tmp_path / "p.json"
+    db = tmp_path / "t.db"
+    main(["export", "estate", "--out", str(proj)])
+    capsys.readouterr()
+    main(["--db", str(db), "import", str(proj), "--methodology", "VM0047"])
+    capsys.readouterr()
+    assert main(["--db", str(db), "eligibility", "AP-ARR-001"]) == 0
+    out = capsys.readouterr().out
+    assert "blocking the whole project" not in out or "consultation" in out
+
+
 def test_cli_runs_the_whole_lifecycle(tmp_path, capsys):
     db = str(tmp_path / "t.db")
 
@@ -144,7 +206,9 @@ def test_cli_explain_reads_the_stored_derivation(tmp_path, capsys):
 
     assert main(["--db", db, "explain", "IN-TNJ-01:2025"]) == 0
     out = capsys.readouterr().out
-    assert "VM0042 abatement" in out
+    # Rice quantifies under VM0051, the purpose-built rice methodology, not
+    # VM0042 as the first prototype did.
+    assert "VM0051 abatement" in out
     assert "source:" in out
 
 

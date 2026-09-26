@@ -17,7 +17,7 @@ import json
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from . import ledger, payments
+from . import ledger, payments, stacking
 from .store.repo import Store, _canonical
 
 
@@ -40,6 +40,7 @@ def build(store: Store, project_id: str, out_dir: str | Path) -> Path:
     vintages = ledger.list_vintages(store, project_id)
     issued = ledger.issuances(store, project_id)
     pay_rows = payments.register(store, project_id=project_id)
+    stack_report = stacking.audit(store, project_id)
     intact, bad = store.verify_chain()
 
     # -- plot register -----------------------------------------------------
@@ -62,6 +63,26 @@ def build(store: Store, project_id: str, out_dir: str | Path) -> Path:
             "tenure_reference": plot.tenure_reference,
             "consent_on": farmer.consent_on.isoformat() if farmer and farmer.consent_on else "",
             "consent_reference": farmer.consent_reference if farmer else "",
+            "carbon_rights_reference": (
+                farmer.carbon_rights.agreement_reference
+                if farmer and farmer.carbon_rights else ""),
+            "carbon_rights_holder": (
+                farmer.carbon_rights.holder
+                if farmer and farmer.carbon_rights else ""),
+            "reversal_clause_ack": (
+                "yes" if farmer and farmer.carbon_rights
+                and farmer.carbon_rights.reversal_clause_ack else "no"),
+            "baseline_captured_on": (
+                enrolment.baseline_captured_on.isoformat()
+                if enrolment and enrolment.baseline_captured_on else ""),
+            "practice_started_on": (
+                enrolment.practice_started_on.isoformat()
+                if enrolment and enrolment.practice_started_on else ""),
+            "rice_ecosystem": (
+                enrolment.ecosystem.value if enrolment and enrolment.ecosystem else ""),
+            "water_control": (
+                enrolment.water_control.value
+                if enrolment and enrolment.water_control else ""),
             "enrolled_on": enrolment.enrolled_on.isoformat() if enrolment else "",
             "practice": enrolment.practice if enrolment else "",
             "creditable": "no" if problems else "yes",
@@ -116,6 +137,11 @@ def build(store: Store, project_id: str, out_dir: str | Path) -> Path:
                ["id", "vintage_id", "farmer_id", "credits", "amount", "currency",
                 "status", "due_on", "paid_on", "reference"])
 
+    # Stacking. "Zero hectares claimed twice" is a claim a verifier wants
+    # evidence for, not a promise, so the audit ships with the pack.
+    (out / "stacking_audit.json").write_text(
+        json.dumps(stack_report, indent=2) + "\n")
+
     # -- event chain -------------------------------------------------------
     events = store.events()
     _write_csv(out / "event_log.csv", [{
@@ -134,9 +160,29 @@ def build(store: Store, project_id: str, out_dir: str | Path) -> Path:
             "country": project.country,
             "start_date": project.start_date.isoformat(),
             "methodology": meta["methodology_id"],
+            "methodology_version": meta["methodology_version"] or None,
             "registry": meta["registry"] or None,
             "registry_ref": meta["registry_ref"] or None,
             "crediting_period_yrs": project.crediting_period_yrs,
+        },
+        "governance": {
+            "programme_issues": project.programme_issues(),
+            "stakeholder_consultation": (
+                {"held_on": project.consultation.held_on.isoformat(),
+                 "record_reference": project.consultation.record_reference,
+                 "participants": project.consultation.participants,
+                 "grievance_channel": project.consultation.grievance_channel}
+                if project.consultation else None),
+            "farmers_with_carbon_rights": sum(
+                1 for f in project.farmers.values() if f.carbon_rights),
+            "farmers_total": len(project.farmers),
+        },
+        "stacking": {
+            "claims": stack_report["claims"],
+            "stacked_plots": stack_report["stacked_plots"],
+            "stacked_ha": stack_report["stacked_ha"],
+            "clean": stack_report["clean"],
+            "conflicts": len(stack_report["conflicts"]),
         },
         "area": {
             "enrolled_ha": round(project.area_ha, 4),
@@ -195,7 +241,7 @@ def _summary_md(m: dict, vintages: list, issues: dict) -> str:
         f"# Evidence pack — {p['name']}",
         "",
         f"Generated {m['generated_at']} · project `{p['id']}` · methodology "
-        f"`{p['methodology']}`",
+        f"`{p['methodology']} {p.get('methodology_version') or '(version not pinned)'}`",
         "",
         "## Project",
         "",
@@ -246,6 +292,39 @@ def _summary_md(m: dict, vintages: list, issues: dict) -> str:
         lines.append(
             f"| {v.year} | {v.gross_t:,.2f} | {v.net_t:,.2f} | {v.issuable_whole:,} | "
             f"{v.relative_uncertainty:.1%} | {v.status.value} |")
+
+    gov = m.get("governance", {})
+    stack = m.get("stacking", {})
+    lines += [
+        "",
+        "## Governance",
+        "",
+        f"- Carbon rights on file for {gov.get('farmers_with_carbon_rights', 0)} "
+        f"of {gov.get('farmers_total', 0)} farmers",
+    ]
+    consult = gov.get("stakeholder_consultation")
+    lines.append(
+        f"- Stakeholder consultation {consult['held_on']}, "
+        f"{consult['participants']} participants, grievance channel: "
+        f"{consult['grievance_channel']}" if consult
+        else "- **No stakeholder consultation on record** — required by Verra "
+             "and Gold Standard")
+    for problem in gov.get("programme_issues", []):
+        lines.append(f"- **Blocking:** {problem}")
+
+    lines += [
+        "",
+        "## Stacking",
+        "",
+        f"- {stack.get('claims', 0)} pillar claim(s); "
+        f"{stack.get('stacked_plots', 0)} plot(s) carry more than one",
+        f"- {stack.get('stacked_ha', 0):,.2f} ha stacked",
+        f"- Double counting: **{'none found' if stack.get('clean') else str(stack.get('conflicts')) + ' conflict(s)'}**",
+        "",
+        "Methodologies partition by carbon pool, not by activity name. The "
+        "audit in `stacking_audit.json` is the evidence that no pool is "
+        "credited twice on the same ground.",
+    ]
 
     pay = m["payments"]
     integrity = m["integrity"]
