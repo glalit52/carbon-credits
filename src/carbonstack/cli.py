@@ -4,6 +4,7 @@
     carbonstack enroll thanjavur                  load a pilot site
     carbonstack monitor IN-TNJ-01 --to 2026-09-11 pull and store monitoring
     carbonstack quantify IN-TNJ-01 --year 2025    run the engine, record a draft
+    carbonstack trees ingest KE-NYE-01 field.csv   load a tree census
     carbonstack queue                             what is waiting on a human
     carbonstack explain IN-TNJ-01:2025            where the number came from
     carbonstack review IN-TNJ-01:2025 --approve --actor lalit --note "clean"
@@ -25,12 +26,22 @@ import sys
 from datetime import date, timedelta
 from pathlib import Path
 
-from . import evidence, ledger, methodology, payments, pipeline, scenario, serialize, sites
-from .feed import (
-    FeedProvider, season_warnings, series, summarise_seasons, year_confidence,
+from . import (
+    article6, evidence, forecast, ledger, methodology, payments, pipeline,
+    scenario, serialize, sites, stacking,
 )
+from .agroforestry import (
+    SPECIES, CensusInventory, StemMeasurement, SurvivalSurvey,
+)
+from .feed import (
+    FeedProvider, sar_seasons, sar_series, sar_truth, season_warnings,
+    series, summarise_seasons, year_confidence,
+)
+from .sar import SarProvider, WaterRegimeDetector, WaterState, score
 from .methodology.vm0042 import EmissionFactor
 from .methodology.vm0047 import PerformanceBenchmark
+from .methodology.vm0051 import CommonPractice, RiceEmissionFactor
+from .soil import ModelValidation, SamplingDesign, SoilCore, SoilLayer, Stratum
 from .remote_sensing import SyntheticProvider
 from .store import Store
 from .store.repo import StoreError
@@ -60,22 +71,32 @@ def _site(name: str):
     raise SystemExit(f"unknown site {name!r}; known: {known}")
 
 
+#: The lapse the demo injects, so a review workflow has something to review.
+RICE_LAPSE = {"awd_lapse_season": "Kuruvai", "awd_lapse_year": 2026}
+
+
+def _sar_provider(site, end: date):
+    """Detect the water regime from radar, season by season.
+
+    The adoption probability a rice vintage is multiplied by used to be
+    handed over by the simulator that generated the dry-downs. It is now the
+    output of a detector that sees backscatter and nothing else.
+    """
+    passes = sar_series(site, site.enrolled_on, end, **RICE_LAPSE)
+    provider = SarProvider.from_passes(sar_seasons(site, passes))
+    return provider, passes
+
+
 def _feed_provider(site, end: date):
     """The pilot sites are driven by the simulated feed; real projects would
     name a real provider here and nothing downstream would change."""
-    kwargs = {}
     if site.track.value == "rice":
-        kwargs = {"awd_lapse_season": "Kuruvai", "awd_lapse_year": 2026}
-    else:
-        kwargs = {"stumping_year": 2026}
-    readings = series(site, site.enrolled_on, end, **kwargs)
-    confidences = {}
-    if site.track.value == "rice":
-        by_year: dict[int, list] = {}
-        for s in summarise_seasons(readings):
-            by_year.setdefault(s.year, []).append(s)
-        confidences = {y: year_confidence(ss) for y, ss in by_year.items()}
-    return FeedProvider(readings, season_confidence=confidences), readings
+        readings = series(site, site.enrolled_on, end, **RICE_LAPSE)
+        detector, passes = _sar_provider(site, end)
+        return FeedProvider(readings, sar_passes=passes,
+                            adoption=detector), readings
+    readings = series(site, site.enrolled_on, end, stumping_year=2026)
+    return FeedProvider(readings), readings
 
 
 # ---------------------------------------------------------------------------
@@ -94,7 +115,11 @@ def cmd_init(args) -> int:
 def cmd_enroll(args) -> int:
     site = _site(args.site)
     project = sites.as_project(site)
-    meth = "VM0042" if site.track.value in ("rice", "cropland") else "VM0047"
+    # Rice goes to VM0051, the purpose-built rice methodology, not VM0042.
+    # VM0042 covers rice but is an agricultural land management methodology;
+    # VM0051 replaces CDM AMS-III.AU and is CORSIA eligible.
+    meth = {"rice": "VM0051", "cropland": "VM0042"}.get(
+        site.track.value, "VM0047")
     with _store(args) as store:
         store.save_project(project, methodology_id=meth)
         print(f"enrolled {project.id} — {project.name}")
@@ -137,6 +162,46 @@ def cmd_monitor(args) -> int:
     return 0
 
 
+def _methodology_for(site, methodology_id: str, readings, year: int, *,
+                     tier: int = 1, jurisdiction: str = "",
+                     awd_penetration: float = 0.04,
+                     benchmark: float = 0.6):
+    """Build the methodology for one site-year, with its measured factors.
+
+    Extracted so `quantify` and `forecast` cannot drift: a projection that
+    used a different emission factor from the one the vintage will be
+    quantified with is not a projection of anything.
+    """
+    if methodology_id == "VM0051":
+        ss = [s for s in summarise_seasons(readings) if s.year == year]
+        if not ss:
+            raise SystemExit(f"no seasons found for {year}")
+        baseline = sum(s.baseline_ch4_kg_ha for s in ss) / max(len(ss), 1)
+        project_ch4 = sum(s.project_ch4_kg_ha for s in ss) / max(len(ss), 1)
+        factor = RiceEmissionFactor(
+            baseline_ch4_kg_ha_season=baseline,
+            project_ch4_kg_ha_season=project_ch4,
+            seasons_per_year=len(ss), tier=tier,
+            source=(f"measured from {sum(s.revisits for s in ss)} "
+                    f"revisits across {len(ss)} season(s)"))
+        return methodology.get(
+            "VM0051", factors={"awd": factor},
+            common_practice=CommonPractice(
+                jurisdiction=jurisdiction or site.admin,
+                awd_penetration=awd_penetration))
+    if methodology_id == "VM0042":
+        ss = [s for s in summarise_seasons(readings) if s.year == year]
+        if not ss:
+            raise SystemExit(f"no seasons found for {year}")
+        return methodology.get("VM0042", factors={"awd": EmissionFactor(
+            practice="awd",
+            t_co2e_per_ha_yr=sum(s.abatement_tco2e_ha for s in ss),
+            tier=tier,
+            source=f"measured from {sum(s.revisits for s in ss)} revisits")})
+    return methodology.get(
+        "VM0047", benchmark=PerformanceBenchmark(t_co2e_per_ha_yr=benchmark))
+
+
 def cmd_quantify(args) -> int:
     with _store(args) as store:
         meta = store.project_meta(args.project_id)
@@ -146,23 +211,24 @@ def cmd_quantify(args) -> int:
             site = _site(args.project_id)
         except SystemExit:
             site = None
+        open_seasons: list[str] = []
 
         if site is not None:
             provider, readings = _feed_provider(site, max(end, date.today()))
-            if meta["methodology_id"] == "VM0042":
-                ss = [s for s in summarise_seasons(readings) if s.year == args.year]
-                if not ss:
-                    raise SystemExit(f"no seasons found for {args.year}")
-                factor = EmissionFactor(
-                    practice="awd",
-                    t_co2e_per_ha_yr=sum(s.abatement_tco2e_ha for s in ss),
-                    tier=args.tier,
-                    source=f"measured from {sum(s.revisits for s in ss)} revisits")
-                meth = methodology.get("VM0042", factors={"awd": factor})
-            else:
-                meth = methodology.get(
-                    "VM0047",
-                    benchmark=PerformanceBenchmark(t_co2e_per_ha_yr=args.benchmark))
+            meth = _methodology_for(
+                site, meta["methodology_id"], readings, args.year,
+                tier=args.tier, jurisdiction=args.jurisdiction or "",
+                awd_penetration=args.awd_penetration,
+                benchmark=args.benchmark)
+            if meta["methodology_id"] == "VM0051":
+                # A season that wraps the new year is not over on 31
+                # December, and quantifying it early reads a partial season
+                # as a weak one. Say which, rather than letting the
+                # confidence quietly absorb it.
+                window_end = max(end, date.today())
+                open_seasons = [
+                    s_.name for s_ in site.seasons
+                    if s_.closes_in(args.year) > window_end]
         else:
             provider = SyntheticProvider(planting_year=
                                          date.fromisoformat(meta["start_date"]).year)
@@ -172,6 +238,11 @@ def cmd_quantify(args) -> int:
         if site is not None and meta["methodology_id"] == "VM0042":
             extra = season_warnings(
                 [s for s in summarise_seasons(readings) if s.year == args.year])
+        if site is not None and meta["methodology_id"] == "VM0051" and open_seasons:
+            extra.append(
+                f"{', '.join(open_seasons)} had not closed by "
+                f"{max(end, date.today())}, so this vintage reads a partial "
+                f"season; a wrapping season cannot be verified on 31 December")
         v = pipeline.quantify(store, args.project_id, meth, provider, args.year,
                               actor=getattr(args, "actor", None) or "cli",
                               extra_warnings=extra)
@@ -314,6 +385,12 @@ def cmd_eligibility(args) -> int:
             print("\n  blocking reasons, most common first:")
             for reason, count in sorted(reasons.items(), key=lambda kv: -kv[1]):
                 print(f"    {count:>5,}  {reason}")
+        programme = project.programme_issues()
+        if programme:
+            print("\n  blocking the whole project, not any one plot:")
+            for problem in programme:
+                print(f"    ! {problem}")
+
         if args.verbose:
             print()
             for plot_id, problems in sorted(issues.items()):
@@ -342,6 +419,665 @@ def cmd_status(args) -> int:
                 print(f"    {v.year}  {v.status.value:<13} {v.net_t:>10,.3f} tCO2e"
                       f"  {v.issuable_whole:>6,} credits")
         print(f"  buffer held          {ledger.buffer_balance(store, args.project_id)['held_t']:>10,.4f} tCO2e")
+    return 0
+
+
+def cmd_article6(args) -> int:
+    with _store(args) as store:
+        if args.a6_command == "authorise":
+            actor = _require_actor(args)
+            a = article6.record_authorisation(
+                store, args.project_id, authority=args.authority,
+                reference=args.reference,
+                issued_on=date.fromisoformat(args.issued_on),
+                authorised_use=article6.AuthorisedUse(args.use),
+                authorised_volume_t=args.volume,
+                corresponding_adjustment_committed=not args.no_adjustment,
+                first_vintage=args.first_vintage, last_vintage=args.last_vintage,
+                valid_until=(date.fromisoformat(args.valid_until)
+                             if args.valid_until else None), actor=actor)
+            print(f"authorisation {a.reference} recorded")
+            print(f"  authority   {a.authority}")
+            print(f"  use         {a.authorised_use.value}")
+            print(f"  volume      {a.authorised_volume_t:,.0f} tCO2e, vintages "
+                  f"{a.first_vintage}-{a.last_vintage}")
+            print(f"  adjustment  {'committed' if a.corresponding_adjustment_committed else 'NOT COMMITTED'}")
+            for problem in a.issues():
+                print(f"  ! {problem}")
+
+        elif args.a6_command == "adjust":
+            actor = _require_actor(args)
+            adj = article6.record_adjustment(
+                store, args.authorisation_id, vintage_year=args.year,
+                volume_t=args.volume,
+                applied_on=date.fromisoformat(args.applied_on),
+                reported_in=args.reported_in, actor=actor)
+            print(f"corresponding adjustment recorded: {adj.volume_t:,.2f} tCO2e "
+                  f"for vintage {adj.vintage_year}")
+            print(f"  reported in {adj.reported_in}")
+
+        elif args.a6_command == "revoke":
+            actor = _require_actor(args)
+            article6.revoke_authorisation(
+                store, args.authorisation_id,
+                on=date.fromisoformat(args.on), reason=args.reason, actor=actor)
+            print(f"authorisation revoked on {args.on}")
+
+        elif args.a6_command == "claims":
+            register = article6.claim_register(
+                store, args.project_id, ccts_registered=args.ccts)
+            print(f"{args.project_id} — what a buyer may claim")
+            print(f"  issued          {register['issued_t']:>12,.2f} tCO2e")
+            print(f"  offsettable     {register['offsettable_t']:>12,.2f} tCO2e")
+            print(f"  unadjusted      {register['unadjusted_t']:>12,.2f} tCO2e")
+            print(f"  CORSIA eligible {register['corsia_eligible_t']:>12,.2f} tCO2e")
+            for v in register["vintages"]:
+                print()
+                print(f"  vintage {v['vintage_year']}  [{v['basis']}]")
+                print(f"    issued {v['issued_t']:,.2f}  offsettable "
+                      f"{v['offsettable_t']:,.2f}  unadjusted {v['unadjusted_t']:,.2f}")
+                print(f"    {v['buyer_language']}")
+                for r in v["reasons"]:
+                    print(f"      - {r}")
+                for w in v["warnings"]:
+                    print(f"      ! {w}")
+            if not register["clean"]:
+                return 1
+    return 0
+
+
+LAB_COLUMNS = ("plot_id", "role", "sampled_on", "lab_reference",
+               "top_cm", "bottom_cm", "soc_pct", "bulk_density_g_cm3")
+
+
+def cmd_soil(args) -> int:
+    with _store(args) as store:
+        if args.soil_command == "ingest":
+            return _soil_ingest(store, args)
+        if args.soil_command == "validate":
+            return _soil_validate(store, args)
+        if args.soil_command == "design":
+            return _soil_design(args)
+        if args.soil_command == "quantify":
+            return _soil_quantify(store, args)
+        if args.soil_command == "status":
+            return _soil_status(store, args)
+    return 0
+
+
+def _soil_ingest(store, args) -> int:
+    """Load cores from a lab CSV, which is how core data actually arrives.
+
+    One row per layer; rows are grouped into cores by plot, role and sampling
+    date. A row the lab cannot be traced to is refused rather than stored.
+    """
+    import csv as _csv
+
+    actor = _require_actor(args)
+    grouped: dict[tuple, dict] = {}
+    with open(args.csv_file, newline="") as fh:
+        reader = _csv.DictReader(fh)
+        missing = [c for c in LAB_COLUMNS if c not in (reader.fieldnames or [])]
+        if missing:
+            raise SystemExit(
+                f"lab CSV is missing column(s): {', '.join(missing)}\n"
+                f"expected: {', '.join(LAB_COLUMNS)}"
+                f"[,stratum][,coarse_fragment_frac]")
+        for row in reader:
+            key = (row["plot_id"], row["role"], row["sampled_on"])
+            entry = grouped.setdefault(key, {
+                "lab_reference": row["lab_reference"],
+                "stratum": row.get("stratum", "") or "",
+                "layers": []})
+            entry["layers"].append(SoilLayer(
+                top_cm=float(row["top_cm"]), bottom_cm=float(row["bottom_cm"]),
+                soc_pct=float(row["soc_pct"]),
+                bulk_density_g_cm3=float(row["bulk_density_g_cm3"]),
+                coarse_fragment_frac=float(row.get("coarse_fragment_frac") or 0)))
+
+    stored = 0
+    for (plot_id, role, sampled_on), entry in sorted(grouped.items()):
+        core = SoilCore(plot_id=plot_id, sampled_on=date.fromisoformat(sampled_on),
+                        lab_reference=entry["lab_reference"],
+                        stratum=entry["stratum"], layers=entry["layers"])
+        store.add_soil_core(args.project_id, core, role=role, actor=actor)
+        stored += 1
+        print(f"  {role:<10} {plot_id:<16} {sampled_on}  "
+              f"{core.max_depth_cm:>5.0f} cm  "
+              f"{core.soc_t_ha(30.0):>7.2f} t C/ha (0-30)")
+        for problem in core.issues:
+            print(f"    ! {problem}")
+    print(f"\n{stored} core(s) stored from {args.csv_file}")
+    return 0
+
+
+def _soil_validate(store, args) -> int:
+    """Record a VMD0053 model validation from a measured,modelled CSV."""
+    import csv as _csv
+
+    actor = _require_actor(args)
+    pairs = []
+    with open(args.csv_file, newline="") as fh:
+        for row in _csv.DictReader(fh):
+            pairs.append((float(row["measured_t_ha"]), float(row["modelled_t_ha"])))
+
+    validation = ModelValidation(model_name=args.model, model_version=args.version,
+                                 pairs=pairs, held_out=not args.training_data)
+    store.add_model_validation(args.project_id, validation, actor=actor)
+    print(validation.report().render("  "))
+    print()
+    problems = validation.issues()
+    if problems:
+        print("  NOT ACCEPTED:")
+        for problem in problems:
+            print(f"    ! {problem}")
+        print("\n  The punitive default uncertainty will apply until a model "
+              "passes.")
+        return 1
+    print(f"  accepted: {validation.relative_uncertainty:.1%} relative "
+          f"uncertainty feeds the deduction")
+    return 0
+
+
+def _soil_design(args) -> int:
+    strata = []
+    for spec in args.strata.split(","):
+        parts = spec.split(":")
+        if len(parts) < 3:
+            raise SystemExit(
+                "each stratum is name:area_ha:soc_std_dev, comma separated")
+        strata.append(Stratum(name=parts[0].strip(), area_ha=float(parts[1]),
+                              soc_std_dev_t_ha=float(parts[2]),
+                              existing_samples=int(parts[3]) if len(parts) > 3 else 0))
+
+    design = SamplingDesign(strata=strata, target_margin_t_ha=args.margin,
+                            confidence=args.confidence,
+                            comparison_depth_cm=args.depth)
+    plan = design.plan()
+    print(f"sampling design over {plan['total_area_ha']:,.1f} ha")
+    print(f"  precision        +/- {plan['target_margin_t_ha']} t C/ha at "
+          f"{plan['confidence']:.0%} confidence")
+    print(f"  cores required   {plan['total_required']:>6,}")
+    print(f"  still to collect {plan['total_outstanding']:>6,}")
+    print()
+    print(f"  {'stratum':<28}{'area ha':>10}{'sd':>7}{'cores':>8}{'to go':>8}")
+    for stratum in design.strata:
+        print(f"  {stratum.name:<28}{stratum.area_ha:>10,.1f}"
+              f"{stratum.soc_std_dev_t_ha:>7.1f}"
+              f"{plan['required_samples'][stratum.name]:>8,}"
+              f"{plan['outstanding_samples'][stratum.name]:>8,}")
+    print()
+    print(f"  ! {plan['depth_note']}")
+    return 0
+
+
+def _soil_quantify(store, args) -> int:
+    project = store.load_project(args.project_id)
+    baseline = store.soil_cores(args.project_id, "baseline")
+    monitoring = store.soil_cores(args.project_id, "monitoring")
+    if not baseline or not monitoring:
+        raise SystemExit(
+            f"need paired cores: {len(baseline)} baseline, "
+            f"{len(monitoring)} monitoring on record")
+
+    validation = store.latest_model_validation(args.project_id)
+    result = methodology.soil_pathway(validation=validation).quantify(
+        project, baseline_cores=baseline, monitoring_cores=monitoring,
+        reporting_year=args.year)
+    v = pipeline.record_vintage(store, result,
+                                actor=getattr(args, "actor", None) or "cli")
+    print(result.render())
+    print(f"\n  recorded as {v.id} ({v.status.value}), "
+          f"{v.issuable_whole:,} whole credit(s)")
+    return 0
+
+
+def _soil_status(store, args) -> int:
+    baseline = store.soil_cores(args.project_id, "baseline")
+    monitoring = store.soil_cores(args.project_id, "monitoring")
+    project = store.load_project(args.project_id)
+    paired = set(baseline) & set(monitoring)
+
+    print(f"{args.project_id} soil")
+    print(f"  plots enrolled     {len(project.plots):>6,}")
+    print(f"  baseline cores     {len(baseline):>6,}")
+    print(f"  monitoring cores   {len(monitoring):>6,}")
+    print(f"  paired plots       {len(paired):>6,}")
+    validation = store.latest_model_validation(args.project_id)
+    if validation is None:
+        print("  ! no accepted VMD0053 model validation; the punitive default "
+              "uncertainty applies")
+    else:
+        print(f"  model              {validation.model_name} "
+              f"{validation.model_version}, "
+              f"{validation.relative_uncertainty:.1%} uncertainty")
+    return 0
+
+
+FIELD_COLUMNS = ("plot_id", "measured_on", "surveyed_on", "surveyor",
+                 "stems_planted", "stems_sampled", "stems_alive",
+                 "species_key")
+
+
+def _project_forward(site, methodology_id: str, through: int, *,
+                     benchmark: float = 0.6) -> list:
+    """Run the engine for every year to the horizon, without recording.
+
+    A forecast is a projection of vintages that do not exist yet, so this
+    quantifies them in memory. Nothing is written: a draft vintage for 2034
+    would sit in the review queue forever.
+    """
+    project = sites.as_project(site)
+    end = date(through, 12, 31)
+    provider, readings = _feed_provider(site, end)
+    settled_through = date.today().year - 1
+
+    out = []
+    for year in range(site.enrolled_on.year, through + 1):
+        try:
+            meth = _methodology_for(site, methodology_id, readings, year,
+                                    benchmark=benchmark)
+        except SystemExit:
+            continue                       # no season that year
+        result = meth.quantify(project, provider, year)
+        if result.net_t <= 0 and year < settled_through:
+            continue
+        out.append(forecast.VintageProjection(
+            year=year, net_t=result.net_t,
+            relative_uncertainty=result.relative_uncertainty,
+            track=site.track.value,
+            settled=year <= settled_through))
+    return out
+
+
+def cmd_forecast(args) -> int:
+    """What can be promised, as opposed to what is projected."""
+    site = _site(args.site)
+    methodology_id = {"rice": "VM0051", "cropland": "VM0042"}.get(
+        site.track.value, "VM0047")
+    projections = _project_forward(site, methodology_id, args.through)
+    if not projections:
+        raise SystemExit(f"nothing to forecast for {site.id}")
+
+    risk = forecast.RiskModel(enrolled_units=args.units)
+    f = forecast.run(projections, project_id=site.id, risk=risk,
+                     trials=args.trials, confidence=args.confidence)
+
+    print(f"{site.id} forward delivery to {args.through}")
+    print(f"  {args.trials:,} simulated portfolios · {args.units:,} "
+          f"independently-failing unit(s) · {args.confidence:.0%} confidence")
+    print()
+    print(f"  {'vintage':<10}{'projected':>11}{'P10':>9}{'P50':>9}{'P90':>9}"
+          f"{'safe':>9}{'haircut':>9}")
+    for y in f.years:
+        print(f"  {y.year:<10}{y.projected_t:>11,.1f}{y.p10:>9,.1f}"
+              f"{y.p50:>9,.1f}{y.p90:>9,.1f}{y.safe_t:>9,.1f}"
+              f"{y.haircut:>8.0%}")
+    print(f"  {'-' * 66}")
+    print(f"  {'total':<10}{f.projected_total_t:>11,.1f}"
+          f"{'':>9}{f.p50_total_t:>9,.1f}{'':>9}{f.safe_total_t:>9,.1f}"
+          f"{f.portfolio_haircut:>8.0%}")
+    print()
+    print(f"  safe to sell forward   {f.safe_total_t:>10,.1f} tCO2e")
+    print(f"  against a projection of {f.projected_total_t:>9,.1f} tCO2e")
+
+    if f.sensitivity:
+        print()
+        print("  what each risk costs in safe volume:")
+        for name, without in sorted(f.sensitivity.items(),
+                                    key=lambda kv: -kv[1]):
+            print(f"    {name:<26}{without - f.safe_total_t:>9,.1f} tCO2e")
+
+    for w in f.warnings:
+        print(f"\n  ! {w}")
+
+    if args.aggregation:
+        print()
+        print("  how many units before an offtake is signable:")
+        print(f"    {'units':>8}{'safe tCO2e':>13}{'haircut':>10}{'gain':>10}")
+        for row in forecast.aggregation_curve(
+                projections, risk=risk, confidence=args.confidence,
+                trials=max(500, args.trials // 3)):
+            gain = row["gain_over_previous_t"]
+            print(f"    {row['units']:>8,}{row['safe_t']:>13,.1f}"
+                  f"{row['haircut']:>9.0%}"
+                  f"{('—' if gain is None else f'{gain:+,.1f}'):>10}")
+
+    if args.offtake:
+        print()
+        a = forecast.assess_offtake(
+            f, projections, committed_t=args.offtake,
+            replacement_price=args.replacement_price, risk=risk)
+        print(f"  offtake of {a.committed_t:,.0f} tCO2e")
+        print(f"    delivers in           {a.delivery_probability:>8.0%} "
+              f"of futures")
+        print(f"    expected shortfall    {a.expected_shortfall_t:>8,.1f} tCO2e")
+        print(f"    worst case            {a.worst_case_shortfall_t:>8,.1f} tCO2e")
+        print(f"    expected cover cost   ${a.expected_cover_cost:>8,.0f} "
+              f"at ${a.replacement_price:,.0f}/t replacement")
+        print(f"    {a.verdict}")
+    return 0
+
+
+def cmd_rice(args) -> int:
+    site = _site(args.site)
+    if site.track.value != "rice":
+        raise SystemExit(f"{site.id} is not a rice site")
+    end = date.fromisoformat(args.to) if args.to else date.today()
+    passes = sar_series(site, site.enrolled_on, end, **RICE_LAPSE)
+    detector = WaterRegimeDetector()
+    seasons = sar_seasons(site, passes)
+
+    if args.rice_command == "regime":
+        return _rice_regime(site, seasons, detector, args)
+    if args.rice_command == "passes":
+        return _rice_passes(site, seasons, detector, args)
+    if args.rice_command == "validate":
+        return _rice_validate(site, passes, detector, end)
+    return 0
+
+
+def _rice_regime(site, seasons, detector, args) -> int:
+    """Season by season: what the radar saw, and what it is worth."""
+    provider = SarProvider.from_passes(seasons, detector=detector)
+    print(f"{site.id} water regime, detected from Sentinel-1")
+    print(f"  {'season':<18}{'passes':>8}{'usable':>8}{'drained':>9}"
+          f"{'AWD':>6}{'confidence':>12}")
+    years = sorted({y for (y, _) in seasons})
+    for year in years:
+        if args.year and year != args.year:
+            continue
+        regime = provider.regime(year)
+        if regime is None:
+            continue
+        for s_ in regime.seasons:
+            print(f"  {s_.season + ' ' + str(s_.year):<18}{s_.passes:>8}"
+                  f"{s_.usable_passes:>8}{s_.drained_passes:>9}"
+                  f"{len(s_.qualifying_spells):>6}"
+                  f"{s_.adoption_confidence:>11.0%}")
+        if len(regime.seasons) > 1:
+            print(f"  {'-> ' + str(year):<18}{regime.passes:>8}"
+                  f"{regime.usable_passes:>8}{regime.drained_passes:>9}"
+                  f"{len(regime.qualifying_spells):>6}"
+                  f"{regime.adoption_confidence:>11.0%}")
+        for w in regime.warnings:
+            print(f"    ! {w}")
+        print()
+    if args.year:
+        regime = provider.regime(args.year)
+        if regime is not None:
+            print(regime.report().render("  "))
+    return 0
+
+
+def _rice_passes(site, seasons, detector, args) -> int:
+    """Every acquisition, and the call made on it.
+
+    Printed because a verifier's first question about a detected regime is
+    which passes it rests on, and the answer must not be a number.
+    """
+    keys = [k for k in sorted(seasons)
+            if (not args.year or k[0] == args.year)
+            and (not args.season or k[1].lower() == args.season.lower())]
+    if not keys:
+        raise SystemExit("no season matches; try --year / --season")
+
+    for key in keys:
+        calls = detector.classify(seasons[key])
+        print(f"{key[1]} {key[0]}")
+        print(f"  {'date':<12}{'VV dB':>8}{'stage':>7}{'sep dB':>8}"
+              f"{'state':>11}{'conf':>7}  note")
+        for c in calls:
+            mark = "~" if c.inferred else " "
+            print(f"  {c.day.isoformat():<12}{c.vv_normalised_db:>8.1f}"
+                  f"{c.stage_estimate:>7.2f}{c.separation_db:>8.1f}"
+                  f"{c.state.value:>11}{mark}{c.confidence:>6.0%}  "
+                  f"{c.note[:52]}")
+        regime = summarise_regime_for(calls, key)
+        print()
+        for spell in regime.spells:
+            label = "harvest drain" if spell.terminal else (
+                "AWD event" if spell in regime.qualifying_spells
+                else "not counted")
+            print(f"  dry {spell.start} to {spell.end}  {spell.days:>3} d  "
+                  f"{spell.passes} pass(es)  {label}")
+        print()
+    print("  ~ marks a call carried across an unreadable pass from its "
+          "neighbours")
+    return 0
+
+
+def summarise_regime_for(calls, key):
+    from .sar import summarise_regime
+    return summarise_regime(calls, season=key[1], year=key[0])
+
+
+def _rice_validate(site, passes, detector, end: date) -> int:
+    """Score the detector against the state the simulator actually used.
+
+    Only possible because the water regime here is generated. In a real
+    project this command has no input, which is the point of printing it:
+    these numbers come from a simulation and belong in a validation report,
+    never in a claim.
+    """
+    truth = sar_truth(site, site.enrolled_on, end, **RICE_LAPSE)
+    calls = detector.classify(passes)
+    result = score(calls, truth)
+
+    print(f"{site.id} detector validation, {site.enrolled_on} to {end}")
+    print(f"  passes                {len(calls):>6,}")
+    print(f"  called                {result['called']:>6,}")
+    print(f"  abstained             {result['abstained']:>6,}   "
+          f"(not separable at their crop stage)")
+    print(f"  accuracy              {result['accuracy']:>6.1%}")
+    print(f"  precision, flooded    {result['precision_flooded']:>6.1%}")
+    print(f"  recall, flooded       {result['recall_flooded']:>6.1%}")
+    print(f"  accuracy, drained     {result['drained_accuracy']:>6.1%}")
+    print(f"  called dry when flooded {result['false_negative']:>4,}   "
+          f"this is the error that over-credits")
+    print(f"  called flooded when dry {result['false_positive']:>4,}   "
+          f"this one loses real abatement")
+    print()
+    print("  ! Scored against a simulated water regime. Real validation "
+          "needs field water-level loggers on a sample of plots, which is "
+          "what VM0051 expects and what this number stands in for.")
+    return 0
+
+
+def cmd_trees(args) -> int:
+    if args.trees_command == "species":
+        return _trees_species(args)
+    with _store(args) as store:
+        if args.trees_command == "ingest":
+            return _trees_ingest(store, args)
+        if args.trees_command == "survival":
+            return _trees_survival(store, args)
+        if args.trees_command == "quantify":
+            return _trees_quantify(store, args)
+        if args.trees_command == "status":
+            return _trees_status(store, args)
+    return 0
+
+
+def _trees_species(args) -> int:
+    """The allometry catalogue, and which entries are still placeholders.
+
+    Worth its own command because the difference between a generic equation
+    and a local fit is roughly a quarter of the credits, and nobody goes
+    looking for that in a source file.
+    """
+    print(f"  {'key':<22}{'species':<22}{'equation':<15}{'rho':>6}"
+          f"{'err':>7}  calibration")
+    for key, sp in sorted(SPECIES.items()):
+        mark = "local fit" if sp.is_locally_calibrated else "GENERIC"
+        print(f"  {key:<22}{sp.name:<22}{sp.equation:<15}"
+              f"{sp.wood_density_g_cm3:>6.2f}{sp.relative_error:>7.0%}  {mark}")
+    generic = [k for k, sp in SPECIES.items() if not sp.is_locally_calibrated]
+    if generic:
+        print(f"\n  ! {len(generic)} of {len(SPECIES)} species carry a generic "
+              f"equation. Each costs its plots the difference between the "
+              f"generic error and a local fit, every vintage.")
+    return 0
+
+
+def _trees_ingest(store, args) -> int:
+    """Load a field census from CSV: one row per measured stem.
+
+    The survival survey is repeated on every row of a visit, which is how a
+    field app exports it, and rows are grouped into one inventory per plot
+    and date.
+    """
+    import csv as _csv
+
+    actor = _require_actor(args)
+    grouped: dict[tuple, dict] = {}
+    with open(args.csv_file, newline="") as fh:
+        reader = _csv.DictReader(fh)
+        missing = [c for c in FIELD_COLUMNS if c not in (reader.fieldnames or [])]
+        if missing:
+            raise SystemExit(
+                f"field CSV is missing column(s): {', '.join(missing)}\n"
+                f"expected: {', '.join(FIELD_COLUMNS)}[,dbh_cm][,height_m]")
+        for row in reader:
+            key = (row["plot_id"], row["measured_on"])
+            entry = grouped.setdefault(key, {
+                "surveyed_on": row["surveyed_on"],
+                "surveyor": row["surveyor"],
+                "stems_planted": int(row["stems_planted"]),
+                "stems_sampled": int(row["stems_sampled"]),
+                "stems_alive": int(row["stems_alive"]),
+                "sample": []})
+            entry["sample"].append(StemMeasurement(
+                species_key=row["species_key"],
+                dbh_cm=float(row["dbh_cm"]) if row.get("dbh_cm") else None,
+                height_m=float(row["height_m"]) if row.get("height_m") else None))
+
+    stored = 0
+    for (plot_id, measured_on), entry in sorted(grouped.items()):
+        survey = SurvivalSurvey(
+            plot_id=plot_id, surveyed_on=date.fromisoformat(entry["surveyed_on"]),
+            stems_planted=entry["stems_planted"],
+            stems_sampled=entry["stems_sampled"],
+            stems_alive=entry["stems_alive"], surveyor=entry["surveyor"])
+        inventory = CensusInventory(
+            plot_id=plot_id, measured_on=date.fromisoformat(measured_on),
+            survival=survey, sample=entry["sample"])
+        store.add_tree_inventory(args.project_id, inventory, actor=actor)
+        stored += 1
+        stock, relative = inventory.stock()
+        print(f"  {plot_id:<16} {measured_on}  "
+              f"{len(entry['sample']):>3} stems measured  "
+              f"survival {survey.survival_rate:>5.0%} "
+              f"(>={survey.survival_lower_bound():.0%})  "
+              f"{stock:>8.2f} tCO2e +/- {relative:.0%}")
+        for problem in survey.issues():
+            print(f"    ! {problem}")
+    print(f"\n{stored} inventory visit(s) stored from {args.csv_file}")
+    return 0
+
+
+def _trees_survival(store, args) -> int:
+    inventories = store.tree_inventories(args.project_id)
+    if not inventories:
+        print("no census inventory on record")
+        return 0
+    print(f"  {'plot':<16}{'visited':<12}{'planted':>9}{'sampled':>9}"
+          f"{'alive':>7}{'rate':>8}{'credited':>10}")
+    failing = 0
+    for plot_id, inv in sorted(inventories.items()):
+        s = inv.survival
+        flag = "  REPLANT" if s.needs_replanting else ""
+        if s.needs_replanting:
+            failing += 1
+        print(f"  {plot_id:<16}{s.surveyed_on.isoformat():<12}"
+              f"{s.stems_planted:>9,}{s.stems_sampled:>9,}{s.stems_alive:>7,}"
+              f"{s.survival_rate:>8.0%}{s.surviving_stems:>10,}{flag}")
+    print(f"\n  crediting the lower bound of each survey, not the point "
+          f"estimate")
+    if failing:
+        print(f"  ! {failing} plot(s) below the 70% floor: those need "
+              f"replanting, not a vintage")
+    return 0
+
+
+def _trees_quantify(store, args) -> int:
+    project = store.load_project(args.project_id)
+    current = store.tree_inventories(args.project_id, year=args.year)
+    if not current:
+        raise SystemExit(
+            f"no census inventory on or before {args.year}-12-31; "
+            f"a census credits what was counted")
+    prior = store.tree_inventories(args.project_id, year=args.year - 1)
+
+    result = methodology.census_pathway().quantify(
+        project, inventories=current, prior_inventories=prior,
+        reporting_year=args.year)
+    v = pipeline.record_vintage(store, result,
+                                actor=getattr(args, "actor", None) or "cli")
+    print(result.render())
+    print(f"\n  recorded as {v.id} ({v.status.value}), "
+          f"{v.issuable_whole:,} whole credit(s)")
+    return 0
+
+
+def _trees_status(store, args) -> int:
+    project = store.load_project(args.project_id)
+    inventories = store.tree_inventories(args.project_id)
+    counted = set(inventories) & set(project.creditable_plot_ids())
+    stems = sum(i.survival.stems_planted for i in inventories.values())
+    credited = sum(i.survival.surviving_stems for i in inventories.values())
+    stock = sum(i.stock()[0] for i in inventories.values())
+    generic = [p for p, i in inventories.items() if not i.uses_local_allometry]
+
+    print(f"{args.project_id} trees")
+    print(f"  plots enrolled     {len(project.plots):>6,}")
+    print(f"  plots inventoried  {len(counted):>6,}")
+    print(f"  stems planted      {stems:>6,}")
+    print(f"  stems credited     {credited:>6,}  (survival lower bound)")
+    print(f"  standing stock     {stock:>6.1f} tCO2e")
+    if generic:
+        print(f"  ! {len(generic)} plot(s) priced on a generic allometric "
+              f"equation")
+    benchmark = methodology.census_pathway().benchmark
+    if not benchmark.is_vetted:
+        print(f"  ! performance benchmark is '{benchmark.name}'; no issuance "
+              f"may rest on it until a Verra-vetted provider supplies one")
+    return 0
+
+
+def cmd_stack(args) -> int:
+    with _store(args) as store:
+        if args.stack_command == "add":
+            actor = _require_actor(args)
+            geometry = None
+            if args.geometry:
+                geometry = [tuple(float(x) for x in pair.split(","))
+                            for pair in args.geometry.split(";")]
+            c = stacking.register_claim(
+                store, args.project_id, args.plot_id,
+                pillar=stacking.Pillar(args.pillar),
+                methodology_id=args.methodology, area_ha=args.area,
+                geometry=geometry, actor=actor)
+            print(f"{c.pillar.value} claimed on {c.plot_id} under "
+                  f"{c.methodology_id}")
+            print(f"  pools    {', '.join(sorted(p.value for p in c.pools))}")
+            print(f"  area     {c.area_ha:,.4f} ha")
+            print(f"  boundary {'own sub-plot' if c.has_own_geometry else 'whole plot'}")
+        elif args.stack_command == "audit":
+            report = stacking.audit(store, args.project_id)
+            print(f"{args.project_id}")
+            print(f"  claims           {report['claims']:>8,}")
+            print(f"  plots claimed    {report['plots_with_claims']:>8,}")
+            print(f"  stacked plots    {report['stacked_plots']:>8,}")
+            print(f"  stacked area     {report['stacked_ha']:>8,.2f} ha "
+                  f"({report['stacked_share']:.0%} of the project)")
+            if report["clean"]:
+                print("  no hectare is claimed twice")
+            else:
+                print(f"\n  {len(report['conflicts'])} conflict(s):")
+                for c in report["conflicts"]:
+                    print(f"    [{c['kind']}] {c['detail']}")
+                return 1
     return 0
 
 
@@ -479,6 +1215,11 @@ def build_parser() -> argparse.ArgumentParser:
                    help="emission factor tier for practice-based methodologies")
     p.add_argument("--benchmark", type=float, default=0.6,
                    help="performance benchmark, tCO2e/ha/yr, for ARR")
+    p.add_argument("--awd-penetration", type=float, default=0.04,
+                   help="share of rice area already on AWD in the jurisdiction; "
+                        "VM0051 ties additionality to it")
+    p.add_argument("--jurisdiction", default="",
+                   help="jurisdiction the common-practice figure applies to")
     p.set_defaults(func=cmd_quantify)
 
     p = sub.add_parser("queue", help="vintages waiting on a human")
@@ -528,6 +1269,133 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("status", help="is this project healthy")
     p.add_argument("project_id")
     p.set_defaults(func=cmd_status)
+
+    p = sub.add_parser("article6", parents=[actor_opt],
+                       help="host-country authorisation and corresponding adjustments")
+    asub = p.add_subparsers(dest="a6_command", required=True)
+    q = asub.add_parser("authorise", parents=[actor_opt],
+                        help="record a letter of authorisation")
+    q.add_argument("project_id")
+    q.add_argument("--authority", required=True)
+    q.add_argument("--reference", required=True)
+    q.add_argument("--issued-on", required=True)
+    q.add_argument("--use", required=True,
+                   choices=[u.value for u in article6.AuthorisedUse])
+    q.add_argument("--volume", type=float, required=True)
+    q.add_argument("--first-vintage", type=int, required=True)
+    q.add_argument("--last-vintage", type=int, required=True)
+    q.add_argument("--valid-until")
+    q.add_argument("--no-adjustment", action="store_true",
+                   help="the letter does NOT commit to a corresponding adjustment")
+    q = asub.add_parser("adjust", parents=[actor_opt],
+                        help="record that the host country applied the adjustment")
+    q.add_argument("authorisation_id")
+    q.add_argument("--year", type=int, required=True)
+    q.add_argument("--volume", type=float, required=True)
+    q.add_argument("--applied-on", required=True)
+    q.add_argument("--reported-in", required=True)
+    q = asub.add_parser("revoke", parents=[actor_opt], help="withdraw an authorisation")
+    q.add_argument("authorisation_id")
+    q.add_argument("--on", required=True)
+    q.add_argument("--reason", required=True)
+    q = asub.add_parser("claims", help="what a buyer of each vintage may say")
+    q.add_argument("project_id")
+    q.add_argument("--ccts", action="store_true",
+                   help="the project is also registered under India's CCTS")
+    p.set_defaults(func=cmd_article6)
+
+    p = sub.add_parser("soil", parents=[actor_opt],
+                       help="soil carbon: cores, VMD0053 validation, quantify")
+    tsub = p.add_subparsers(dest="soil_command", required=True)
+    q = tsub.add_parser("ingest", parents=[actor_opt], help="load cores from a lab CSV")
+    q.add_argument("project_id")
+    q.add_argument("csv_file")
+    q = tsub.add_parser("validate", parents=[actor_opt],
+                        help="record a VMD0053 model validation")
+    q.add_argument("project_id")
+    q.add_argument("csv_file", help="CSV of measured_t_ha,modelled_t_ha")
+    q.add_argument("--model", required=True)
+    q.add_argument("--version", required=True)
+    q.add_argument("--training-data", action="store_true",
+                   help="scored on training data; recorded but never accepted")
+    q = tsub.add_parser("design", help="how many cores, and where")
+    q.add_argument("--strata", required=True,
+                   help="name:area_ha:soc_std_dev[:existing], comma separated")
+    q.add_argument("--margin", type=float, default=2.0)
+    q.add_argument("--confidence", type=float, default=0.90)
+    q.add_argument("--depth", type=float, default=30.0)
+    q = tsub.add_parser("quantify", parents=[actor_opt],
+                        help="credit the measured SOC change")
+    q.add_argument("project_id")
+    q.add_argument("--year", type=int, required=True)
+    q = tsub.add_parser("status", help="cores held and model state")
+    q.add_argument("project_id")
+    p.set_defaults(func=cmd_soil)
+
+    p = sub.add_parser("forecast",
+                       help="forward delivery, and what is safe to pre-sell")
+    p.add_argument("site")
+    p.add_argument("--through", type=int, default=date.today().year + 8,
+                   help="last vintage year to project")
+    p.add_argument("--units", type=int, default=1,
+                   help="independently-failing units (farmers) in the portfolio")
+    p.add_argument("--confidence", type=float, default=0.90)
+    p.add_argument("--trials", type=int, default=4000)
+    p.add_argument("--aggregation", action="store_true",
+                   help="safe volume against portfolio size")
+    p.add_argument("--offtake", type=float,
+                   help="test a forward commitment of this many tonnes")
+    p.add_argument("--replacement-price", type=float, default=45.0,
+                   help="spot price assumed when covering a shortfall")
+    p.set_defaults(func=cmd_forecast)
+
+    p = sub.add_parser("rice", help="water regime detected from Sentinel-1")
+    rsub = p.add_subparsers(dest="rice_command", required=True)
+    for name, helptext in (("regime", "season summaries and adoption confidence"),
+                           ("passes", "every acquisition and the call made on it"),
+                           ("validate", "score the detector against known truth")):
+        q = rsub.add_parser(name, help=helptext)
+        q.add_argument("site")
+        q.add_argument("--to", help="end of the window (default today)")
+        if name != "validate":
+            q.add_argument("--year", type=int)
+        if name == "passes":
+            q.add_argument("--season")
+    p.set_defaults(func=cmd_rice)
+
+    p = sub.add_parser("trees", parents=[actor_opt],
+                       help="agroforestry: census inventory, survival, quantify")
+    tsub = p.add_subparsers(dest="trees_command", required=True)
+    q = tsub.add_parser("species", help="the allometry catalogue")
+    q = tsub.add_parser("ingest", parents=[actor_opt],
+                        help="load a field census from CSV")
+    q.add_argument("project_id")
+    q.add_argument("csv_file")
+    q = tsub.add_parser("survival", help="survival by plot, and what is credited")
+    q.add_argument("project_id")
+    q = tsub.add_parser("quantify", parents=[actor_opt],
+                        help="credit inventory growth over the benchmark")
+    q.add_argument("project_id")
+    q.add_argument("--year", type=int, required=True)
+    q = tsub.add_parser("status", help="inventories held and allometry in use")
+    q.add_argument("project_id")
+    p.set_defaults(func=cmd_trees)
+
+    p = sub.add_parser("stack", parents=[actor_opt],
+                       help="pillar claims and double-counting control")
+    ssub = p.add_subparsers(dest="stack_command", required=True)
+    q = ssub.add_parser("add", parents=[actor_opt], help="claim a pillar on a plot")
+    q.add_argument("project_id")
+    q.add_argument("plot_id")
+    q.add_argument("--pillar", required=True,
+                   choices=[x.value for x in stacking.Pillar])
+    q.add_argument("--methodology", required=True)
+    q.add_argument("--area", type=float, required=True)
+    q.add_argument("--geometry", default="",
+                   help="sub-plot boundary as 'lon,lat;lon,lat;...'")
+    r = ssub.add_parser("audit", help="is any hectare claimed twice")
+    r.add_argument("project_id")
+    p.set_defaults(func=cmd_stack)
 
     p = sub.add_parser("evidence", help="build the verification pack")
     p.add_argument("project_id")

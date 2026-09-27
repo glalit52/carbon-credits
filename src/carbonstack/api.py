@@ -23,7 +23,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable
 from urllib.parse import parse_qs, urlparse
 
-from . import ledger, payments
+from . import agroforestry, article6, ledger, payments, stacking
 from .pipeline import health
 from .store.repo import Store, StoreError
 
@@ -120,7 +120,116 @@ def api_eligibility(store: Store, project_id: str, **_) -> dict:
         "creditable_ha": round(project.creditable_area_ha(), 4),
         "blocked_plots": len(issues),
         "reasons": dict(sorted(reasons.items(), key=lambda kv: -kv[1])),
+        # Reported apart from the per-plot findings because these block every
+        # hectare at once, and repeating them per plot would bury the rest.
+        "programme_issues": project.programme_issues(),
+        "methodology_version": store.project_meta(project_id)["methodology_version"],
         "detail": issues,
+    }
+
+
+@route("GET", "/api/projects/{project_id}/stacking")
+def api_stacking(store: Store, project_id: str, **_) -> dict:
+    """Is any hectare claimed twice. Read this before issuing on a stacked plot."""
+    return stacking.audit(store, project_id)
+
+
+@route("POST", "/api/projects/{project_id}/stacking")
+def api_register_claim(store: Store, project_id: str, body: dict, **_) -> dict:
+    try:
+        pillar = stacking.Pillar(body["pillar"])
+        methodology_id = body["methodology_id"]
+        area_ha = float(body["area_ha"])
+    except KeyError as exc:
+        raise ApiError(400, f"missing field: {exc.args[0]}") from None
+    except ValueError as exc:
+        raise ApiError(400, str(exc)) from None
+
+    plot_id = body.get("plot_id")
+    if not plot_id:
+        raise ApiError(400, "missing field: plot_id")
+
+    geometry = body.get("geometry")
+    if geometry is not None:
+        geometry = [tuple(v) for v in geometry]
+
+    return stacking.register_claim(
+        store, project_id, plot_id, pillar=pillar,
+        methodology_id=methodology_id, area_ha=area_ha, geometry=geometry,
+        actor=_actor(body)).to_dict()
+
+
+@route("GET", "/api/allometry")
+def api_allometry(store: Store, **_) -> dict:
+    """The equation catalogue, and which entries are still placeholders.
+
+    Exposed because the gap between a generic equation and a local fit is
+    roughly a quarter of a tree project's credits, and a buyer doing
+    diligence should be able to read which one priced the tonnes they are
+    being sold.
+    """
+    return {"species": [{
+        "key": key,
+        "name": sp.name,
+        "equation": sp.equation,
+        "wood_density_g_cm3": sp.wood_density_g_cm3,
+        "root_shoot": sp.root_shoot,
+        "relative_error": sp.relative_error,
+        "locally_calibrated": sp.is_locally_calibrated,
+        "region": sp.region,
+        "source": sp.source,
+    } for key, sp in sorted(agroforestry.SPECIES.items())]}
+
+
+@route("GET", "/api/projects/{project_id}/trees")
+def api_trees(store: Store, project_id: str, query: dict, **_) -> dict:
+    """The census: what was counted, by whom, and what it is worth.
+
+    `?year=` reads the inventory as it stood at the end of that year, which
+    is the view a verifier checking a past vintage needs.
+    """
+    year = query.get("year")
+    inventories = store.tree_inventories(
+        project_id, year=int(year[0]) if year else None)
+
+    plots = []
+    for plot_id, inv in sorted(inventories.items()):
+        survey = inv.survival
+        stock, relative = inv.stock()
+        plots.append({
+            "plot_id": plot_id,
+            "measured_on": inv.measured_on.isoformat(),
+            "surveyed_on": survey.surveyed_on.isoformat(),
+            "surveyor": survey.surveyor,
+            "stems_planted": survey.stems_planted,
+            "stems_sampled": survey.stems_sampled,
+            "stems_alive": survey.stems_alive,
+            "survival_rate": round(survey.survival_rate, 4),
+            "survival_lower_bound": round(survey.survival_lower_bound(), 4),
+            "stems_credited": survey.surviving_stems,
+            "stems_measured": len(inv.sample),
+            "mean_kgco2e_per_stem": round(inv.mean_co2e_per_stem_kg, 3),
+            "stock_tco2e": round(stock, 4),
+            "relative_uncertainty": round(relative, 4),
+            "locally_calibrated": inv.uses_local_allometry,
+            "needs_replanting": survey.needs_replanting,
+            "issues": survey.issues(),
+        })
+
+    benchmark = agroforestry.BenchmarkProvider()
+    return {
+        "approach": "VM0047 v1.1 census-based",
+        "plots": plots,
+        "stems_planted": sum(p["stems_planted"] for p in plots),
+        "stems_credited": sum(p["stems_credited"] for p in plots),
+        "standing_stock_tco2e": round(sum(p["stock_tco2e"] for p in plots), 4),
+        "plots_below_survival_floor": sum(
+            1 for p in plots if p["needs_replanting"]),
+        "benchmark_vetted": benchmark.is_vetted,
+        "benchmark_note": (
+            "performance benchmark is a placeholder; no issuance may rest on "
+            "it until a Verra-vetted data service provider supplies one"
+            if not benchmark.is_vetted else ""),
     }
 
 
@@ -168,6 +277,53 @@ def api_payments(store: Store, project_id: str, query: dict, **_) -> dict:
         status=payments.PaymentStatus(status) if status else None)
     return {"payments": [p.to_dict() for p in rows],
             "summary": payments.summary(store, project_id)}
+
+
+@route("GET", "/api/projects/{project_id}/claims")
+def api_claims(store: Store, project_id: str, query: dict, **_) -> dict:
+    """What a buyer of each vintage may truthfully say.
+
+    The page a buyer's counsel reads before signing, and the one a CORSIA
+    auditor asks for.
+    """
+    ccts = query.get("ccts", ["false"])[0].lower() in ("1", "true", "yes")
+    return article6.claim_register(store, project_id, ccts_registered=ccts)
+
+
+@route("POST", "/api/projects/{project_id}/authorisations")
+def api_authorise(store: Store, project_id: str, body: dict, **_) -> dict:
+    from datetime import date as _date
+    try:
+        a = article6.record_authorisation(
+            store, project_id,
+            authority=body["authority"], reference=body["reference"],
+            issued_on=_date.fromisoformat(body["issued_on"]),
+            authorised_use=article6.AuthorisedUse(body["authorised_use"]),
+            authorised_volume_t=float(body["authorised_volume_t"]),
+            corresponding_adjustment_committed=bool(
+                body.get("corresponding_adjustment_committed", False)),
+            first_vintage=int(body["first_vintage"]),
+            last_vintage=int(body["last_vintage"]),
+            valid_until=(_date.fromisoformat(body["valid_until"])
+                         if body.get("valid_until") else None),
+            actor=_actor(body))
+    except KeyError as exc:
+        raise ApiError(400, f"missing field: {exc.args[0]}") from None
+    return a.to_dict()
+
+
+@route("POST", "/api/authorisations/{authorisation_id}/adjustments")
+def api_adjust(store: Store, authorisation_id: str, body: dict, **_) -> dict:
+    from datetime import date as _date
+    try:
+        adj = article6.record_adjustment(
+            store, authorisation_id, vintage_year=int(body["vintage_year"]),
+            volume_t=float(body["volume_t"]),
+            applied_on=_date.fromisoformat(body["applied_on"]),
+            reported_in=body["reported_in"], actor=_actor(body))
+    except KeyError as exc:
+        raise ApiError(400, f"missing field: {exc.args[0]}") from None
+    return adj.to_dict()
 
 
 @route("GET", "/api/events")

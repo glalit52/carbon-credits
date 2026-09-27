@@ -1,3 +1,7 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Vallam and Gatugi</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -318,6 +322,11 @@
     <p>Both plots run the same fixed machinery &mdash; validation, verification, registry
       fees, project operations. That cost does not care how much land sits inside the
       project, which is why plot-scale economics decide everything downstream.</p>
+    <p>The bottom three rows are the metric that matters, and it is not cost per
+      hectare. Deductions and the buffer decide how many credits actually reach a
+      registry, so a cheap hectare carrying a large uncertainty deduction is a worse
+      business than a dearer one that issues more. <strong>Cost per issued tonne</strong>
+      is what gets managed.</p>
     <div class="verdicts" id="verdicts"></div>
     <div class="tscroll" id="econtable"></div>
   </section>
@@ -1017,6 +1026,340 @@
     }
     panel.appendChild(fig5);
 
+    // --- radar, where the site has it ---------------------------------
+    // The rice claim is "the field was dry". This is the evidence for it,
+    // and the place where the page stops asserting and starts detecting.
+    if (block.radar) {
+      var rad = block.radar;
+      var figR = el("figure");
+      var topR = el("div", "figtop");
+      topR.appendChild(el("h3", null, "Was the field actually dry?"));
+      topR.appendChild(el("span", "note", rad.instrument));
+      figR.appendChild(topR);
+
+      var pR = el("p", "empty");
+      pR.textContent = rad.note;
+      figR.appendChild(pR);
+
+      var gridR = el("div", "ledger-grid");
+      function rcell(k, v, sTxt) {
+        var n = el("div");
+        n.appendChild(el("span", "k", k));
+        n.appendChild(el("span", "v", v));
+        n.appendChild(el("span", "s", sTxt));
+        gridR.appendChild(n);
+      }
+      var val = rad.validation || {};
+      var revealedCalls = (rad.calls || []).filter(function (c) {
+        return parseDay(c.day) <= NOW;
+      });
+      var sep = revealedCalls.filter(function (c) {
+        return c.state !== "ambiguous";
+      }).length;
+      rcell("Radar passes", String(revealedCalls.length),
+            "6-day revisit, unaffected by cloud");
+      rcell("Calls made", sep + " of " + revealedCalls.length,
+            "the rest fall where the two responses cross");
+      rcell("Accuracy", ((val.accuracy || 0) * 100).toFixed(0) + "%",
+            "against the simulated regime · " +
+            (val.false_negative || 0) + " dry calls on a flooded field");
+      var lastCmp = (rad.comparison || []).filter(function (c) {
+        return c.detected_confidence != null;
+      });
+      var lc = lastCmp.length ? lastCmp[lastCmp.length - 1] : null;
+      rcell("Adoption confidence",
+            lc ? (lc.detected_confidence * 100).toFixed(0) + "%" : "—",
+            lc ? "detected, against " +
+                 (lc.asserted_confidence * 100).toFixed(0) +
+                 "% when it was asserted" : "");
+      figR.appendChild(gridR);
+
+      var scrollR = el("div", "tscroll");
+      var tableR = el("table");
+      var theadR = el("thead"), hrR = el("tr");
+      ["Year", "Optical coverage", "Radar coverage", "AWD events",
+       "Asserted", "Detected"].forEach(function (h) {
+        hrR.appendChild(el("th", null, h));
+      });
+      theadR.appendChild(hrR);
+      tableR.appendChild(theadR);
+      var tbodyR = el("tbody");
+      (rad.comparison || []).forEach(function (c) {
+        var tr = el("tr");
+        tr.appendChild(el("td", null, String(c.year)));
+        tr.appendChild(el("td", "ded", c.optical_coverage != null
+          ? (c.optical_coverage * 100).toFixed(0) + "%" : "—"));
+        tr.appendChild(el("td", null, c.radar_coverage != null
+          ? (c.radar_coverage * 100).toFixed(0) + "%" : "—"));
+        tr.appendChild(el("td", null, String(c.awd_events)));
+        tr.appendChild(el("td", "ded", c.asserted_confidence != null
+          ? (c.asserted_confidence * 100).toFixed(0) + "%" : "—"));
+        tr.appendChild(el("td", "net", c.detected_confidence != null
+          ? (c.detected_confidence * 100).toFixed(0) + "%" : "—"));
+        tbodyR.appendChild(tr);
+      });
+      tableR.appendChild(tbodyR);
+      scrollR.appendChild(tableR);
+      figR.appendChild(scrollR);
+
+      // The last dozen acquisitions, so the table above resolves to passes.
+      var recent = revealedCalls.slice(-12);
+      if (recent.length) {
+        var scrollP = el("div", "tscroll");
+        var tableP = el("table");
+        var theadP = el("thead"), hrP = el("tr");
+        ["Pass", "VV dB", "Stage", "Separation", "Call", "Confidence"]
+          .forEach(function (h) { hrP.appendChild(el("th", null, h)); });
+        theadP.appendChild(hrP);
+        tableP.appendChild(theadP);
+        var tbodyP = el("tbody");
+        recent.forEach(function (c) {
+          var tr = el("tr");
+          if (c.state === "ambiguous") tr.className = "projected";
+          tr.appendChild(el("td", null, fmtDay(parseDay(c.day))));
+          tr.appendChild(el("td", null, num(c.vv_db, 1)));
+          tr.appendChild(el("td", null, num(c.stage_estimate, 2)));
+          tr.appendChild(el("td", null, num(c.separation_db, 1)));
+          tr.appendChild(el("td", c.state === "ambiguous" ? "ded" : "net",
+            c.state + (c.inferred ? " ~" : "")));
+          tr.appendChild(el("td", null,
+            c.state === "ambiguous" ? "—"
+              : (c.confidence * 100).toFixed(0) + "%"));
+          tbodyP.appendChild(tr);
+        });
+        tableP.appendChild(tbodyP);
+        scrollP.appendChild(tableP);
+        figR.appendChild(scrollP);
+      }
+
+      var capR = el("div", "covnote");
+      capR.innerHTML = "<span>" + rad.caveats.join(" &middot; ") + "</span>";
+      figR.appendChild(capR);
+      panel.appendChild(figR);
+    }
+
+    // --- census, where the site has one -------------------------------
+    // Two instruments over the same trees. Shown together because the choice
+    // between them is not a preference: a stocking index has nothing to
+    // measure over a bund line, which is most of the agroforestry pipeline.
+    if (block.census) {
+      var cen = block.census;
+      var figC = el("figure");
+      var topC = el("div", "figtop");
+      topC.appendChild(el("h3", null, "Counted, not inferred"));
+      topC.appendChild(el("span", "note", cen.approach +
+        " · " + cen.stems_planted + " shade stems · " +
+        cen.sample_size + " measured per visit"));
+      figC.appendChild(topC);
+
+      var pC = el("p", "empty");
+      pC.textContent = cen.note;
+      figC.appendChild(pC);
+
+      var gridC = el("div", "ledger-grid");
+      function ccell(k, v, sTxt) {
+        var n = el("div");
+        n.appendChild(el("span", "k", k));
+        n.appendChild(el("span", "v", v));
+        n.appendChild(el("span", "s", sTxt));
+        gridC.appendChild(n);
+      }
+      // The headline is the last visit that has actually happened. Leading
+      // with a 2040 projection would read as a measurement.
+      var done = cen.visits.filter(function (r) { return r.complete; });
+      var lastVisit = done.length ? done[done.length - 1] : cen.visits[0];
+      var when = lastVisit.complete ? "at " + lastVisit.measured_on
+                                    : "projected, first census " +
+                                      lastVisit.measured_on;
+      ccell("Stems planted", String(cen.stems_planted),
+            cen.stems_per_ha + " per ha, shade layer only");
+      ccell("Stems credited", String(lastVisit.stems_credited),
+            "lower bound of the " + (lastVisit.survival_rate * 100).toFixed(0) +
+            "% survival survey, not the count");
+      ccell("Standing stock", num(lastVisit.stock_tco2e, 1) + " tCO2e",
+            when + " · ±" +
+            (lastVisit.relative_uncertainty * 100).toFixed(0) + "%");
+      ccell("Allometry", cen.locally_calibrated ? "local fit" : "generic",
+            cen.allometry);
+      figC.appendChild(gridC);
+
+      if (cen.instrument_gap && cen.instrument_gap.ratio) {
+        var gap = el("p", "empty");
+        gap.textContent = cen.instrument_gap.finding;
+        figC.appendChild(gap);
+      }
+
+      var scrollC = el("div", "tscroll");
+      var tableC = el("table");
+      var theadC = el("thead"), hrC = el("tr");
+      ["Visit", "Mean DBH", "Mean height", "Survival", "Credited stems",
+       "Stock tCO2e", "Area-based", "Census"].forEach(function (h) {
+        hrC.appendChild(el("th", null, h));
+      });
+      theadC.appendChild(hrC);
+      tableC.appendChild(theadC);
+
+      var cmp = {};
+      (cen.comparison || []).forEach(function (c) { cmp[c.year] = c; });
+      var tbodyC = el("tbody");
+      var horizonC = NOW.getFullYear() + 6;
+      cen.visits.filter(function (r) {
+        return r.complete || r.year <= horizonC;
+      }).forEach(function (r) {
+        var tr = el("tr");
+        if (!r.complete) tr.className = "projected";
+        tr.appendChild(el("td", null, String(r.year) +
+          (r.complete ? "" : " · proj")));
+        tr.appendChild(el("td", null, num(r.mean_dbh_cm, 1) + " cm"));
+        tr.appendChild(el("td", null, num(r.mean_height_m, 1) + " m"));
+        tr.appendChild(el("td", null,
+          (r.survival_rate * 100).toFixed(0) + "% → " +
+          (r.survival_lower_bound * 100).toFixed(0) + "%"));
+        tr.appendChild(el("td", null, String(r.stems_credited)));
+        tr.appendChild(el("td", null, num(r.stock_tco2e, 1)));
+        var c = cmp[r.year];
+        tr.appendChild(el("td", "ded", c ? num(c.area_based_net_t, 1) : "—"));
+        tr.appendChild(el("td", "net", c ? num(c.census_net_t, 1) : "—"));
+        tbodyC.appendChild(tr);
+      });
+      tableC.appendChild(tbodyC);
+      scrollC.appendChild(tableC);
+      figC.appendChild(scrollC);
+
+      var capC = el("div", "covnote");
+      capC.innerHTML = "<span>" + cen.caveats.join(" &middot; ") + "</span>";
+      figC.appendChild(capC);
+      panel.appendChild(figC);
+    }
+
+    // --- forward delivery ----------------------------------------------
+    // The curve above is a projection. Nobody sells a projection: they sell
+    // a contract, and a contract needs the volume the project clears in
+    // nine futures out of ten.
+    if (block.forecast && block.forecast.years) {
+      var fc = block.forecast;
+      var figF = el("figure");
+      var topF = el("div", "figtop");
+      topF.appendChild(el("h3", null, "What could actually be promised"));
+      topF.appendChild(el("span", "note",
+        fc.trials.toLocaleString() + " simulated portfolios · " +
+        (fc.confidence * 100).toFixed(0) + "% confidence"));
+      figF.appendChild(topF);
+
+      var pF = el("p", "empty");
+      pF.textContent = fc.note;
+      figF.appendChild(pF);
+
+      var gridF = el("div", "ledger-grid");
+      function fcell(k, v, sTxt, cls) {
+        var n = el("div");
+        n.appendChild(el("span", "k", k));
+        n.appendChild(el("span", "v", v));
+        n.appendChild(el("span", "s", sTxt));
+        gridF.appendChild(n);
+      }
+      fcell("Projected", num(fc.projected_total_t, 1) + " tCO2e",
+            "the engine's point estimate over the horizon");
+      fcell("Median delivery", num(fc.p50_total_t, 1) + " tCO2e",
+            "half of futures land above this");
+      fcell("Safe to sell", num(fc.safe_total_t, 1) + " tCO2e",
+            "a " + (fc.portfolio_haircut * 100).toFixed(0) +
+            "% haircut on the projection");
+      if (fc.dominant_risk) {
+        fcell("Biggest risk", fc.dominant_risk.risk,
+              "worth " + num(fc.dominant_risk.safe_volume_cost_t, 1) +
+              " tCO2e of safe volume if eliminated");
+      }
+      figF.appendChild(gridF);
+
+      var scrollF = el("div", "tscroll");
+      var tableF = el("table");
+      var theadF = el("thead"), hrF = el("tr");
+      ["Vintage", "Projected", "P10", "P50", "P90", "Safe", "Haircut"]
+        .forEach(function (h) { hrF.appendChild(el("th", null, h)); });
+      theadF.appendChild(hrF);
+      tableF.appendChild(theadF);
+      var tbodyF = el("tbody");
+      var horizonF = NOW.getFullYear() + 6;
+      var shownF = fc.years.filter(function (y) { return y.year <= horizonF; });
+      shownF.forEach(function (y) {
+        var tr = el("tr");
+        if (y.safe_t <= 0) tr.className = "projected";
+        tr.appendChild(el("td", null, String(y.year)));
+        tr.appendChild(el("td", null, num(y.projected_t, 1)));
+        tr.appendChild(el("td", "ded", num(y.p10, 1)));
+        tr.appendChild(el("td", null, num(y.p50, 1)));
+        tr.appendChild(el("td", "ded", num(y.p90, 1)));
+        tr.appendChild(el("td", "net", num(y.safe_t, 1)));
+        tr.appendChild(el("td", "ded", (y.haircut * 100).toFixed(0) + "%"));
+        tbodyF.appendChild(tr);
+      });
+      tableF.appendChild(tbodyF);
+      scrollF.appendChild(tableF);
+      figF.appendChild(scrollF);
+      if (fc.years.length > shownF.length) {
+        var moreF = el("div", "covnote");
+        moreF.innerHTML = "<span>" + (fc.years.length - shownF.length) +
+          " further vintage(s) to " + fc.years[fc.years.length - 1].year +
+          " are in the totals but not the table</span>";
+        figF.appendChild(moreF);
+      }
+
+      (fc.warnings || []).forEach(function (w) {
+        var n = el("p", "empty");
+        n.textContent = w;
+        figF.appendChild(n);
+      });
+
+      if (fc.aggregation && fc.aggregation.length) {
+        var topA = el("div", "figtop");
+        topA.appendChild(el("h3", null, "What aggregation buys"));
+        topA.appendChild(el("span", "note",
+          "safe volume against the number of independently-failing units"));
+        figF.appendChild(topA);
+
+        var scrollA = el("div", "tscroll");
+        var tableA = el("table");
+        var theadA = el("thead"), hrA = el("tr");
+        ["Farmers", "Safe tCO2e", "Haircut", "Gain over previous"]
+          .forEach(function (h) { hrA.appendChild(el("th", null, h)); });
+        theadA.appendChild(hrA);
+        tableA.appendChild(theadA);
+        var tbodyA = el("tbody");
+        fc.aggregation.forEach(function (r) {
+          var tr = el("tr");
+          tr.appendChild(el("td", null, r.units.toLocaleString()));
+          tr.appendChild(el("td", "net", num(r.safe_t, 1)));
+          tr.appendChild(el("td", "ded", (r.haircut * 100).toFixed(0) + "%"));
+          tr.appendChild(el("td", null, r.gain_over_previous_t == null ? "—"
+            : (r.gain_over_previous_t > 0 ? "+" : "") +
+              num(r.gain_over_previous_t, 1)));
+          tbodyA.appendChild(tr);
+        });
+        tableA.appendChild(tbodyA);
+        scrollA.appendChild(tableA);
+        figF.appendChild(scrollA);
+      }
+
+      if (fc.offtake_at_projection) {
+        var off = fc.offtake_at_projection;
+        var pOff = el("p", "empty");
+        pOff.textContent = "Selling the projection itself — " +
+          num(off.committed_t, 0) + " tCO2e — delivers in " +
+          (off.delivery_probability * 100).toFixed(0) +
+          "% of futures, with an expected shortfall of " +
+          num(off.expected_shortfall_t, 1) + " tCO2e costing " +
+          money(off.expected_cover_cost, 0) + " to cover at " +
+          money(off.replacement_price, 0) + "/t. " + off.verdict;
+        figF.appendChild(pOff);
+      }
+
+      var capF = el("div", "covnote");
+      capF.innerHTML = "<span>" + fc.caveats.join(" &middot; ") + "</span>";
+      figF.appendChild(capF);
+      panel.appendChild(figF);
+    }
+
     // --- ledger ---
     var gov = (DATA.governance && DATA.governance.sites &&
                DATA.governance.sites[site.id]) || null;
@@ -1258,7 +1601,14 @@
     ["Monitoring cost", function (e) { return money(e.mrv_cost); }],
     ["Margin after monitoring", function (e) { return money(e.mature.net_of_mrv); }],
     ["MRV budget per ha/yr", function (e) { return money(e.breakeven_mrv_per_ha); }],
-    ["Headroom vs assumed MRV", function (e) { return money(e.mrv_headroom); }]
+    ["Headroom vs assumed MRV", function (e) { return money(e.mrv_headroom); }],
+    ["Revenue per issued tonne", function (e) { return money(e.price, 0); }],
+    ["Cost per issued tonne", function (e) {
+      return e.mature.cost_per_issued_tonne == null ? "—"
+        : money(e.mature.cost_per_issued_tonne); }],
+    ["Margin per issued tonne", function (e) {
+      return e.mature.cost_per_issued_tonne == null ? "—"
+        : money(e.price - e.mature.cost_per_issued_tonne); }]
   ];
   rows.forEach(function (r) {
     var tr = el("tr");
@@ -1266,8 +1616,11 @@
     DATA.economics.per_site.forEach(function (e) {
       var td = el("td", null, r[1](e));
       if (r[0].indexOf("Margin") === 0 || r[0].indexOf("Headroom") === 0) {
-        td.style.color = (e.mature.net_of_mrv > 0 && e.mrv_headroom > 0)
-          ? "var(--ok)" : "var(--block)";
+        var good = r[0] === "Margin per issued tonne"
+          ? (e.mature.cost_per_issued_tonne != null
+             && e.price - e.mature.cost_per_issued_tonne > 0)
+          : (e.mature.net_of_mrv > 0 && e.mrv_headroom > 0);
+        td.style.color = good ? "var(--ok)" : "var(--block)";
         td.style.fontWeight = "600";
       }
       tr.appendChild(td);

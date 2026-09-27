@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-11T08:38:44+00:00",
+  "generated_at": "2026-09-27T17:55:46+00:00",
   "project": {
     "id": "KE-NYR-01",
     "name": "Gatugi shade-coffee block, Nyeri County, Central Highlands",
@@ -7,9 +7,45 @@
     "country": "Kenya",
     "start_date": "2025-03-20",
     "methodology": "VM0047",
+    "methodology_version": "VM0047 v1.1",
     "registry": null,
     "registry_ref": null,
     "crediting_period_yrs": 30
+  },
+  "governance": {
+    "programme_issues": [],
+    "stakeholder_consultation": {
+      "held_on": "2025-03-20",
+      "record_reference": "CONSULT/KE-NYR-01/001",
+      "participants": 34,
+      "grievance_channel": "village committee, monthly; SMS to +91 80000 00000"
+    },
+    "farmers_with_carbon_rights": 1,
+    "farmers_total": 1
+  },
+  "claims": {
+    "issued_t": 0,
+    "offsettable_t": 0,
+    "unadjusted_t": 0,
+    "corsia_eligible_t": 0,
+    "authorisations": 0,
+    "clean": true
+  },
+  "stacking": {
+    "claims": 0,
+    "stacked_plots": 0,
+    "stacked_ha": 0,
+    "clean": true,
+    "conflicts": 0
+  },
+  "water_regime": null,
+  "trees": {
+    "plots_inventoried": 0,
+    "stems_planted": 0,
+    "stems_credited": 0,
+    "standing_stock_tco2e": 0,
+    "plots_below_survival_floor": 0,
+    "plots_on_generic_allometry": 0
   },
   "area": {
     "enrolled_ha": 2.8729,
@@ -19,11 +55,17 @@
     "farmers": 1
   },
   "monitoring": {
-    "observations": 0,
-    "variables": [],
-    "sources": [],
-    "first": null,
-    "last": null
+    "observations": 64,
+    "variables": [
+      "canopy_height_m",
+      "stocking_index"
+    ],
+    "sources": [
+      "sentinel2",
+      "sentinel2+gedi"
+    ],
+    "first": "2025-03-20",
+    "last": "2026-09-01"
   },
   "credits": {
     "vintages": 0,
@@ -47,18 +89,23 @@
     "currency": ""
   },
   "integrity": {
-    "event_count": 8,
+    "event_count": 10,
     "chain_intact": true,
     "first_bad_event": null,
-    "head_hash": "2e9961e746faeb063c04fbe9d6a281f533ee422f0d48e804af1b180296810625"
+    "head_hash": "b49343dca2b07aad96b0bdfab5a011e9e535423aa1bd9254896f2b43d48533a0"
   },
   "files": [
+    "SUMMARY.md",
+    "claim_register.json",
     "derivations.json",
     "event_log.csv",
     "issuances.csv",
+    "manifest.json",
     "observations.csv",
     "payments.csv",
     "plot_register.csv",
+    "stacking_audit.json",
+    "tree_inventory.csv",
     "vintages.csv"
   ],
   "caveats": [

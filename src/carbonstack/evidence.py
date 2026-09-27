@@ -17,7 +17,7 @@ import json
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from . import ledger, payments
+from . import article6, ledger, payments, stacking
 from .store.repo import Store, _canonical
 
 
@@ -27,6 +27,47 @@ def _write_csv(path: Path, rows: list[dict], columns: list[str]) -> None:
         w.writeheader()
         for r in rows:
             w.writerow(r)
+
+
+def _water_regime_rows(project) -> list[dict]:
+    """Classify every stored Sentinel-1 pass, from the observations alone."""
+    from .sar import (
+        REFERENCE_INCIDENCE_DEG, SarPass, WaterRegimeDetector,
+    )
+
+    bands: dict[tuple[str, object], dict[str, float]] = {}
+    for o in project.observations:
+        if o.variable not in ("vv_db", "vh_db") or o.source != "sentinel1":
+            continue
+        bands.setdefault((o.plot_id, o.observed_on), {})[o.variable] = o.value
+
+    detector = WaterRegimeDetector()
+    by_plot: dict[str, list[SarPass]] = {}
+    for (plot_id, day), values in sorted(bands.items()):
+        if "vv_db" not in values or "vh_db" not in values:
+            continue
+        # The stored values are already normalised to the reference
+        # incidence angle, so the pass is rebuilt at that angle.
+        by_plot.setdefault(plot_id, []).append(SarPass(
+            day=day, vv_db=values["vv_db"], vh_db=values["vh_db"],
+            incidence_deg=REFERENCE_INCIDENCE_DEG))
+
+    rows = []
+    for plot_id, passes in sorted(by_plot.items()):
+        for call in detector.classify(passes):
+            rows.append({
+                "plot_id": plot_id,
+                "day": call.day.isoformat(),
+                "vv_db": round(call.vv_normalised_db, 2),
+                "stage_estimate": round(call.stage_estimate, 3),
+                "separation_db": round(call.separation_db, 2),
+                "state": call.state.value,
+                "p_flooded": round(call.p_flooded, 4),
+                "confidence": round(call.confidence, 4),
+                "inferred": "yes" if call.inferred else "no",
+                "note": call.note,
+            })
+    return rows
 
 
 def build(store: Store, project_id: str, out_dir: str | Path) -> Path:
@@ -40,6 +81,9 @@ def build(store: Store, project_id: str, out_dir: str | Path) -> Path:
     vintages = ledger.list_vintages(store, project_id)
     issued = ledger.issuances(store, project_id)
     pay_rows = payments.register(store, project_id=project_id)
+    stack_report = stacking.audit(store, project_id)
+    claims = article6.claim_register(store, project_id)
+    inventories = store.tree_inventories(project_id)
     intact, bad = store.verify_chain()
 
     # -- plot register -----------------------------------------------------
@@ -62,6 +106,26 @@ def build(store: Store, project_id: str, out_dir: str | Path) -> Path:
             "tenure_reference": plot.tenure_reference,
             "consent_on": farmer.consent_on.isoformat() if farmer and farmer.consent_on else "",
             "consent_reference": farmer.consent_reference if farmer else "",
+            "carbon_rights_reference": (
+                farmer.carbon_rights.agreement_reference
+                if farmer and farmer.carbon_rights else ""),
+            "carbon_rights_holder": (
+                farmer.carbon_rights.holder
+                if farmer and farmer.carbon_rights else ""),
+            "reversal_clause_ack": (
+                "yes" if farmer and farmer.carbon_rights
+                and farmer.carbon_rights.reversal_clause_ack else "no"),
+            "baseline_captured_on": (
+                enrolment.baseline_captured_on.isoformat()
+                if enrolment and enrolment.baseline_captured_on else ""),
+            "practice_started_on": (
+                enrolment.practice_started_on.isoformat()
+                if enrolment and enrolment.practice_started_on else ""),
+            "rice_ecosystem": (
+                enrolment.ecosystem.value if enrolment and enrolment.ecosystem else ""),
+            "water_control": (
+                enrolment.water_control.value
+                if enrolment and enrolment.water_control else ""),
             "enrolled_on": enrolment.enrolled_on.isoformat() if enrolment else "",
             "practice": enrolment.practice if enrolment else "",
             "creditable": "no" if problems else "yes",
@@ -116,6 +180,57 @@ def build(store: Store, project_id: str, out_dir: str | Path) -> Path:
                ["id", "vintage_id", "farmer_id", "credits", "amount", "currency",
                 "status", "due_on", "paid_on", "reference"])
 
+    # Water regime. The rice claim rests on whether the field was dry, and
+    # the only acceptable answer to "how do you know" is the radar passes it
+    # was read from. Rebuilt here from the stored observations rather than
+    # from the pipeline's memory: if the database cannot reproduce the call,
+    # the call is not evidence.
+    regime_rows = _water_regime_rows(project)
+    if regime_rows:
+        _write_csv(out / "water_regime.csv", regime_rows,
+                   list(regime_rows[0].keys()))
+
+    # Tree census. A census credits stems, so the register of what was
+    # counted, by whom, and on which equation is the claim's evidence -- the
+    # forestry equivalent of the lab reference on a soil core.
+    inventory_rows = []
+    for plot_id, inv in sorted(inventories.items()):
+        survey = inv.survival
+        stock, relative = inv.stock()
+        inventory_rows.append({
+            "plot_id": plot_id,
+            "measured_on": inv.measured_on.isoformat(),
+            "surveyed_on": survey.surveyed_on.isoformat(),
+            "surveyor": survey.surveyor,
+            "stems_planted": survey.stems_planted,
+            "stems_sampled": survey.stems_sampled,
+            "stems_alive": survey.stems_alive,
+            "survival_rate": round(survey.survival_rate, 4),
+            "survival_lower_bound": round(survey.survival_lower_bound(), 4),
+            "stems_credited": survey.surviving_stems,
+            "stems_measured": len(inv.sample),
+            "species": "; ".join(sorted({m.species_key for m in inv.sample})),
+            "allometry": "local fit" if inv.uses_local_allometry else "generic",
+            "mean_kgco2e_per_stem": round(inv.mean_co2e_per_stem_kg, 3),
+            "stock_tco2e": round(stock, 4),
+            "relative_uncertainty": round(relative, 4),
+            "needs_replanting": "yes" if survey.needs_replanting else "no",
+        })
+    _write_csv(out / "tree_inventory.csv", inventory_rows,
+               list(inventory_rows[0].keys()) if inventory_rows
+               else ["plot_id", "measured_on", "surveyor", "stems_planted",
+                     "stems_credited", "stock_tco2e"])
+
+    # Stacking. "Zero hectares claimed twice" is a claim a verifier wants
+    # evidence for, not a promise, so the audit ships with the pack.
+    (out / "stacking_audit.json").write_text(
+        json.dumps(stack_report, indent=2) + "\n")
+
+    # Article 6. A buyer's counsel and a CORSIA auditor both ask who is
+    # entitled to count these tonnes, and the answer is not "we issued them".
+    (out / "claim_register.json").write_text(
+        json.dumps(claims, indent=2) + "\n")
+
     # -- event chain -------------------------------------------------------
     events = store.events()
     _write_csv(out / "event_log.csv", [{
@@ -134,9 +249,61 @@ def build(store: Store, project_id: str, out_dir: str | Path) -> Path:
             "country": project.country,
             "start_date": project.start_date.isoformat(),
             "methodology": meta["methodology_id"],
+            "methodology_version": meta["methodology_version"] or None,
             "registry": meta["registry"] or None,
             "registry_ref": meta["registry_ref"] or None,
             "crediting_period_yrs": project.crediting_period_yrs,
+        },
+        "governance": {
+            "programme_issues": project.programme_issues(),
+            "stakeholder_consultation": (
+                {"held_on": project.consultation.held_on.isoformat(),
+                 "record_reference": project.consultation.record_reference,
+                 "participants": project.consultation.participants,
+                 "grievance_channel": project.consultation.grievance_channel}
+                if project.consultation else None),
+            "farmers_with_carbon_rights": sum(
+                1 for f in project.farmers.values() if f.carbon_rights),
+            "farmers_total": len(project.farmers),
+        },
+        "claims": {
+            "issued_t": claims["issued_t"],
+            "offsettable_t": claims["offsettable_t"],
+            "unadjusted_t": claims["unadjusted_t"],
+            "corsia_eligible_t": claims["corsia_eligible_t"],
+            "authorisations": len(claims["authorisations"]),
+            "clean": claims["clean"],
+        },
+        "stacking": {
+            "claims": stack_report["claims"],
+            "stacked_plots": stack_report["stacked_plots"],
+            "stacked_ha": stack_report["stacked_ha"],
+            "clean": stack_report["clean"],
+            "conflicts": len(stack_report["conflicts"]),
+        },
+        "water_regime": {
+            "passes_classified": len(regime_rows),
+            "flooded": sum(1 for r in regime_rows if r["state"] == "flooded"),
+            "drained": sum(1 for r in regime_rows if r["state"] == "drained"),
+            "not_separable": sum(1 for r in regime_rows
+                                 if r["state"] == "ambiguous"),
+            "carried_across_gaps": sum(1 for r in regime_rows
+                                       if r["inferred"] == "yes"),
+            "source": "Sentinel-1 C-band IW VV+VH, rebuilt from the stored "
+                      "observations",
+        } if regime_rows else None,
+        "trees": {
+            "plots_inventoried": len(inventories),
+            "stems_planted": sum(i.survival.stems_planted
+                                 for i in inventories.values()),
+            "stems_credited": sum(i.survival.surviving_stems
+                                  for i in inventories.values()),
+            "standing_stock_tco2e": round(
+                sum(i.stock()[0] for i in inventories.values()), 4),
+            "plots_below_survival_floor": sum(
+                1 for i in inventories.values() if i.survival.needs_replanting),
+            "plots_on_generic_allometry": sum(
+                1 for i in inventories.values() if not i.uses_local_allometry),
         },
         "area": {
             "enrolled_ha": round(project.area_ha, 4),
@@ -195,7 +362,7 @@ def _summary_md(m: dict, vintages: list, issues: dict) -> str:
         f"# Evidence pack — {p['name']}",
         "",
         f"Generated {m['generated_at']} · project `{p['id']}` · methodology "
-        f"`{p['methodology']}`",
+        f"`{p['methodology']} {p.get('methodology_version') or '(version not pinned)'}`",
         "",
         "## Project",
         "",
@@ -246,6 +413,57 @@ def _summary_md(m: dict, vintages: list, issues: dict) -> str:
         lines.append(
             f"| {v.year} | {v.gross_t:,.2f} | {v.net_t:,.2f} | {v.issuable_whole:,} | "
             f"{v.relative_uncertainty:.1%} | {v.status.value} |")
+
+    gov = m.get("governance", {})
+    stack = m.get("stacking", {})
+    lines += [
+        "",
+        "## Governance",
+        "",
+        f"- Carbon rights on file for {gov.get('farmers_with_carbon_rights', 0)} "
+        f"of {gov.get('farmers_total', 0)} farmers",
+    ]
+    consult = gov.get("stakeholder_consultation")
+    lines.append(
+        f"- Stakeholder consultation {consult['held_on']}, "
+        f"{consult['participants']} participants, grievance channel: "
+        f"{consult['grievance_channel']}" if consult
+        else "- **No stakeholder consultation on record** — required by Verra "
+             "and Gold Standard")
+    for problem in gov.get("programme_issues", []):
+        lines.append(f"- **Blocking:** {problem}")
+
+    lines += [
+        "",
+        "## Stacking",
+        "",
+        f"- {stack.get('claims', 0)} pillar claim(s); "
+        f"{stack.get('stacked_plots', 0)} plot(s) carry more than one",
+        f"- {stack.get('stacked_ha', 0):,.2f} ha stacked",
+        f"- Double counting: **{'none found' if stack.get('clean') else str(stack.get('conflicts')) + ' conflict(s)'}**",
+        "",
+        "Methodologies partition by carbon pool, not by activity name. The "
+        "audit in `stacking_audit.json` is the evidence that no pool is "
+        "credited twice on the same ground.",
+    ]
+
+    cl = m.get("claims", {})
+    lines += [
+        "",
+        "## Who may count these tonnes",
+        "",
+        f"- {cl.get('issued_t', 0):,.2f} tCO2e issued",
+        f"- **{cl.get('offsettable_t', 0):,.2f} tCO2e** may be counted against a "
+        f"buyer's own target (authorised, with a corresponding adjustment applied)",
+        f"- {cl.get('unadjusted_t', 0):,.2f} tCO2e have no corresponding "
+        f"adjustment and may only be described as financed, not offset",
+        f"- {cl.get('corsia_eligible_t', 0):,.2f} tCO2e are CORSIA eligible",
+        f"- {cl.get('authorisations', 0)} host-country authorisation(s) on record",
+        "",
+        "An authorisation is a promise; a corresponding adjustment is the "
+        "promise kept. Only adjusted tonnes are offsettable, and "
+        "`claim_register.json` shows the position vintage by vintage.",
+    ]
 
     pay = m["payments"]
     integrity = m["integrity"]

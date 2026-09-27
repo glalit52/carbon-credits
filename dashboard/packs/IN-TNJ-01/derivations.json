@@ -2,11 +2,60 @@
   "IN-TNJ-01:2025": [
     {
       "citations": [
-        "Verra VM0042 v2.0, Improved Agricultural Land Management",
-        "awd: 0.965198243262335 tCO2e/ha/yr (Tier 1) -- measured from 41 revisits across 2 season(s); 28.0x GWP100"
+        "Sentinel-1 C-band IW, VV+VH, 6-day revisit",
+        "VM0051 v1.1: the baseline water regime is monitored, not assumed"
       ],
-      "name": "VM0042 abatement, vintage 2025",
-      "result": 1.1697756880886234,
+      "name": "detected water regime, Kuruvai + Samba 2025",
+      "result": 0.712576343780144,
+      "terms": [
+        {
+          "detail": "",
+          "label": "passes in season",
+          "unit": "acquisitions",
+          "value": 37.0
+        },
+        {
+          "detail": "11 not separable at their crop stage",
+          "label": "usable passes",
+          "unit": "acquisitions",
+          "value": 26.0
+        },
+        {
+          "detail": "",
+          "label": "coverage",
+          "unit": "fraction",
+          "value": 0.7027027027027027
+        },
+        {
+          "detail": "",
+          "label": "passes called drained",
+          "unit": "passes",
+          "value": 11.0
+        },
+        {
+          "detail": "runs of >= 6 days",
+          "label": "qualifying dry spells",
+          "unit": "events",
+          "value": 4.0
+        },
+        {
+          "detail": "",
+          "label": "AWD target",
+          "unit": "events",
+          "value": 3.0
+        }
+      ],
+      "unit": "confidence"
+    },
+    {
+      "citations": [
+        "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
+        "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
+        "awd: baseline 87.09433611839881 -> project 69.85865320299997 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 41 revisits across 2 season(s); 28.0x GWP100",
+        "water regime detected from feed: 26 of 37 passes separable, 4 AWD event(s)"
+      ],
+      "name": "VM0051 abatement, vintage 2025",
+      "result": 1.1139682382168663,
       "terms": [
         {
           "detail": "",
@@ -15,16 +64,28 @@
           "value": 2.4917905151233644
         },
         {
-          "detail": "area x detected adoption probability",
+          "detail": "area x detected water-regime confidence",
           "label": "confidence-weighted area",
           "unit": "ha",
-          "value": 2.193581556113902
+          "value": 1.7755909747326486
+        },
+        {
+          "detail": "Tamil Nadu, threshold 20%",
+          "label": "AWD penetration in the jurisdiction",
+          "unit": "fraction",
+          "value": 0.04
+        },
+        {
+          "detail": "CH4 over 100 years, IPCC AR5",
+          "label": "global warming potential",
+          "unit": "x",
+          "value": 28.0
         },
         {
           "detail": "",
           "label": "gross abatement",
           "unit": "tCO2e",
-          "value": 2.117241064413798
+          "value": 1.7137972895644096
         },
         {
           "detail": "abatement-weighted across emission factor tiers",

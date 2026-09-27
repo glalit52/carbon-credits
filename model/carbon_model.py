@@ -241,12 +241,19 @@ def summarise(scn: Scenario, rows: list[YearRow]) -> dict[str, float | int | Non
     trough_year = next(r.year for r in rows if r.cumulative == trough)
     breakeven_yr = next((r.year for r in rows if r.net > 0), None)
     cash_positive_yr = next((r.year for r in rows if r.cumulative > 0), None)
+    total_credits = sum(r.credits for r in rows)
+    total_cost = sum(r.opex + r.farmer_payments for r in rows)
     return {
         "peak_funding_need": -trough if trough < 0 else 0.0,
         "trough_year": trough_year,
         "first_profitable_year": breakeven_yr,
         "cumulative_positive_year": cash_positive_yr,
-        "total_credits": sum(r.credits for r in rows),
+        "total_credits": total_credits,
+        # The metric that replaces cost per verified hectare. Deductions and
+        # the buffer decide how many credits are actually issued, so a hectare
+        # is not the unit the business is run on -- an issued tonne is.
+        "cost_per_issued_tonne": (total_cost / total_credits
+                                  if total_credits > 0 else float("inf")),
         "final_cumulative": rows[-1].cumulative,
     }
 
@@ -287,6 +294,15 @@ def report(scn: Scenario, rows: list[YearRow]) -> None:
     print(f"  Cumulative turns positive  "
           f"{s['cumulative_positive_year'] or 'not within horizon'}")
     print(f"  Credits over {scn.horizon_yrs} years      {s['total_credits']:,.0f}")
+    cpt = s["cost_per_issued_tonne"]
+    # money() renders in thousands, which turns a per-tonne figure into "0k".
+    cpt_text = f"${cpt:,.2f}" if cpt != float("inf") else "n/a (no credits)"
+    print(f"  Cost per issued tonne      {cpt_text:>9}   (not cost per hectare)")
+    print()
+    print("  Cost per hectare is the wrong metric: a cheap hectare carrying a")
+    print("  large uncertainty deduction issues few credits and is a worse")
+    print("  business than a dearer one that issues many. What is managed here")
+    print("  is the cost of a tonne that actually reaches a registry.")
     print()
     print("  Read the peak funding need as the minimum raise - equity, grant, or")
     print("  a Mirova-style credit prepay - required before the portfolio is")

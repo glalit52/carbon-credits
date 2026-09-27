@@ -1,15 +1,58 @@
 {
-  "generated_at": "2026-09-11T08:38:44+00:00",
+  "generated_at": "2026-09-27T17:55:46+00:00",
   "project": {
     "id": "IN-TNJ-01",
     "name": "Vallam paddy block, Thanjavur district, Tamil Nadu",
     "track": "rice",
     "country": "India",
     "start_date": "2025-06-01",
-    "methodology": "VM0042",
+    "methodology": "VM0051",
+    "methodology_version": "VM0051 v1.1",
     "registry": null,
     "registry_ref": null,
     "crediting_period_yrs": 30
+  },
+  "governance": {
+    "programme_issues": [],
+    "stakeholder_consultation": {
+      "held_on": "2025-06-01",
+      "record_reference": "CONSULT/IN-TNJ-01/001",
+      "participants": 34,
+      "grievance_channel": "village committee, monthly; SMS to +91 80000 00000"
+    },
+    "farmers_with_carbon_rights": 1,
+    "farmers_total": 1
+  },
+  "claims": {
+    "issued_t": 0,
+    "offsettable_t": 0,
+    "unadjusted_t": 0,
+    "corsia_eligible_t": 0,
+    "authorisations": 0,
+    "clean": true
+  },
+  "stacking": {
+    "claims": 0,
+    "stacked_plots": 0,
+    "stacked_ha": 0,
+    "clean": true,
+    "conflicts": 0
+  },
+  "water_regime": {
+    "passes_classified": 81,
+    "flooded": 26,
+    "drained": 39,
+    "not_separable": 16,
+    "carried_across_gaps": 0,
+    "source": "Sentinel-1 C-band IW VV+VH, rebuilt from the stored observations"
+  },
+  "trees": {
+    "plots_inventoried": 0,
+    "stems_planted": 0,
+    "stems_credited": 0,
+    "standing_stock_tco2e": 0,
+    "plots_below_survival_floor": 0,
+    "plots_on_generic_allometry": 0
   },
   "area": {
     "enrolled_ha": 2.4918,
@@ -19,47 +62,59 @@
     "farmers": 1
   },
   "monitoring": {
-    "observations": 0,
-    "variables": [],
-    "sources": [],
-    "first": null,
-    "last": null
+    "observations": 164,
+    "variables": [
+      "practice_adopted",
+      "vh_db",
+      "vv_db"
+    ],
+    "sources": [
+      "sentinel1"
+    ],
+    "first": "2025-06-01",
+    "last": "2027-01-16"
   },
   "credits": {
     "vintages": 1,
-    "gross_tco2e": 2.1172,
-    "net_tco2e": 1.1698,
-    "issued_credits": 1.0,
+    "gross_tco2e": 1.7138,
+    "net_tco2e": 1.114,
+    "issued_credits": 0,
     "buffer": {
-      "held_t": 0.2064,
+      "held_t": 0,
       "released_t": 0,
-      "entries": 1
+      "entries": 0
     }
   },
   "payments": {
-    "payments": 1,
-    "farmers": 1,
+    "payments": 0,
+    "farmers": 0,
     "paid_total": 0,
-    "outstanding_total": 6.6,
+    "outstanding_total": 0,
     "overdue_count": 0,
     "overdue_total": 0,
     "failed_count": 0,
-    "currency": "USD"
+    "currency": ""
   },
   "integrity": {
-    "event_count": 7,
+    "event_count": 9,
     "chain_intact": true,
     "first_bad_event": null,
-    "head_hash": "c6f100ae1842b7f05ed0fc742661cec3ad9f597920637e930afdc83ab00e8d15"
+    "head_hash": "fae74f9ed07f914c3a8116d4684392f711ed5a3edf091a6cb771532ada601c16"
   },
   "files": [
+    "SUMMARY.md",
+    "claim_register.json",
     "derivations.json",
     "event_log.csv",
     "issuances.csv",
+    "manifest.json",
     "observations.csv",
     "payments.csv",
     "plot_register.csv",
-    "vintages.csv"
+    "stacking_audit.json",
+    "tree_inventory.csv",
+    "vintages.csv",
+    "water_regime.csv"
   ],
   "caveats": [
     "Allometric equation is a generic placeholder and must be replaced with a locally calibrated equation before issuance.",

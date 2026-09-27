@@ -1,6 +1,6 @@
 # Evidence pack — Vallam paddy block, Thanjavur district, Tamil Nadu
 
-Generated 2026-09-11T08:38:44+00:00 · project `IN-TNJ-01` · methodology `VM0042`
+Generated 2026-09-27T17:55:46+00:00 · project `IN-TNJ-01` · methodology `VM0051 VM0051 v1.1`
 
 ## Project
 
@@ -15,30 +15,53 @@ Generated 2026-09-11T08:38:44+00:00 · project `IN-TNJ-01` · methodology `VM004
 
 ## Monitoring
 
-- 0 observations, — to —
-- Variables: —
-- Sources: —
+- 164 observations, 2025-06-01 to 2027-01-16
+- Variables: practice_adopted, vh_db, vv_db
+- Sources: sentinel1
 
 ## Credits
 
-- 1 vintage(s): 2.12 tCO2e gross, 1.17 tCO2e net of deductions
-- 1.0 credits issued (whole tonnes)
-- Buffer pool: 0.21 tCO2e held across 1 entr(ies)
+- 1 vintage(s): 1.71 tCO2e gross, 1.11 tCO2e net of deductions
+- 0 credits issued (whole tonnes)
+- Buffer pool: 0.00 tCO2e held across 0 entr(ies)
 
 | Vintage | Gross | Net | Issuable | Uncertainty | Status |
 |---|---|---|---|---|---|
-| 2025 | 2.12 | 1.17 | 1 | 50.0% | issued |
+| 2025 | 1.71 | 1.11 | 1 | 50.0% | held |
+
+## Governance
+
+- Carbon rights on file for 1 of 1 farmers
+- Stakeholder consultation 2025-06-01, 34 participants, grievance channel: village committee, monthly; SMS to +91 80000 00000
+
+## Stacking
+
+- 0 pillar claim(s); 0 plot(s) carry more than one
+- 0.00 ha stacked
+- Double counting: **none found**
+
+Methodologies partition by carbon pool, not by activity name. The audit in `stacking_audit.json` is the evidence that no pool is credited twice on the same ground.
+
+## Who may count these tonnes
+
+- 0.00 tCO2e issued
+- **0.00 tCO2e** may be counted against a buyer's own target (authorised, with a corresponding adjustment applied)
+- 0.00 tCO2e have no corresponding adjustment and may only be described as financed, not offset
+- 0.00 tCO2e are CORSIA eligible
+- 0 host-country authorisation(s) on record
+
+An authorisation is a promise; a corresponding adjustment is the promise kept. Only adjusted tonnes are offsettable, and `claim_register.json` shows the position vintage by vintage.
 
 ## Farmer payments
 
-- 1 payment(s) to 1 farmer(s)
-- Paid 0.00 USD, outstanding 6.60, overdue 0.00 across 0
+- 0 payment(s) to 0 farmer(s)
+- Paid 0.00 , outstanding 0.00, overdue 0.00 across 0
 
 ## Integrity
 
-- 7 events in the log
+- 9 events in the log
 - Hash chain: **intact**
-- Head hash: `c6f100ae1842b7f05ed0fc742661cec3ad9f597920637e930afdc83ab00e8d15`
+- Head hash: `fae74f9ed07f914c3a8116d4684392f711ed5a3edf091a6cb771532ada601c16`
 
 Every event's hash covers its own content and its predecessor's hash. Recompute the chain from `event_log.csv` to confirm nothing was edited after the fact.
 
