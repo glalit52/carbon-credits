@@ -26,8 +26,8 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from . import (
-    evidence, ledger, methodology, payments, pipeline, scenario, serialize,
-    sites, stacking,
+    article6, evidence, ledger, methodology, payments, pipeline, scenario,
+    serialize, sites, stacking,
 )
 from .feed import (
     FeedProvider, season_warnings, series, summarise_seasons, year_confidence,
@@ -375,6 +375,70 @@ def cmd_status(args) -> int:
                 print(f"    {v.year}  {v.status.value:<13} {v.net_t:>10,.3f} tCO2e"
                       f"  {v.issuable_whole:>6,} credits")
         print(f"  buffer held          {ledger.buffer_balance(store, args.project_id)['held_t']:>10,.4f} tCO2e")
+    return 0
+
+
+def cmd_article6(args) -> int:
+    with _store(args) as store:
+        if args.a6_command == "authorise":
+            actor = _require_actor(args)
+            a = article6.record_authorisation(
+                store, args.project_id, authority=args.authority,
+                reference=args.reference,
+                issued_on=date.fromisoformat(args.issued_on),
+                authorised_use=article6.AuthorisedUse(args.use),
+                authorised_volume_t=args.volume,
+                corresponding_adjustment_committed=not args.no_adjustment,
+                first_vintage=args.first_vintage, last_vintage=args.last_vintage,
+                valid_until=(date.fromisoformat(args.valid_until)
+                             if args.valid_until else None), actor=actor)
+            print(f"authorisation {a.reference} recorded")
+            print(f"  authority   {a.authority}")
+            print(f"  use         {a.authorised_use.value}")
+            print(f"  volume      {a.authorised_volume_t:,.0f} tCO2e, vintages "
+                  f"{a.first_vintage}-{a.last_vintage}")
+            print(f"  adjustment  {'committed' if a.corresponding_adjustment_committed else 'NOT COMMITTED'}")
+            for problem in a.issues():
+                print(f"  ! {problem}")
+
+        elif args.a6_command == "adjust":
+            actor = _require_actor(args)
+            adj = article6.record_adjustment(
+                store, args.authorisation_id, vintage_year=args.year,
+                volume_t=args.volume,
+                applied_on=date.fromisoformat(args.applied_on),
+                reported_in=args.reported_in, actor=actor)
+            print(f"corresponding adjustment recorded: {adj.volume_t:,.2f} tCO2e "
+                  f"for vintage {adj.vintage_year}")
+            print(f"  reported in {adj.reported_in}")
+
+        elif args.a6_command == "revoke":
+            actor = _require_actor(args)
+            article6.revoke_authorisation(
+                store, args.authorisation_id,
+                on=date.fromisoformat(args.on), reason=args.reason, actor=actor)
+            print(f"authorisation revoked on {args.on}")
+
+        elif args.a6_command == "claims":
+            register = article6.claim_register(
+                store, args.project_id, ccts_registered=args.ccts)
+            print(f"{args.project_id} — what a buyer may claim")
+            print(f"  issued          {register['issued_t']:>12,.2f} tCO2e")
+            print(f"  offsettable     {register['offsettable_t']:>12,.2f} tCO2e")
+            print(f"  unadjusted      {register['unadjusted_t']:>12,.2f} tCO2e")
+            print(f"  CORSIA eligible {register['corsia_eligible_t']:>12,.2f} tCO2e")
+            for v in register["vintages"]:
+                print()
+                print(f"  vintage {v['vintage_year']}  [{v['basis']}]")
+                print(f"    issued {v['issued_t']:,.2f}  offsettable "
+                      f"{v['offsettable_t']:,.2f}  unadjusted {v['unadjusted_t']:,.2f}")
+                print(f"    {v['buyer_language']}")
+                for r in v["reasons"]:
+                    print(f"      - {r}")
+                for w in v["warnings"]:
+                    print(f"      ! {w}")
+            if not register["clean"]:
+                return 1
     return 0
 
 
@@ -770,6 +834,40 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("status", help="is this project healthy")
     p.add_argument("project_id")
     p.set_defaults(func=cmd_status)
+
+    p = sub.add_parser("article6", parents=[actor_opt],
+                       help="host-country authorisation and corresponding adjustments")
+    asub = p.add_subparsers(dest="a6_command", required=True)
+    q = asub.add_parser("authorise", parents=[actor_opt],
+                        help="record a letter of authorisation")
+    q.add_argument("project_id")
+    q.add_argument("--authority", required=True)
+    q.add_argument("--reference", required=True)
+    q.add_argument("--issued-on", required=True)
+    q.add_argument("--use", required=True,
+                   choices=[u.value for u in article6.AuthorisedUse])
+    q.add_argument("--volume", type=float, required=True)
+    q.add_argument("--first-vintage", type=int, required=True)
+    q.add_argument("--last-vintage", type=int, required=True)
+    q.add_argument("--valid-until")
+    q.add_argument("--no-adjustment", action="store_true",
+                   help="the letter does NOT commit to a corresponding adjustment")
+    q = asub.add_parser("adjust", parents=[actor_opt],
+                        help="record that the host country applied the adjustment")
+    q.add_argument("authorisation_id")
+    q.add_argument("--year", type=int, required=True)
+    q.add_argument("--volume", type=float, required=True)
+    q.add_argument("--applied-on", required=True)
+    q.add_argument("--reported-in", required=True)
+    q = asub.add_parser("revoke", parents=[actor_opt], help="withdraw an authorisation")
+    q.add_argument("authorisation_id")
+    q.add_argument("--on", required=True)
+    q.add_argument("--reason", required=True)
+    q = asub.add_parser("claims", help="what a buyer of each vintage may say")
+    q.add_argument("project_id")
+    q.add_argument("--ccts", action="store_true",
+                   help="the project is also registered under India's CCTS")
+    p.set_defaults(func=cmd_article6)
 
     p = sub.add_parser("soil", parents=[actor_opt],
                        help="soil carbon: cores, VMD0053 validation, quantify")

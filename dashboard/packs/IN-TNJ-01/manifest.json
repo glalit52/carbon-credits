@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T12:20:43+00:00",
+  "generated_at": "2026-09-27T12:27:06+00:00",
   "project": {
     "id": "IN-TNJ-01",
     "name": "Vallam paddy block, Thanjavur district, Tamil Nadu",
@@ -22,6 +22,14 @@
     },
     "farmers_with_carbon_rights": 1,
     "farmers_total": 1
+  },
+  "claims": {
+    "issued_t": 1.0,
+    "offsettable_t": 0.0,
+    "unadjusted_t": 1.0,
+    "corsia_eligible_t": 0,
+    "authorisations": 0,
+    "clean": true
   },
   "stacking": {
     "claims": 0,
@@ -69,10 +77,11 @@
     "event_count": 7,
     "chain_intact": true,
     "first_bad_event": null,
-    "head_hash": "fe9490ac994c384fe68b5d6bfd5020a14b879f2dc21e44663985445c18e1a8cc"
+    "head_hash": "062ff2953bdcc25b03c2307da075f78e9ace9196f13947f1dfda3f074fb611ca"
   },
   "files": [
     "SUMMARY.md",
+    "claim_register.json",
     "derivations.json",
     "event_log.csv",
     "issuances.csv",

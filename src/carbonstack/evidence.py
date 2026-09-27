@@ -17,7 +17,7 @@ import json
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from . import ledger, payments, stacking
+from . import article6, ledger, payments, stacking
 from .store.repo import Store, _canonical
 
 
@@ -41,6 +41,7 @@ def build(store: Store, project_id: str, out_dir: str | Path) -> Path:
     issued = ledger.issuances(store, project_id)
     pay_rows = payments.register(store, project_id=project_id)
     stack_report = stacking.audit(store, project_id)
+    claims = article6.claim_register(store, project_id)
     intact, bad = store.verify_chain()
 
     # -- plot register -----------------------------------------------------
@@ -142,6 +143,11 @@ def build(store: Store, project_id: str, out_dir: str | Path) -> Path:
     (out / "stacking_audit.json").write_text(
         json.dumps(stack_report, indent=2) + "\n")
 
+    # Article 6. A buyer's counsel and a CORSIA auditor both ask who is
+    # entitled to count these tonnes, and the answer is not "we issued them".
+    (out / "claim_register.json").write_text(
+        json.dumps(claims, indent=2) + "\n")
+
     # -- event chain -------------------------------------------------------
     events = store.events()
     _write_csv(out / "event_log.csv", [{
@@ -176,6 +182,14 @@ def build(store: Store, project_id: str, out_dir: str | Path) -> Path:
             "farmers_with_carbon_rights": sum(
                 1 for f in project.farmers.values() if f.carbon_rights),
             "farmers_total": len(project.farmers),
+        },
+        "claims": {
+            "issued_t": claims["issued_t"],
+            "offsettable_t": claims["offsettable_t"],
+            "unadjusted_t": claims["unadjusted_t"],
+            "corsia_eligible_t": claims["corsia_eligible_t"],
+            "authorisations": len(claims["authorisations"]),
+            "clean": claims["clean"],
         },
         "stacking": {
             "claims": stack_report["claims"],
@@ -324,6 +338,24 @@ def _summary_md(m: dict, vintages: list, issues: dict) -> str:
         "Methodologies partition by carbon pool, not by activity name. The "
         "audit in `stacking_audit.json` is the evidence that no pool is "
         "credited twice on the same ground.",
+    ]
+
+    cl = m.get("claims", {})
+    lines += [
+        "",
+        "## Who may count these tonnes",
+        "",
+        f"- {cl.get('issued_t', 0):,.2f} tCO2e issued",
+        f"- **{cl.get('offsettable_t', 0):,.2f} tCO2e** may be counted against a "
+        f"buyer's own target (authorised, with a corresponding adjustment applied)",
+        f"- {cl.get('unadjusted_t', 0):,.2f} tCO2e have no corresponding "
+        f"adjustment and may only be described as financed, not offset",
+        f"- {cl.get('corsia_eligible_t', 0):,.2f} tCO2e are CORSIA eligible",
+        f"- {cl.get('authorisations', 0)} host-country authorisation(s) on record",
+        "",
+        "An authorisation is a promise; a corresponding adjustment is the "
+        "promise kept. Only adjusted tonnes are offsettable, and "
+        "`claim_register.json` shows the position vintage by vintage.",
     ]
 
     pay = m["payments"]

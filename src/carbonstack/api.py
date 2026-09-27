@@ -23,7 +23,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable
 from urllib.parse import parse_qs, urlparse
 
-from . import ledger, payments, stacking
+from . import article6, ledger, payments, stacking
 from .pipeline import health
 from .store.repo import Store, StoreError
 
@@ -203,6 +203,53 @@ def api_payments(store: Store, project_id: str, query: dict, **_) -> dict:
         status=payments.PaymentStatus(status) if status else None)
     return {"payments": [p.to_dict() for p in rows],
             "summary": payments.summary(store, project_id)}
+
+
+@route("GET", "/api/projects/{project_id}/claims")
+def api_claims(store: Store, project_id: str, query: dict, **_) -> dict:
+    """What a buyer of each vintage may truthfully say.
+
+    The page a buyer's counsel reads before signing, and the one a CORSIA
+    auditor asks for.
+    """
+    ccts = query.get("ccts", ["false"])[0].lower() in ("1", "true", "yes")
+    return article6.claim_register(store, project_id, ccts_registered=ccts)
+
+
+@route("POST", "/api/projects/{project_id}/authorisations")
+def api_authorise(store: Store, project_id: str, body: dict, **_) -> dict:
+    from datetime import date as _date
+    try:
+        a = article6.record_authorisation(
+            store, project_id,
+            authority=body["authority"], reference=body["reference"],
+            issued_on=_date.fromisoformat(body["issued_on"]),
+            authorised_use=article6.AuthorisedUse(body["authorised_use"]),
+            authorised_volume_t=float(body["authorised_volume_t"]),
+            corresponding_adjustment_committed=bool(
+                body.get("corresponding_adjustment_committed", False)),
+            first_vintage=int(body["first_vintage"]),
+            last_vintage=int(body["last_vintage"]),
+            valid_until=(_date.fromisoformat(body["valid_until"])
+                         if body.get("valid_until") else None),
+            actor=_actor(body))
+    except KeyError as exc:
+        raise ApiError(400, f"missing field: {exc.args[0]}") from None
+    return a.to_dict()
+
+
+@route("POST", "/api/authorisations/{authorisation_id}/adjustments")
+def api_adjust(store: Store, authorisation_id: str, body: dict, **_) -> dict:
+    from datetime import date as _date
+    try:
+        adj = article6.record_adjustment(
+            store, authorisation_id, vintage_year=int(body["vintage_year"]),
+            volume_t=float(body["volume_t"]),
+            applied_on=_date.fromisoformat(body["applied_on"]),
+            reported_in=body["reported_in"], actor=_actor(body))
+    except KeyError as exc:
+        raise ApiError(400, f"missing field: {exc.args[0]}") from None
+    return adj.to_dict()
 
 
 @route("GET", "/api/events")

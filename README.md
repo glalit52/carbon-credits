@@ -14,7 +14,7 @@ financial model that gates it, and `carbonstack`, the dMRV core it runs on.
 | `src/carbonstack/feed.py` | Simulated monitoring on the real 5-day revisit cadence |
 | `dashboard/` | The live MRV dashboard, its dataset and example evidence packs |
 | `scripts/` | Build the dashboard dataset and page |
-| `tests/` | 270 tests, stdlib only |
+| `tests/` | 294 tests, stdlib only |
 
 ## The two numbers that shape everything
 
@@ -41,7 +41,7 @@ python3 model/carbon_model.py            # cashflow, peak funding need, sensitiv
 
 ```bash
 pip install -e ".[dev]"
-python -m pytest                         # 270 tests
+python -m pytest                         # 294 tests
 
 python -m carbonstack demo               # both tracks against synthetic monitoring
 python -m carbonstack export estate --out project.json
@@ -111,6 +111,7 @@ carbonstack/
   methodology/      VM0051 (rice), VM0047 (ARR), VM0042 (cropland + soil)
   stacking.py       pillar claims per plot, and the double-counting engine
   soil.py           SOC stocks, equivalent soil mass, sampling, VMD0053
+  article6.py       host-country authorisation, corresponding adjustments
   store/            SQLite schema, migrations, repositories, hash-chained events
   pipeline.py       batch monitoring, quantification, project health
   ledger.py         vintage lifecycle, issuance, serials, buffer pool
@@ -445,6 +446,54 @@ no usable variance whatever the formula says.
 Soil carbon is a stock and a single tillage pass can release it, so the
 non-permanence buffer applies at 15%. That is exactly the difference from
 VM0051, where avoided methane was never stored and cannot reverse.
+
+## Article 6: who is allowed to count the tonne
+
+A different question from how many there are, and getting it wrong does not
+produce a bad number — it produces a buyer telling their regulator something
+untrue.
+
+```bash
+carbonstack article6 authorise IN-TNJ-01 --authority "MoEFCC, Government of India"     --reference MoEFCC/A6/2026/0041 --issued-on 2026-03-01 --use corsia     --volume 50000 --first-vintage 2025 --last-vintage 2030 --actor legal
+carbonstack article6 adjust <auth-id> --year 2025 --volume 2     --applied-on 2026-06-30 --reported-in "India BTR 2026, Annex 6.2" --actor legal
+carbonstack article6 claims IN-TNJ-01
+```
+
+Three claims are routinely conflated and only one needs a corresponding
+adjustment:
+
+| Basis | What the buyer may say |
+|---|---|
+| **Unadjusted voluntary** | *financed* the reduction — India still counts the tonne toward its NDC |
+| **Authorised ITMO** | offset against their own target — India has adjusted its account |
+| **CCTS domestic** | an Indian Carbon Credit Certificate, not for international transfer |
+
+### A letter is a promise; an adjustment is the promise kept
+
+The gap between them is where double claiming actually lives, so the two are
+separate records and only the **adjusted** portion is offsettable:
+
+```
+vintage 2025  [authorised_itmo]
+  issued 2.00  offsettable 0.00  unadjusted 2.00
+  authorised for transfer, but NO corresponding adjustment has been applied
+  yet; until it is, these tonnes may NOT be counted against the buyer's own target
+```
+
+That buyer-facing line is derived from the adjusted volume, not from the basis
+— an authorisation with nothing behind it is still an ITMO *by basis*, and a
+reader who saw only "offset against your target" would make a false claim.
+A partial adjustment splits the statement rather than rounding it up.
+
+Also enforced: CORSIA eligibility needs an authorisation that names CORSIA
+*and* an applied adjustment; a revoked or expired authorisation says so by
+name and date rather than vanishing into "none on record"; adjustments beyond
+the authorised volume are flagged; and a project registered under both CCTS
+and an international authorisation is told to confirm the CCTS certificates
+were cancelled or never issued, because the code cannot see that registry.
+
+`claim_register.json` ships in the evidence pack — it is the page a buyer's
+counsel reads before signing and the one a CORSIA auditor asks for.
 
 ## What is deliberately not real yet
 

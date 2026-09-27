@@ -224,6 +224,41 @@ MIGRATIONS: list[tuple[int, str]] = [
     );
     CREATE INDEX idx_validations_project ON model_validations(project_id);
     """),
+    (4, """
+    -- Article 6. Who is allowed to count the tonne, which is a different
+    -- question from how many there are, and one the product could not answer.
+    CREATE TABLE authorisations (
+        id                  TEXT PRIMARY KEY,
+        project_id          TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        authority           TEXT NOT NULL,
+        reference           TEXT NOT NULL,
+        issued_on           TEXT NOT NULL,
+        authorised_use      TEXT NOT NULL,
+        authorised_volume_t REAL NOT NULL,
+        ca_committed        INTEGER NOT NULL,
+        first_vintage       INTEGER NOT NULL,
+        last_vintage        INTEGER NOT NULL,
+        valid_until         TEXT,
+        revoked_on          TEXT,
+        created_at          TEXT NOT NULL,
+        UNIQUE(project_id, reference)
+    );
+    CREATE INDEX idx_auth_project ON authorisations(project_id);
+
+    -- The adjustment itself, kept apart from the letter that promised it.
+    -- The gap between the two is where double claiming actually lives.
+    CREATE TABLE corresponding_adjustments (
+        id               TEXT PRIMARY KEY,
+        authorisation_id TEXT NOT NULL REFERENCES authorisations(id) ON DELETE CASCADE,
+        project_id       TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        vintage_year     INTEGER NOT NULL,
+        volume_t         REAL NOT NULL,
+        applied_on       TEXT NOT NULL,
+        reported_in      TEXT NOT NULL,
+        created_at       TEXT NOT NULL
+    );
+    CREATE INDEX idx_ca_project ON corresponding_adjustments(project_id, vintage_year);
+    """),
 ]
 
 LATEST = max(v for v, _ in MIGRATIONS)

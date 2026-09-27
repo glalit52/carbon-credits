@@ -1,6 +1,6 @@
 # Evidence pack — Gatugi shade-coffee block, Nyeri County, Central Highlands
 
-Generated 2026-09-27T12:20:43+00:00 · project `KE-NYR-01` · methodology `VM0047 VM0047 v1.1`
+Generated 2026-09-27T12:27:06+00:00 · project `KE-NYR-01` · methodology `VM0047 VM0047 v1.1`
 
 ## Project
 
@@ -41,6 +41,16 @@ Generated 2026-09-27T12:20:43+00:00 · project `KE-NYR-01` · methodology `VM004
 
 Methodologies partition by carbon pool, not by activity name. The audit in `stacking_audit.json` is the evidence that no pool is credited twice on the same ground.
 
+## Who may count these tonnes
+
+- 0.00 tCO2e issued
+- **0.00 tCO2e** may be counted against a buyer's own target (authorised, with a corresponding adjustment applied)
+- 0.00 tCO2e have no corresponding adjustment and may only be described as financed, not offset
+- 0.00 tCO2e are CORSIA eligible
+- 0 host-country authorisation(s) on record
+
+An authorisation is a promise; a corresponding adjustment is the promise kept. Only adjusted tonnes are offsettable, and `claim_register.json` shows the position vintage by vintage.
+
 ## Farmer payments
 
 - 0 payment(s) to 0 farmer(s)
@@ -50,7 +60,7 @@ Methodologies partition by carbon pool, not by activity name. The audit in `stac
 
 - 8 events in the log
 - Hash chain: **intact**
-- Head hash: `eaf204f1fd95a4a9394671e1c1af6e43078b4195a65936d6a146820e6882c928`
+- Head hash: `8249edd19e70bc82d480d8331275595c1c128464ad47aab1c98a789fa9ac468a`
 
 Every event's hash covers its own content and its predecessor's hash. Recompute the chain from `event_log.csv` to confirm nothing was edited after the fact.
 

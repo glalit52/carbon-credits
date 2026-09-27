@@ -1,0 +1,28 @@
+{
+  "project_id": "IN-TNJ-01",
+  "vintages": [
+    {
+      "project_id": "IN-TNJ-01",
+      "vintage_year": 2025,
+      "issued_t": 1.0,
+      "adjusted_t": 0.0,
+      "unadjusted_t": 1.0,
+      "offsettable_t": 0.0,
+      "basis": "unadjusted_voluntary",
+      "buyer_language": "financed emission reductions in India; may NOT be counted against the buyer's own target, as India still counts these tonnes toward its NDC",
+      "corsia_eligible": false,
+      "authorisation": null,
+      "reasons": [
+        "no host-country authorisation on record"
+      ],
+      "warnings": []
+    }
+  ],
+  "issued_t": 1.0,
+  "offsettable_t": 0.0,
+  "unadjusted_t": 1.0,
+  "corsia_eligible_t": 0,
+  "authorisations": [],
+  "warnings": [],
+  "clean": true
+}

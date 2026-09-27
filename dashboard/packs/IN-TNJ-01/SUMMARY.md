@@ -1,6 +1,6 @@
 # Evidence pack — Vallam paddy block, Thanjavur district, Tamil Nadu
 
-Generated 2026-09-27T12:20:43+00:00 · project `IN-TNJ-01` · methodology `VM0051 VM0051 v1.1`
+Generated 2026-09-27T12:27:06+00:00 · project `IN-TNJ-01` · methodology `VM0051 VM0051 v1.1`
 
 ## Project
 
@@ -42,6 +42,16 @@ Generated 2026-09-27T12:20:43+00:00 · project `IN-TNJ-01` · methodology `VM005
 
 Methodologies partition by carbon pool, not by activity name. The audit in `stacking_audit.json` is the evidence that no pool is credited twice on the same ground.
 
+## Who may count these tonnes
+
+- 1.00 tCO2e issued
+- **0.00 tCO2e** may be counted against a buyer's own target (authorised, with a corresponding adjustment applied)
+- 1.00 tCO2e have no corresponding adjustment and may only be described as financed, not offset
+- 0.00 tCO2e are CORSIA eligible
+- 0 host-country authorisation(s) on record
+
+An authorisation is a promise; a corresponding adjustment is the promise kept. Only adjusted tonnes are offsettable, and `claim_register.json` shows the position vintage by vintage.
+
 ## Farmer payments
 
 - 1 payment(s) to 1 farmer(s)
@@ -51,7 +61,7 @@ Methodologies partition by carbon pool, not by activity name. The audit in `stac
 
 - 7 events in the log
 - Hash chain: **intact**
-- Head hash: `fe9490ac994c384fe68b5d6bfd5020a14b879f2dc21e44663985445c18e1a8cc`
+- Head hash: `062ff2953bdcc25b03c2307da075f78e9ace9196f13947f1dfda3f074fb611ca`
 
 Every event's hash covers its own content and its predecessor's hash. Recompute the chain from `event_log.csv` to confirm nothing was edited after the fact.
 
