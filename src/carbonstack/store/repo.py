@@ -350,5 +350,114 @@ class Store:
         return _d(row["d"]) if row and row["d"] else None
 
 
+    # -- soil ---------------------------------------------------------------
+
+    def add_soil_core(self, project_id: str, core, *, role: str,
+                      actor: str | None = None) -> str:
+        """Store a core. Re-ingesting the same sampling is a no-op.
+
+        Refuses a core the lab cannot be traced to, because an unattributable
+        result is not evidence and storing it invites it into a claim later.
+        """
+        from ..soil import SoilCore  # local import: soil is an optional pathway
+
+        if role not in ("baseline", "monitoring"):
+            raise StoreError(f"core role must be baseline or monitoring, not {role!r}")
+        if not isinstance(core, SoilCore):
+            raise StoreError("expected a SoilCore")
+        blocking = [p for p in core.issues if "lab reference" in p]
+        if blocking:
+            raise StoreError(f"core {core.plot_id}: {blocking[0]}")
+
+        core_id = new_id("core")
+        layers = [{"top_cm": l.top_cm, "bottom_cm": l.bottom_cm,
+                   "soc_pct": l.soc_pct,
+                   "bulk_density_g_cm3": l.bulk_density_g_cm3,
+                   "coarse_fragment_frac": l.coarse_fragment_frac}
+                  for l in core.layers]
+        with self.tx() as conn:
+            conn.execute(
+                "INSERT OR IGNORE INTO soil_cores (id, project_id, plot_id,"
+                " sampled_on, lab_reference, stratum, role, layers_json,"
+                " created_at) VALUES (?,?,?,?,?,?,?,?,?)",
+                (core_id, project_id, core.plot_id, _s(core.sampled_on),
+                 core.lab_reference, core.stratum, role, _canonical(layers),
+                 _now()))
+            self.record("soil.core_stored", "project", project_id, {
+                "plot_id": core.plot_id, "role": role,
+                "sampled_on": _s(core.sampled_on),
+                "lab_reference": core.lab_reference,
+                "layers": len(layers),
+                "max_depth_cm": core.max_depth_cm,
+                "soc_t_ha_30cm": round(core.soc_t_ha(30.0), 4),
+            }, actor=actor)
+        return core_id
+
+    def soil_cores(self, project_id: str, role: str | None = None) -> dict:
+        """Cores by plot id, ready for the soil pathway."""
+        from ..soil import SoilCore, SoilLayer
+
+        sql = "SELECT * FROM soil_cores WHERE project_id = ?"
+        args: list[Any] = [project_id]
+        if role:
+            sql += " AND role = ?"
+            args.append(role)
+        sql += " ORDER BY plot_id, sampled_on"
+
+        out: dict[str, SoilCore] = {}
+        for r in self.conn.execute(sql, args):
+            out[r["plot_id"]] = SoilCore(
+                plot_id=r["plot_id"], sampled_on=_d(r["sampled_on"]),
+                lab_reference=r["lab_reference"], stratum=r["stratum"],
+                layers=[SoilLayer(**layer) for layer in json.loads(r["layers_json"])])
+        return out
+
+    def add_model_validation(self, project_id: str, validation, *,
+                             actor: str | None = None) -> str:
+        """Store a VMD0053 validation, accepted or not.
+
+        A rejected validation is kept rather than discarded: a verifier asking
+        why the punitive uncertainty was applied deserves the evidence, and a
+        model that was tried and failed is part of the project's history.
+        """
+        vid = new_id("val")
+        problems = validation.issues()
+        with self.tx() as conn:
+            conn.execute(
+                "INSERT INTO model_validations (id, project_id, model_name,"
+                " model_version, held_out, pairs_json, rmse_t_ha, bias_t_ha,"
+                " r_squared, relative_uncertainty, accepted, created_at)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                (vid, project_id, validation.model_name, validation.model_version,
+                 int(validation.held_out), _canonical(validation.pairs),
+                 validation.rmse_t_ha, validation.bias_t_ha,
+                 validation.r_squared, validation.relative_uncertainty,
+                 int(not problems), _now()))
+            self.record("soil.model_validated", "project", project_id, {
+                "model": f"{validation.model_name} {validation.model_version}",
+                "pairs": validation.n, "held_out": validation.held_out,
+                "rmse_t_ha": round(validation.rmse_t_ha, 4),
+                "bias_t_ha": round(validation.bias_t_ha, 4),
+                "relative_uncertainty": round(validation.relative_uncertainty, 4),
+                "accepted": not problems,
+                "issues": problems,
+            }, actor=actor)
+        return vid
+
+    def latest_model_validation(self, project_id: str):
+        """The most recent accepted validation, or None."""
+        from ..soil import ModelValidation
+
+        r = self.conn.execute(
+            "SELECT * FROM model_validations WHERE project_id = ? AND accepted = 1"
+            " ORDER BY created_at DESC LIMIT 1", (project_id,)).fetchone()
+        if r is None:
+            return None
+        return ModelValidation(
+            model_name=r["model_name"], model_version=r["model_version"],
+            pairs=[tuple(p) for p in json.loads(r["pairs_json"])],
+            held_out=bool(r["held_out"]))
+
+
 def new_id(prefix: str) -> str:
     return f"{prefix}-{uuid.uuid4().hex[:12]}"

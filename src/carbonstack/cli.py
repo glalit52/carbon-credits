@@ -35,6 +35,7 @@ from .feed import (
 from .methodology.vm0042 import EmissionFactor
 from .methodology.vm0047 import PerformanceBenchmark
 from .methodology.vm0051 import CommonPractice, RiceEmissionFactor
+from .soil import ModelValidation, SamplingDesign, SoilCore, SoilLayer, Stratum
 from .remote_sensing import SyntheticProvider
 from .store import Store
 from .store.repo import StoreError
@@ -377,6 +378,174 @@ def cmd_status(args) -> int:
     return 0
 
 
+LAB_COLUMNS = ("plot_id", "role", "sampled_on", "lab_reference",
+               "top_cm", "bottom_cm", "soc_pct", "bulk_density_g_cm3")
+
+
+def cmd_soil(args) -> int:
+    with _store(args) as store:
+        if args.soil_command == "ingest":
+            return _soil_ingest(store, args)
+        if args.soil_command == "validate":
+            return _soil_validate(store, args)
+        if args.soil_command == "design":
+            return _soil_design(args)
+        if args.soil_command == "quantify":
+            return _soil_quantify(store, args)
+        if args.soil_command == "status":
+            return _soil_status(store, args)
+    return 0
+
+
+def _soil_ingest(store, args) -> int:
+    """Load cores from a lab CSV, which is how core data actually arrives.
+
+    One row per layer; rows are grouped into cores by plot, role and sampling
+    date. A row the lab cannot be traced to is refused rather than stored.
+    """
+    import csv as _csv
+
+    actor = _require_actor(args)
+    grouped: dict[tuple, dict] = {}
+    with open(args.csv_file, newline="") as fh:
+        reader = _csv.DictReader(fh)
+        missing = [c for c in LAB_COLUMNS if c not in (reader.fieldnames or [])]
+        if missing:
+            raise SystemExit(
+                f"lab CSV is missing column(s): {', '.join(missing)}\n"
+                f"expected: {', '.join(LAB_COLUMNS)}"
+                f"[,stratum][,coarse_fragment_frac]")
+        for row in reader:
+            key = (row["plot_id"], row["role"], row["sampled_on"])
+            entry = grouped.setdefault(key, {
+                "lab_reference": row["lab_reference"],
+                "stratum": row.get("stratum", "") or "",
+                "layers": []})
+            entry["layers"].append(SoilLayer(
+                top_cm=float(row["top_cm"]), bottom_cm=float(row["bottom_cm"]),
+                soc_pct=float(row["soc_pct"]),
+                bulk_density_g_cm3=float(row["bulk_density_g_cm3"]),
+                coarse_fragment_frac=float(row.get("coarse_fragment_frac") or 0)))
+
+    stored = 0
+    for (plot_id, role, sampled_on), entry in sorted(grouped.items()):
+        core = SoilCore(plot_id=plot_id, sampled_on=date.fromisoformat(sampled_on),
+                        lab_reference=entry["lab_reference"],
+                        stratum=entry["stratum"], layers=entry["layers"])
+        store.add_soil_core(args.project_id, core, role=role, actor=actor)
+        stored += 1
+        print(f"  {role:<10} {plot_id:<16} {sampled_on}  "
+              f"{core.max_depth_cm:>5.0f} cm  "
+              f"{core.soc_t_ha(30.0):>7.2f} t C/ha (0-30)")
+        for problem in core.issues:
+            print(f"    ! {problem}")
+    print(f"\n{stored} core(s) stored from {args.csv_file}")
+    return 0
+
+
+def _soil_validate(store, args) -> int:
+    """Record a VMD0053 model validation from a measured,modelled CSV."""
+    import csv as _csv
+
+    actor = _require_actor(args)
+    pairs = []
+    with open(args.csv_file, newline="") as fh:
+        for row in _csv.DictReader(fh):
+            pairs.append((float(row["measured_t_ha"]), float(row["modelled_t_ha"])))
+
+    validation = ModelValidation(model_name=args.model, model_version=args.version,
+                                 pairs=pairs, held_out=not args.training_data)
+    store.add_model_validation(args.project_id, validation, actor=actor)
+    print(validation.report().render("  "))
+    print()
+    problems = validation.issues()
+    if problems:
+        print("  NOT ACCEPTED:")
+        for problem in problems:
+            print(f"    ! {problem}")
+        print("\n  The punitive default uncertainty will apply until a model "
+              "passes.")
+        return 1
+    print(f"  accepted: {validation.relative_uncertainty:.1%} relative "
+          f"uncertainty feeds the deduction")
+    return 0
+
+
+def _soil_design(args) -> int:
+    strata = []
+    for spec in args.strata.split(","):
+        parts = spec.split(":")
+        if len(parts) < 3:
+            raise SystemExit(
+                "each stratum is name:area_ha:soc_std_dev, comma separated")
+        strata.append(Stratum(name=parts[0].strip(), area_ha=float(parts[1]),
+                              soc_std_dev_t_ha=float(parts[2]),
+                              existing_samples=int(parts[3]) if len(parts) > 3 else 0))
+
+    design = SamplingDesign(strata=strata, target_margin_t_ha=args.margin,
+                            confidence=args.confidence,
+                            comparison_depth_cm=args.depth)
+    plan = design.plan()
+    print(f"sampling design over {plan['total_area_ha']:,.1f} ha")
+    print(f"  precision        +/- {plan['target_margin_t_ha']} t C/ha at "
+          f"{plan['confidence']:.0%} confidence")
+    print(f"  cores required   {plan['total_required']:>6,}")
+    print(f"  still to collect {plan['total_outstanding']:>6,}")
+    print()
+    print(f"  {'stratum':<28}{'area ha':>10}{'sd':>7}{'cores':>8}{'to go':>8}")
+    for stratum in design.strata:
+        print(f"  {stratum.name:<28}{stratum.area_ha:>10,.1f}"
+              f"{stratum.soc_std_dev_t_ha:>7.1f}"
+              f"{plan['required_samples'][stratum.name]:>8,}"
+              f"{plan['outstanding_samples'][stratum.name]:>8,}")
+    print()
+    print(f"  ! {plan['depth_note']}")
+    return 0
+
+
+def _soil_quantify(store, args) -> int:
+    project = store.load_project(args.project_id)
+    baseline = store.soil_cores(args.project_id, "baseline")
+    monitoring = store.soil_cores(args.project_id, "monitoring")
+    if not baseline or not monitoring:
+        raise SystemExit(
+            f"need paired cores: {len(baseline)} baseline, "
+            f"{len(monitoring)} monitoring on record")
+
+    validation = store.latest_model_validation(args.project_id)
+    result = methodology.soil_pathway(validation=validation).quantify(
+        project, baseline_cores=baseline, monitoring_cores=monitoring,
+        reporting_year=args.year)
+    v = pipeline.record_vintage(store, result,
+                                actor=getattr(args, "actor", None) or "cli")
+    print(result.render())
+    print(f"\n  recorded as {v.id} ({v.status.value}), "
+          f"{v.issuable_whole:,} whole credit(s)")
+    return 0
+
+
+def _soil_status(store, args) -> int:
+    baseline = store.soil_cores(args.project_id, "baseline")
+    monitoring = store.soil_cores(args.project_id, "monitoring")
+    project = store.load_project(args.project_id)
+    paired = set(baseline) & set(monitoring)
+
+    print(f"{args.project_id} soil")
+    print(f"  plots enrolled     {len(project.plots):>6,}")
+    print(f"  baseline cores     {len(baseline):>6,}")
+    print(f"  monitoring cores   {len(monitoring):>6,}")
+    print(f"  paired plots       {len(paired):>6,}")
+    validation = store.latest_model_validation(args.project_id)
+    if validation is None:
+        print("  ! no accepted VMD0053 model validation; the punitive default "
+              "uncertainty applies")
+    else:
+        print(f"  model              {validation.model_name} "
+              f"{validation.model_version}, "
+              f"{validation.relative_uncertainty:.1%} uncertainty")
+    return 0
+
+
 def cmd_stack(args) -> int:
     with _store(args) as store:
         if args.stack_command == "add":
@@ -601,6 +770,34 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("status", help="is this project healthy")
     p.add_argument("project_id")
     p.set_defaults(func=cmd_status)
+
+    p = sub.add_parser("soil", parents=[actor_opt],
+                       help="soil carbon: cores, VMD0053 validation, quantify")
+    tsub = p.add_subparsers(dest="soil_command", required=True)
+    q = tsub.add_parser("ingest", parents=[actor_opt], help="load cores from a lab CSV")
+    q.add_argument("project_id")
+    q.add_argument("csv_file")
+    q = tsub.add_parser("validate", parents=[actor_opt],
+                        help="record a VMD0053 model validation")
+    q.add_argument("project_id")
+    q.add_argument("csv_file", help="CSV of measured_t_ha,modelled_t_ha")
+    q.add_argument("--model", required=True)
+    q.add_argument("--version", required=True)
+    q.add_argument("--training-data", action="store_true",
+                   help="scored on training data; recorded but never accepted")
+    q = tsub.add_parser("design", help="how many cores, and where")
+    q.add_argument("--strata", required=True,
+                   help="name:area_ha:soc_std_dev[:existing], comma separated")
+    q.add_argument("--margin", type=float, default=2.0)
+    q.add_argument("--confidence", type=float, default=0.90)
+    q.add_argument("--depth", type=float, default=30.0)
+    q = tsub.add_parser("quantify", parents=[actor_opt],
+                        help="credit the measured SOC change")
+    q.add_argument("project_id")
+    q.add_argument("--year", type=int, required=True)
+    q = tsub.add_parser("status", help="cores held and model state")
+    q.add_argument("project_id")
+    p.set_defaults(func=cmd_soil)
 
     p = sub.add_parser("stack", parents=[actor_opt],
                        help="pillar claims and double-counting control")

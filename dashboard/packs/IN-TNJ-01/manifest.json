@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-26T17:55:02+00:00",
+  "generated_at": "2026-09-27T12:20:43+00:00",
   "project": {
     "id": "IN-TNJ-01",
     "name": "Vallam paddy block, Thanjavur district, Tamil Nadu",
@@ -69,7 +69,7 @@
     "event_count": 7,
     "chain_intact": true,
     "first_bad_event": null,
-    "head_hash": "1856712564518098b58f4c02c7b35fd68f375aef0b71947c13c037061576475e"
+    "head_hash": "fe9490ac994c384fe68b5d6bfd5020a14b879f2dc21e44663985445c18e1a8cc"
   },
   "files": [
     "SUMMARY.md",

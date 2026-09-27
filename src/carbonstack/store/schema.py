@@ -188,6 +188,42 @@ MIGRATIONS: list[tuple[int, str]] = [
     );
     CREATE INDEX idx_pillar_plot ON pillar_claims(plot_id);
     """),
+    (3, """
+    -- Soil. The one pathway whose numbers come from a physical core and an
+    -- accredited lab rather than a satellite, so the lab reference and the
+    -- sampling date are part of the evidence, not metadata about it.
+    CREATE TABLE soil_cores (
+        id            TEXT PRIMARY KEY,
+        project_id    TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        plot_id       TEXT NOT NULL REFERENCES plots(id) ON DELETE CASCADE,
+        sampled_on    TEXT NOT NULL,
+        lab_reference TEXT NOT NULL,
+        stratum       TEXT NOT NULL DEFAULT '',
+        role          TEXT NOT NULL,          -- baseline | monitoring
+        layers_json   TEXT NOT NULL,
+        created_at    TEXT NOT NULL,
+        UNIQUE(plot_id, sampled_on, role)
+    );
+    CREATE INDEX idx_cores_project ON soil_cores(project_id, role);
+
+    -- VMD0053. A model result is only evidence if somebody validated the
+    -- model, so the validation is stored beside the numbers it justifies.
+    CREATE TABLE model_validations (
+        id            TEXT PRIMARY KEY,
+        project_id    TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        model_name    TEXT NOT NULL,
+        model_version TEXT NOT NULL,
+        held_out      INTEGER NOT NULL,
+        pairs_json    TEXT NOT NULL,
+        rmse_t_ha     REAL NOT NULL,
+        bias_t_ha     REAL NOT NULL,
+        r_squared     REAL NOT NULL,
+        relative_uncertainty REAL NOT NULL,
+        accepted      INTEGER NOT NULL,
+        created_at    TEXT NOT NULL
+    );
+    CREATE INDEX idx_validations_project ON model_validations(project_id);
+    """),
 ]
 
 LATEST = max(v for v, _ in MIGRATIONS)

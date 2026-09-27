@@ -14,7 +14,7 @@ financial model that gates it, and `carbonstack`, the dMRV core it runs on.
 | `src/carbonstack/feed.py` | Simulated monitoring on the real 5-day revisit cadence |
 | `dashboard/` | The live MRV dashboard, its dataset and example evidence packs |
 | `scripts/` | Build the dashboard dataset and page |
-| `tests/` | 217 tests, stdlib only |
+| `tests/` | 270 tests, stdlib only |
 
 ## The two numbers that shape everything
 
@@ -41,7 +41,7 @@ python3 model/carbon_model.py            # cashflow, peak funding need, sensitiv
 
 ```bash
 pip install -e ".[dev]"
-python -m pytest                         # 217 tests
+python -m pytest                         # 270 tests
 
 python -m carbonstack demo               # both tracks against synthetic monitoring
 python -m carbonstack export estate --out project.json
@@ -110,6 +110,7 @@ carbonstack/
   feed.py           simulated monitoring on the real 5-day revisit cadence
   methodology/      VM0051 (rice), VM0047 (ARR), VM0042 (cropland + soil)
   stacking.py       pillar claims per plot, and the double-counting engine
+  soil.py           SOC stocks, equivalent soil mass, sampling, VMD0053
   store/            SQLite schema, migrations, repositories, hash-chained events
   pipeline.py       batch monitoring, quantification, project health
   ledger.py         vintage lifecycle, issuance, serials, buffer pool
@@ -366,6 +367,84 @@ portfolio model both now report the metric that is actually managed:
 | Gatugi coffee | $26.00 | $16.91 | **+$9.09** |
 
 The same finding as before, stated in the unit that decides it.
+
+## The soil pathway (VMD0053)
+
+Soil is the one pillar whose numbers cannot come from a satellite. VM0042
+requires physical cores, an accredited lab, an equivalent-soil-mass
+correction, and — where a model quantifies between samplings — calibration and
+validation under **VMD0053**.
+
+```bash
+carbonstack soil design --strata "clay loam:320:9.5,sandy loam:180:14,saline:40:6"
+carbonstack soil ingest   IN-TNJ-01 lab.csv        --actor field
+carbonstack soil validate IN-TNJ-01 val.csv --model DayCent --version 2026.1 --actor science
+carbonstack soil quantify IN-TNJ-01 --year 2028    --actor lalit
+carbonstack soil status   IN-TNJ-01
+```
+
+### Compaction is not sequestration
+
+Compare SOC over a fixed **depth** and a field that was merely rolled looks
+like it gained carbon — the same 30 cm now holds more soil, so it holds more
+carbon, and nothing was sequestered. Equivalent soil mass compares a fixed
+**mass** of fine earth instead. On a real pair of cores the difference is the
+whole answer:
+
+```
+fixed depth change : +0.10 t C/ha  <- looks like a gain
+ESM change         : -2.10 t C/ha  <- the truth
+compaction artefact: +2.20 t C/ha
+```
+
+The engine refuses to report a fixed-depth change, and flags the bulk-density
+movement on the vintage so a reviewer sees it.
+
+### Sample deeper than you compare
+
+This falls out of ESM and is the most common way a soil project discovers,
+years later, that its cores cannot be compared at all. Good management
+*loosens* soil, so a monitoring core taken to the comparison depth holds
+**less** mass than the baseline did, and the reference mass becomes
+unreachable. A core cannot be extended after the fact, so the headroom has to
+be designed in from the first sampling:
+
+```
+! sample to 40 cm, not 30 cm: equivalent soil mass needs headroom if bulk
+  density falls, and a core cannot be extended after the fact
+```
+
+Extrapolating past the bottom of a core is refused rather than guessed.
+
+### A model nobody validated is not evidence
+
+VMD0053 asks for goodness of fit and a characterised prediction error, and
+that error becomes the uncertainty deduction. So a poorly validated model does
+not fail quietly — it costs credits. The same measured carbon, twice:
+
+| | Relative uncertainty | Net issuable |
+|---|---|---|
+| DayCent 2026.1, held-out validation | 5.7% | **46.6 tCO2e** |
+| No validation on record | 75% (punitive default) | **18.6 tCO2e** |
+
+Validating the model is worth **2.5×** on identical cores. Three things are
+refused outright: a model scored on its own training data, fewer than ten
+validation pairs, and an unversioned model. Bias is *added* to RMSE rather
+than averaged with it, because a systematic offset does not cancel across
+plots the way scatter does.
+
+### Sampling design
+
+Stratified random sampling with Neyman allocation — cores go where the
+variance and the area are, not evenly, because cores dominate the cost of a
+soil project. Every stratum gets a floor of three, since one or two cores have
+no usable variance whatever the formula says.
+
+### Soil carries a buffer, unlike avoided methane
+
+Soil carbon is a stock and a single tillage pass can release it, so the
+non-permanence buffer applies at 15%. That is exactly the difference from
+VM0051, where avoided methane was never stored and cannot reverse.
 
 ## What is deliberately not real yet
 

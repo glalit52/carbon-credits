@@ -1,6 +1,6 @@
 # Evidence pack — Vallam paddy block, Thanjavur district, Tamil Nadu
 
-Generated 2026-09-26T17:55:02+00:00 · project `IN-TNJ-01` · methodology `VM0051 VM0051 v1.1`
+Generated 2026-09-27T12:20:43+00:00 · project `IN-TNJ-01` · methodology `VM0051 VM0051 v1.1`
 
 ## Project
 
@@ -51,7 +51,7 @@ Methodologies partition by carbon pool, not by activity name. The audit in `stac
 
 - 7 events in the log
 - Hash chain: **intact**
-- Head hash: `1856712564518098b58f4c02c7b35fd68f375aef0b71947c13c037061576475e`
+- Head hash: `fe9490ac994c384fe68b5d6bfd5020a14b879f2dc21e44663985445c18e1a8cc`
 
 Every event's hash covers its own content and its predecessor's hash. Recompute the chain from `event_log.csv` to confirm nothing was edited after the fact.
 

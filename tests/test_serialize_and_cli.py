@@ -226,3 +226,115 @@ def test_cli_verify_fails_loudly_on_a_tampered_database(tmp_path, capsys):
 
     assert main(["--db", db, "verify"]) == 1
     assert "BROKEN" in capsys.readouterr().err
+
+
+# --- soil through the command line ------------------------------------------
+
+LAB_CSV = """plot_id,role,sampled_on,lab_reference,stratum,top_cm,bottom_cm,soc_pct,bulk_density_g_cm3,coarse_fragment_frac
+IN-TNJ-01-P1,baseline,2025-05-01,TNAU/SOC/2025/0411,clay loam,0,10,1.10,1.32,0.02
+IN-TNJ-01-P1,baseline,2025-05-01,TNAU/SOC/2025/0411,clay loam,10,30,0.72,1.45,0.03
+IN-TNJ-01-P1,baseline,2025-05-01,TNAU/SOC/2025/0411,clay loam,30,40,0.50,1.50,0.04
+IN-TNJ-01-P1,monitoring,2028-05-01,TNAU/SOC/2028/0119,clay loam,0,10,1.34,1.24,0.02
+IN-TNJ-01-P1,monitoring,2028-05-01,TNAU/SOC/2028/0119,clay loam,10,30,0.86,1.38,0.03
+IN-TNJ-01-P1,monitoring,2028-05-01,TNAU/SOC/2028/0119,clay loam,30,40,0.55,1.47,0.04
+"""
+
+VAL_CSV = "measured_t_ha,modelled_t_ha\n" + "".join(
+    f"{38 + i * 1.1:.2f},{38 + i * 1.1 + (-1) ** i * 1.4:.2f}\n" for i in range(16))
+
+
+def soil_db(tmp_path, capsys, *, validate=True):
+    db = str(tmp_path / "s.db")
+    (tmp_path / "lab.csv").write_text(LAB_CSV)
+    (tmp_path / "val.csv").write_text(VAL_CSV)
+    main(["--db", db, "enroll", "vallam"])
+    main(["--db", db, "soil", "ingest", "IN-TNJ-01", str(tmp_path / "lab.csv"),
+          "--actor", "field"])
+    if validate:
+        main(["--db", db, "soil", "validate", "IN-TNJ-01",
+              str(tmp_path / "val.csv"), "--model", "DayCent",
+              "--version", "2026.1", "--actor", "science"])
+    capsys.readouterr()
+    return db
+
+
+def test_cli_soil_design_says_to_sample_deeper(capsys):
+    assert main(["soil", "design", "--strata",
+                 "clay:320:9.5,sandy:180:14,saline:40:6", "--margin", "2.0"]) == 0
+    out = capsys.readouterr().out
+    assert "cores required" in out
+    assert "sample to 40 cm, not 30 cm" in out
+
+
+def test_cli_soil_ingest_and_status(tmp_path, capsys):
+    db = soil_db(tmp_path, capsys)
+    assert main(["--db", db, "soil", "status", "IN-TNJ-01"]) == 0
+    out = capsys.readouterr().out
+    assert "baseline cores          1" in out
+    assert "monitoring cores        1" in out
+    assert "DayCent 2026.1" in out
+
+
+def test_cli_soil_quantify_records_a_vintage(tmp_path, capsys):
+    db = soil_db(tmp_path, capsys)
+    assert main(["--db", db, "soil", "quantify", "IN-TNJ-01", "--year", "2028",
+                 "--actor", "lalit"]) == 0
+    out = capsys.readouterr().out
+    assert "soil (measure and model)" in out
+    assert "recorded as IN-TNJ-01:2028" in out
+    # The ESM correction reaches the operator, not just the log.
+    assert "bulk density moved" in out
+
+
+def test_cli_soil_quantify_without_validation_costs_credits(tmp_path, capsys):
+    """The commercial case for VMD0053: the same measured carbon, and an
+    unvalidated model hands most of it back."""
+    validated_db = soil_db(tmp_path, capsys, validate=True)
+    main(["--db", validated_db, "soil", "quantify", "IN-TNJ-01", "--year",
+          "2028", "--actor", "lalit"])
+    good = capsys.readouterr().out
+
+    bare = tmp_path / "bare"
+    bare.mkdir()
+    unvalidated_db = soil_db(bare, capsys, validate=False)
+    main(["--db", unvalidated_db, "soil", "quantify", "IN-TNJ-01", "--year",
+          "2028", "--actor", "lalit"])
+    poor = capsys.readouterr().out
+
+    assert "75.0% relative uncertainty" in poor
+    assert "no VMD0053 model validation" in poor
+    assert "5." in good          # single-digit uncertainty from the validation
+
+
+def test_cli_soil_validate_rejects_training_data(tmp_path, capsys):
+    db = str(tmp_path / "s.db")
+    (tmp_path / "val.csv").write_text(VAL_CSV)
+    main(["--db", db, "enroll", "vallam"])
+    capsys.readouterr()
+    assert main(["--db", db, "soil", "validate", "IN-TNJ-01",
+                 str(tmp_path / "val.csv"), "--model", "m", "--version", "1",
+                 "--training-data", "--actor", "science"]) == 1
+    assert "independent validation set" in capsys.readouterr().out
+
+
+def test_cli_soil_ingest_names_the_missing_lab_columns(tmp_path, capsys):
+    db = str(tmp_path / "s.db")
+    bad = tmp_path / "bad.csv"
+    bad.write_text("plot_id,role\nP1,baseline\n")
+    main(["--db", db, "enroll", "vallam"])
+    capsys.readouterr()
+    with pytest.raises(SystemExit) as exc:
+        main(["--db", db, "soil", "ingest", "IN-TNJ-01", str(bad),
+              "--actor", "field"])
+    assert "missing column" in str(exc.value)
+    assert "bulk_density_g_cm3" in str(exc.value)
+
+
+def test_cli_soil_quantify_needs_paired_cores(tmp_path, capsys):
+    db = str(tmp_path / "s.db")
+    main(["--db", db, "enroll", "vallam"])
+    capsys.readouterr()
+    with pytest.raises(SystemExit) as exc:
+        main(["--db", db, "soil", "quantify", "IN-TNJ-01", "--year", "2028",
+              "--actor", "lalit"])
+    assert "paired cores" in str(exc.value)

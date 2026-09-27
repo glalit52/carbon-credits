@@ -1,6 +1,6 @@
 # Evidence pack — Gatugi shade-coffee block, Nyeri County, Central Highlands
 
-Generated 2026-09-26T17:55:02+00:00 · project `KE-NYR-01` · methodology `VM0047 VM0047 v1.1`
+Generated 2026-09-27T12:20:43+00:00 · project `KE-NYR-01` · methodology `VM0047 VM0047 v1.1`
 
 ## Project
 
@@ -50,7 +50,7 @@ Methodologies partition by carbon pool, not by activity name. The audit in `stac
 
 - 8 events in the log
 - Hash chain: **intact**
-- Head hash: `ecadaf51165f136dcc79e6db648b7f9286c1a5ad2a36f2290a4916a2a7e0c4de`
+- Head hash: `eaf204f1fd95a4a9394671e1c1af6e43078b4195a65936d6a146820e6882c928`
 
 Every event's hash covers its own content and its predecessor's hash. Recompute the chain from `event_log.csv` to confirm nothing was edited after the fact.
 

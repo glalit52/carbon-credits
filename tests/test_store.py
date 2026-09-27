@@ -155,3 +155,104 @@ def test_actor_is_recorded_and_overridable(store):
     events = store.events()
     assert events[0]["actor"] == "tester"
     assert events[1]["actor"] == "priya"
+
+
+# --- soil: the pathway whose evidence is physical ---------------------------
+
+def _core(plot_id, when, ref="LAB/1"):
+    from carbonstack.soil import SoilCore, SoilLayer
+    return SoilCore(plot_id, when, ref, [
+        SoilLayer(0, 10, 1.10, 1.32), SoilLayer(10, 30, 0.72, 1.45),
+        SoilLayer(30, 40, 0.50, 1.50)])
+
+
+def _validation(n=14, held_out=True, version="2026.1"):
+    from carbonstack.soil import ModelValidation
+    return ModelValidation("DayCent", version,
+                           [(40.0 + i, 40.0 + i + (-1) ** i * 2.2)
+                            for i in range(n)], held_out=held_out)
+
+
+@pytest.fixture
+def rice_store(store):
+    store.save_project(as_project(THANJAVUR), methodology_id="VM0042")
+    return store, THANJAVUR.id, f"{THANJAVUR.id}-P1"
+
+
+def test_cores_round_trip_with_their_layers(rice_store):
+    store, pid, plot = rice_store
+    original = _core(plot, date(2025, 5, 1))
+    store.add_soil_core(pid, original, role="baseline")
+
+    back = store.soil_cores(pid, "baseline")[plot]
+    assert back.lab_reference == original.lab_reference
+    assert back.max_depth_cm == original.max_depth_cm
+    assert back.soc_t_ha(30.0) == pytest.approx(original.soc_t_ha(30.0))
+
+
+def test_a_core_the_lab_cannot_be_traced_to_is_refused(rice_store):
+    """An unattributable result is not evidence, and storing it invites it
+    into a claim later."""
+    store, pid, plot = rice_store
+    with pytest.raises(StoreError, match="lab reference"):
+        store.add_soil_core(pid, _core(plot, date(2025, 5, 1), ref="  "),
+                            role="baseline")
+
+
+def test_an_unknown_core_role_is_refused(rice_store):
+    store, pid, plot = rice_store
+    with pytest.raises(StoreError, match="baseline or monitoring"):
+        store.add_soil_core(pid, _core(plot, date(2025, 5, 1)), role="whenever")
+
+
+def test_reingesting_the_same_sampling_does_not_duplicate(rice_store):
+    store, pid, plot = rice_store
+    core = _core(plot, date(2025, 5, 1))
+    store.add_soil_core(pid, core, role="baseline")
+    store.add_soil_core(pid, core, role="baseline")
+    assert store.conn.execute(
+        "SELECT COUNT(*) FROM soil_cores").fetchone()[0] == 1
+
+
+def test_baseline_and_monitoring_are_separate_roles(rice_store):
+    store, pid, plot = rice_store
+    store.add_soil_core(pid, _core(plot, date(2025, 5, 1)), role="baseline")
+    store.add_soil_core(pid, _core(plot, date(2028, 5, 1), "LAB/2"),
+                        role="monitoring")
+    assert len(store.soil_cores(pid, "baseline")) == 1
+    assert len(store.soil_cores(pid, "monitoring")) == 1
+
+
+def test_only_an_accepted_validation_is_returned(rice_store):
+    """A rejected validation is kept, because a verifier asking why the
+    punitive uncertainty applied deserves the evidence -- but it must never be
+    handed back as if it justified a number."""
+    store, pid, _ = rice_store
+    store.add_model_validation(pid, _validation(held_out=False))
+    assert store.latest_model_validation(pid) is None
+
+    store.add_model_validation(pid, _validation())
+    accepted = store.latest_model_validation(pid)
+    assert accepted is not None and accepted.model_name == "DayCent"
+    assert store.conn.execute(
+        "SELECT COUNT(*) FROM model_validations").fetchone()[0] == 2
+
+
+def test_an_unversioned_model_is_not_accepted(rice_store):
+    store, pid, _ = rice_store
+    store.add_model_validation(pid, _validation(version="  "))
+    assert store.latest_model_validation(pid) is None
+
+
+def test_soil_work_lands_in_the_event_chain(rice_store):
+    store, pid, plot = rice_store
+    store.add_soil_core(pid, _core(plot, date(2025, 5, 1)), role="baseline",
+                        actor="field")
+    store.add_model_validation(pid, _validation(), actor="science")
+
+    kinds = [e["kind"] for e in store.events() if e["kind"].startswith("soil.")]
+    assert kinds == ["soil.core_stored", "soil.model_validated"]
+    stored = [e for e in store.events() if e["kind"] == "soil.core_stored"][0]
+    assert stored["actor"] == "field"
+    assert stored["payload"]["lab_reference"] == "LAB/1"
+    assert store.verify_chain() == (True, None)
