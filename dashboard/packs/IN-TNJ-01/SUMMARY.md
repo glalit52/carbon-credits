@@ -1,6 +1,6 @@
 # Evidence pack — Vallam paddy block, Thanjavur district, Tamil Nadu
 
-Generated 2026-09-27T12:27:06+00:00 · project `IN-TNJ-01` · methodology `VM0051 VM0051 v1.1`
+Generated 2026-09-27T12:43:23+00:00 · project `IN-TNJ-01` · methodology `VM0051 VM0051 v1.1`
 
 ## Project
 
@@ -61,7 +61,7 @@ An authorisation is a promise; a corresponding adjustment is the promise kept. O
 
 - 7 events in the log
 - Hash chain: **intact**
-- Head hash: `062ff2953bdcc25b03c2307da075f78e9ace9196f13947f1dfda3f074fb611ca`
+- Head hash: `4129102072a690407641eb34a8703eaf3028cadd0a98fc3f102709262fab3bf8`
 
 Every event's hash covers its own content and its predecessor's hash. Recompute the chain from `event_log.csv` to confirm nothing was edited after the fact.
 

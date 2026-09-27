@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T12:27:06+00:00",
+  "generated_at": "2026-09-27T12:43:23+00:00",
   "project": {
     "id": "KE-NYR-01",
     "name": "Gatugi shade-coffee block, Nyeri County, Central Highlands",
@@ -37,6 +37,14 @@
     "stacked_ha": 0,
     "clean": true,
     "conflicts": 0
+  },
+  "trees": {
+    "plots_inventoried": 0,
+    "stems_planted": 0,
+    "stems_credited": 0,
+    "standing_stock_tco2e": 0,
+    "plots_below_survival_floor": 0,
+    "plots_on_generic_allometry": 0
   },
   "area": {
     "enrolled_ha": 2.8729,
@@ -77,7 +85,7 @@
     "event_count": 8,
     "chain_intact": true,
     "first_bad_event": null,
-    "head_hash": "8249edd19e70bc82d480d8331275595c1c128464ad47aab1c98a789fa9ac468a"
+    "head_hash": "dddd22b1a5dcdc6c65a948249d92d730bc26b4f7128523855481afaaaee315ff"
   },
   "files": [
     "SUMMARY.md",
@@ -90,6 +98,7 @@
     "payments.csv",
     "plot_register.csv",
     "stacking_audit.json",
+    "tree_inventory.csv",
     "vintages.csv"
   ],
   "caveats": [

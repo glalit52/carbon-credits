@@ -259,6 +259,29 @@ MIGRATIONS: list[tuple[int, str]] = [
     );
     CREATE INDEX idx_ca_project ON corresponding_adjustments(project_id, vintage_year);
     """),
+    (5, """
+    -- Trees, counted. The census approach to VM0047 credits stems rather than
+    -- a stocking index, so the survey that found them is the evidence: who
+    -- walked the plot, how many stems they checked, and how many were alive.
+    -- The allometry travels with the measurements because the equation that
+    -- turned a diameter into a tonne is part of why the tonne is that size.
+    CREATE TABLE tree_inventories (
+        id            TEXT PRIMARY KEY,
+        project_id    TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        plot_id       TEXT NOT NULL REFERENCES plots(id) ON DELETE CASCADE,
+        measured_on   TEXT NOT NULL,
+        surveyed_on   TEXT NOT NULL,
+        surveyor      TEXT NOT NULL,
+        stems_planted INTEGER NOT NULL,
+        stems_sampled INTEGER NOT NULL,
+        stems_alive   INTEGER NOT NULL,
+        sample_json   TEXT NOT NULL,
+        species_json  TEXT NOT NULL,
+        created_at    TEXT NOT NULL,
+        UNIQUE(plot_id, measured_on)
+    );
+    CREATE INDEX idx_tree_inv_project ON tree_inventories(project_id, measured_on);
+    """),
 ]
 
 LATEST = max(v for v, _ in MIGRATIONS)

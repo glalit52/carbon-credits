@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T12:27:06+00:00",
+  "generated_at": "2026-09-27T12:43:23+00:00",
   "project": {
     "id": "IN-TNJ-01",
     "name": "Vallam paddy block, Thanjavur district, Tamil Nadu",
@@ -37,6 +37,14 @@
     "stacked_ha": 0,
     "clean": true,
     "conflicts": 0
+  },
+  "trees": {
+    "plots_inventoried": 0,
+    "stems_planted": 0,
+    "stems_credited": 0,
+    "standing_stock_tco2e": 0,
+    "plots_below_survival_floor": 0,
+    "plots_on_generic_allometry": 0
   },
   "area": {
     "enrolled_ha": 2.4918,
@@ -77,7 +85,7 @@
     "event_count": 7,
     "chain_intact": true,
     "first_bad_event": null,
-    "head_hash": "062ff2953bdcc25b03c2307da075f78e9ace9196f13947f1dfda3f074fb611ca"
+    "head_hash": "4129102072a690407641eb34a8703eaf3028cadd0a98fc3f102709262fab3bf8"
   },
   "files": [
     "SUMMARY.md",
@@ -90,6 +98,7 @@
     "payments.csv",
     "plot_register.csv",
     "stacking_audit.json",
+    "tree_inventory.csv",
     "vintages.csv"
   ],
   "caveats": [

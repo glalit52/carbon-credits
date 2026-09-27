@@ -1022,6 +1022,100 @@
     }
     panel.appendChild(fig5);
 
+    // --- census, where the site has one -------------------------------
+    // Two instruments over the same trees. Shown together because the choice
+    // between them is not a preference: a stocking index has nothing to
+    // measure over a bund line, which is most of the agroforestry pipeline.
+    if (block.census) {
+      var cen = block.census;
+      var figC = el("figure");
+      var topC = el("div", "figtop");
+      topC.appendChild(el("h3", null, "Counted, not inferred"));
+      topC.appendChild(el("span", "note", cen.approach +
+        " · " + cen.stems_planted + " shade stems · " +
+        cen.sample_size + " measured per visit"));
+      figC.appendChild(topC);
+
+      var pC = el("p", "empty");
+      pC.textContent = cen.note;
+      figC.appendChild(pC);
+
+      var gridC = el("div", "ledger-grid");
+      function ccell(k, v, sTxt) {
+        var n = el("div");
+        n.appendChild(el("span", "k", k));
+        n.appendChild(el("span", "v", v));
+        n.appendChild(el("span", "s", sTxt));
+        gridC.appendChild(n);
+      }
+      // The headline is the last visit that has actually happened. Leading
+      // with a 2040 projection would read as a measurement.
+      var done = cen.visits.filter(function (r) { return r.complete; });
+      var lastVisit = done.length ? done[done.length - 1] : cen.visits[0];
+      var when = lastVisit.complete ? "at " + lastVisit.measured_on
+                                    : "projected, first census " +
+                                      lastVisit.measured_on;
+      ccell("Stems planted", String(cen.stems_planted),
+            cen.stems_per_ha + " per ha, shade layer only");
+      ccell("Stems credited", String(lastVisit.stems_credited),
+            "lower bound of the " + (lastVisit.survival_rate * 100).toFixed(0) +
+            "% survival survey, not the count");
+      ccell("Standing stock", num(lastVisit.stock_tco2e, 1) + " tCO2e",
+            when + " · ±" +
+            (lastVisit.relative_uncertainty * 100).toFixed(0) + "%");
+      ccell("Allometry", cen.locally_calibrated ? "local fit" : "generic",
+            cen.allometry);
+      figC.appendChild(gridC);
+
+      if (cen.instrument_gap && cen.instrument_gap.ratio) {
+        var gap = el("p", "empty");
+        gap.textContent = cen.instrument_gap.finding;
+        figC.appendChild(gap);
+      }
+
+      var scrollC = el("div", "tscroll");
+      var tableC = el("table");
+      var theadC = el("thead"), hrC = el("tr");
+      ["Visit", "Mean DBH", "Mean height", "Survival", "Credited stems",
+       "Stock tCO2e", "Area-based", "Census"].forEach(function (h) {
+        hrC.appendChild(el("th", null, h));
+      });
+      theadC.appendChild(hrC);
+      tableC.appendChild(theadC);
+
+      var cmp = {};
+      (cen.comparison || []).forEach(function (c) { cmp[c.year] = c; });
+      var tbodyC = el("tbody");
+      var horizonC = NOW.getFullYear() + 6;
+      cen.visits.filter(function (r) {
+        return r.complete || r.year <= horizonC;
+      }).forEach(function (r) {
+        var tr = el("tr");
+        if (!r.complete) tr.className = "projected";
+        tr.appendChild(el("td", null, String(r.year) +
+          (r.complete ? "" : " · proj")));
+        tr.appendChild(el("td", null, num(r.mean_dbh_cm, 1) + " cm"));
+        tr.appendChild(el("td", null, num(r.mean_height_m, 1) + " m"));
+        tr.appendChild(el("td", null,
+          (r.survival_rate * 100).toFixed(0) + "% → " +
+          (r.survival_lower_bound * 100).toFixed(0) + "%"));
+        tr.appendChild(el("td", null, String(r.stems_credited)));
+        tr.appendChild(el("td", null, num(r.stock_tco2e, 1)));
+        var c = cmp[r.year];
+        tr.appendChild(el("td", "ded", c ? num(c.area_based_net_t, 1) : "—"));
+        tr.appendChild(el("td", "net", c ? num(c.census_net_t, 1) : "—"));
+        tbodyC.appendChild(tr);
+      });
+      tableC.appendChild(tbodyC);
+      scrollC.appendChild(tableC);
+      figC.appendChild(scrollC);
+
+      var capC = el("div", "covnote");
+      capC.innerHTML = "<span>" + cen.caveats.join(" &middot; ") + "</span>";
+      figC.appendChild(capC);
+      panel.appendChild(figC);
+    }
+
     // --- ledger ---
     var gov = (DATA.governance && DATA.governance.sites &&
                DATA.governance.sites[site.id]) || null;

@@ -23,7 +23,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable
 from urllib.parse import parse_qs, urlparse
 
-from . import article6, ledger, payments, stacking
+from . import agroforestry, article6, ledger, payments, stacking
 from .pipeline import health
 from .store.repo import Store, StoreError
 
@@ -157,6 +157,80 @@ def api_register_claim(store: Store, project_id: str, body: dict, **_) -> dict:
         store, project_id, plot_id, pillar=pillar,
         methodology_id=methodology_id, area_ha=area_ha, geometry=geometry,
         actor=_actor(body)).to_dict()
+
+
+@route("GET", "/api/allometry")
+def api_allometry(store: Store, **_) -> dict:
+    """The equation catalogue, and which entries are still placeholders.
+
+    Exposed because the gap between a generic equation and a local fit is
+    roughly a quarter of a tree project's credits, and a buyer doing
+    diligence should be able to read which one priced the tonnes they are
+    being sold.
+    """
+    return {"species": [{
+        "key": key,
+        "name": sp.name,
+        "equation": sp.equation,
+        "wood_density_g_cm3": sp.wood_density_g_cm3,
+        "root_shoot": sp.root_shoot,
+        "relative_error": sp.relative_error,
+        "locally_calibrated": sp.is_locally_calibrated,
+        "region": sp.region,
+        "source": sp.source,
+    } for key, sp in sorted(agroforestry.SPECIES.items())]}
+
+
+@route("GET", "/api/projects/{project_id}/trees")
+def api_trees(store: Store, project_id: str, query: dict, **_) -> dict:
+    """The census: what was counted, by whom, and what it is worth.
+
+    `?year=` reads the inventory as it stood at the end of that year, which
+    is the view a verifier checking a past vintage needs.
+    """
+    year = query.get("year")
+    inventories = store.tree_inventories(
+        project_id, year=int(year[0]) if year else None)
+
+    plots = []
+    for plot_id, inv in sorted(inventories.items()):
+        survey = inv.survival
+        stock, relative = inv.stock()
+        plots.append({
+            "plot_id": plot_id,
+            "measured_on": inv.measured_on.isoformat(),
+            "surveyed_on": survey.surveyed_on.isoformat(),
+            "surveyor": survey.surveyor,
+            "stems_planted": survey.stems_planted,
+            "stems_sampled": survey.stems_sampled,
+            "stems_alive": survey.stems_alive,
+            "survival_rate": round(survey.survival_rate, 4),
+            "survival_lower_bound": round(survey.survival_lower_bound(), 4),
+            "stems_credited": survey.surviving_stems,
+            "stems_measured": len(inv.sample),
+            "mean_kgco2e_per_stem": round(inv.mean_co2e_per_stem_kg, 3),
+            "stock_tco2e": round(stock, 4),
+            "relative_uncertainty": round(relative, 4),
+            "locally_calibrated": inv.uses_local_allometry,
+            "needs_replanting": survey.needs_replanting,
+            "issues": survey.issues(),
+        })
+
+    benchmark = agroforestry.BenchmarkProvider()
+    return {
+        "approach": "VM0047 v1.1 census-based",
+        "plots": plots,
+        "stems_planted": sum(p["stems_planted"] for p in plots),
+        "stems_credited": sum(p["stems_credited"] for p in plots),
+        "standing_stock_tco2e": round(sum(p["stock_tco2e"] for p in plots), 4),
+        "plots_below_survival_floor": sum(
+            1 for p in plots if p["needs_replanting"]),
+        "benchmark_vetted": benchmark.is_vetted,
+        "benchmark_note": (
+            "performance benchmark is a placeholder; no issuance may rest on "
+            "it until a Verra-vetted data service provider supplies one"
+            if not benchmark.is_vetted else ""),
+    }
 
 
 @route("GET", "/api/projects/{project_id}/vintages")

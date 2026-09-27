@@ -21,6 +21,7 @@ import json
 import sqlite3
 import uuid
 from contextlib import contextmanager
+from dataclasses import asdict
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
@@ -457,6 +458,100 @@ class Store:
             model_name=r["model_name"], model_version=r["model_version"],
             pairs=[tuple(p) for p in json.loads(r["pairs_json"])],
             held_out=bool(r["held_out"]))
+
+
+    # -- trees --------------------------------------------------------------
+
+    def add_tree_inventory(self, project_id: str, inventory, *,
+                           actor: str | None = None) -> str:
+        """Store a census inventory. Re-ingesting the same visit is a no-op.
+
+        Refuses a survey with no surveyor for the same reason a core with no
+        lab reference is refused: an unattributable measurement is not
+        evidence, and storing it invites it into a claim later.
+        """
+        from ..agroforestry import CensusInventory
+
+        if not isinstance(inventory, CensusInventory):
+            raise StoreError("expected a CensusInventory")
+        survey = inventory.survival
+        if not survey.surveyor.strip():
+            raise StoreError(
+                f"inventory {inventory.plot_id}: no surveyor recorded; an "
+                f"unattributable survival survey is not evidence")
+
+        inv_id = new_id("inv")
+        sample = [{"species_key": m.species_key, "dbh_cm": m.dbh_cm,
+                   "height_m": m.height_m} for m in inventory.sample]
+        # The allometry is stored with the measurements. A local fit that
+        # replaces a placeholder later must not silently restate last year's
+        # inventory at a new number.
+        used = sorted({m.species_key for m in inventory.sample})
+        species = {k: asdict(inventory.species[k]) for k in used}
+
+        with self.tx() as conn:
+            conn.execute(
+                "INSERT OR IGNORE INTO tree_inventories (id, project_id,"
+                " plot_id, measured_on, surveyed_on, surveyor, stems_planted,"
+                " stems_sampled, stems_alive, sample_json, species_json,"
+                " created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                (inv_id, project_id, inventory.plot_id,
+                 _s(inventory.measured_on), _s(survey.surveyed_on),
+                 survey.surveyor, survey.stems_planted, survey.stems_sampled,
+                 survey.stems_alive, _canonical(sample), _canonical(species),
+                 _now()))
+            stock, relative = inventory.stock()
+            self.record("trees.inventory_stored", "project", project_id, {
+                "plot_id": inventory.plot_id,
+                "measured_on": _s(inventory.measured_on),
+                "surveyor": survey.surveyor,
+                "stems_planted": survey.stems_planted,
+                "stems_sampled": survey.stems_sampled,
+                "survival_rate": round(survey.survival_rate, 4),
+                "survival_lower_bound": round(survey.survival_lower_bound(), 4),
+                "stems_measured": len(sample),
+                "species": used,
+                "local_allometry": inventory.uses_local_allometry,
+                "stock_tco2e": round(stock, 4),
+                "relative_uncertainty": round(relative, 4),
+                "needs_replanting": survey.needs_replanting,
+            }, actor=actor)
+        return inv_id
+
+    def tree_inventories(self, project_id: str, year: int | None = None) -> dict:
+        """The latest inventory per plot, at or before the end of `year`.
+
+        Keyed by plot id, which is what the census pathway takes. Carrying the
+        most recent visit forward rather than demanding one per year is what
+        lets a plot be inventoried every second year without its stock
+        appearing to vanish in between.
+        """
+        from ..agroforestry import (
+            SPECIES, CensusInventory, Species, StemMeasurement, SurvivalSurvey,
+        )
+
+        sql = "SELECT * FROM tree_inventories WHERE project_id = ?"
+        args: list[Any] = [project_id]
+        if year is not None:
+            sql += " AND measured_on <= ?"
+            args.append(f"{year}-12-31")
+        sql += " ORDER BY plot_id, measured_on"
+
+        out: dict[str, CensusInventory] = {}
+        for r in self.conn.execute(sql, args):
+            species = {k: Species(**v)
+                       for k, v in json.loads(r["species_json"]).items()}
+            out[r["plot_id"]] = CensusInventory(
+                plot_id=r["plot_id"], measured_on=_d(r["measured_on"]),
+                survival=SurvivalSurvey(
+                    plot_id=r["plot_id"], surveyed_on=_d(r["surveyed_on"]),
+                    stems_planted=r["stems_planted"],
+                    stems_sampled=r["stems_sampled"],
+                    stems_alive=r["stems_alive"], surveyor=r["surveyor"]),
+                sample=[StemMeasurement(**m)
+                        for m in json.loads(r["sample_json"])],
+                species=species or dict(SPECIES))
+        return out
 
 
 def new_id(prefix: str) -> str:

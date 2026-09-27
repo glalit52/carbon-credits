@@ -4,6 +4,7 @@
     carbonstack enroll thanjavur                  load a pilot site
     carbonstack monitor IN-TNJ-01 --to 2026-09-11 pull and store monitoring
     carbonstack quantify IN-TNJ-01 --year 2025    run the engine, record a draft
+    carbonstack trees ingest KE-NYE-01 field.csv   load a tree census
     carbonstack queue                             what is waiting on a human
     carbonstack explain IN-TNJ-01:2025            where the number came from
     carbonstack review IN-TNJ-01:2025 --approve --actor lalit --note "clean"
@@ -28,6 +29,9 @@ from pathlib import Path
 from . import (
     article6, evidence, ledger, methodology, payments, pipeline, scenario,
     serialize, sites, stacking,
+)
+from .agroforestry import (
+    SPECIES, CensusInventory, StemMeasurement, SurvivalSurvey,
 )
 from .feed import (
     FeedProvider, season_warnings, series, summarise_seasons, year_confidence,
@@ -610,6 +614,172 @@ def _soil_status(store, args) -> int:
     return 0
 
 
+FIELD_COLUMNS = ("plot_id", "measured_on", "surveyed_on", "surveyor",
+                 "stems_planted", "stems_sampled", "stems_alive",
+                 "species_key")
+
+
+def cmd_trees(args) -> int:
+    if args.trees_command == "species":
+        return _trees_species(args)
+    with _store(args) as store:
+        if args.trees_command == "ingest":
+            return _trees_ingest(store, args)
+        if args.trees_command == "survival":
+            return _trees_survival(store, args)
+        if args.trees_command == "quantify":
+            return _trees_quantify(store, args)
+        if args.trees_command == "status":
+            return _trees_status(store, args)
+    return 0
+
+
+def _trees_species(args) -> int:
+    """The allometry catalogue, and which entries are still placeholders.
+
+    Worth its own command because the difference between a generic equation
+    and a local fit is roughly a quarter of the credits, and nobody goes
+    looking for that in a source file.
+    """
+    print(f"  {'key':<22}{'species':<22}{'equation':<15}{'rho':>6}"
+          f"{'err':>7}  calibration")
+    for key, sp in sorted(SPECIES.items()):
+        mark = "local fit" if sp.is_locally_calibrated else "GENERIC"
+        print(f"  {key:<22}{sp.name:<22}{sp.equation:<15}"
+              f"{sp.wood_density_g_cm3:>6.2f}{sp.relative_error:>7.0%}  {mark}")
+    generic = [k for k, sp in SPECIES.items() if not sp.is_locally_calibrated]
+    if generic:
+        print(f"\n  ! {len(generic)} of {len(SPECIES)} species carry a generic "
+              f"equation. Each costs its plots the difference between the "
+              f"generic error and a local fit, every vintage.")
+    return 0
+
+
+def _trees_ingest(store, args) -> int:
+    """Load a field census from CSV: one row per measured stem.
+
+    The survival survey is repeated on every row of a visit, which is how a
+    field app exports it, and rows are grouped into one inventory per plot
+    and date.
+    """
+    import csv as _csv
+
+    actor = _require_actor(args)
+    grouped: dict[tuple, dict] = {}
+    with open(args.csv_file, newline="") as fh:
+        reader = _csv.DictReader(fh)
+        missing = [c for c in FIELD_COLUMNS if c not in (reader.fieldnames or [])]
+        if missing:
+            raise SystemExit(
+                f"field CSV is missing column(s): {', '.join(missing)}\n"
+                f"expected: {', '.join(FIELD_COLUMNS)}[,dbh_cm][,height_m]")
+        for row in reader:
+            key = (row["plot_id"], row["measured_on"])
+            entry = grouped.setdefault(key, {
+                "surveyed_on": row["surveyed_on"],
+                "surveyor": row["surveyor"],
+                "stems_planted": int(row["stems_planted"]),
+                "stems_sampled": int(row["stems_sampled"]),
+                "stems_alive": int(row["stems_alive"]),
+                "sample": []})
+            entry["sample"].append(StemMeasurement(
+                species_key=row["species_key"],
+                dbh_cm=float(row["dbh_cm"]) if row.get("dbh_cm") else None,
+                height_m=float(row["height_m"]) if row.get("height_m") else None))
+
+    stored = 0
+    for (plot_id, measured_on), entry in sorted(grouped.items()):
+        survey = SurvivalSurvey(
+            plot_id=plot_id, surveyed_on=date.fromisoformat(entry["surveyed_on"]),
+            stems_planted=entry["stems_planted"],
+            stems_sampled=entry["stems_sampled"],
+            stems_alive=entry["stems_alive"], surveyor=entry["surveyor"])
+        inventory = CensusInventory(
+            plot_id=plot_id, measured_on=date.fromisoformat(measured_on),
+            survival=survey, sample=entry["sample"])
+        store.add_tree_inventory(args.project_id, inventory, actor=actor)
+        stored += 1
+        stock, relative = inventory.stock()
+        print(f"  {plot_id:<16} {measured_on}  "
+              f"{len(entry['sample']):>3} stems measured  "
+              f"survival {survey.survival_rate:>5.0%} "
+              f"(>={survey.survival_lower_bound():.0%})  "
+              f"{stock:>8.2f} tCO2e +/- {relative:.0%}")
+        for problem in survey.issues():
+            print(f"    ! {problem}")
+    print(f"\n{stored} inventory visit(s) stored from {args.csv_file}")
+    return 0
+
+
+def _trees_survival(store, args) -> int:
+    inventories = store.tree_inventories(args.project_id)
+    if not inventories:
+        print("no census inventory on record")
+        return 0
+    print(f"  {'plot':<16}{'visited':<12}{'planted':>9}{'sampled':>9}"
+          f"{'alive':>7}{'rate':>8}{'credited':>10}")
+    failing = 0
+    for plot_id, inv in sorted(inventories.items()):
+        s = inv.survival
+        flag = "  REPLANT" if s.needs_replanting else ""
+        if s.needs_replanting:
+            failing += 1
+        print(f"  {plot_id:<16}{s.surveyed_on.isoformat():<12}"
+              f"{s.stems_planted:>9,}{s.stems_sampled:>9,}{s.stems_alive:>7,}"
+              f"{s.survival_rate:>8.0%}{s.surviving_stems:>10,}{flag}")
+    print(f"\n  crediting the lower bound of each survey, not the point "
+          f"estimate")
+    if failing:
+        print(f"  ! {failing} plot(s) below the 70% floor: those need "
+              f"replanting, not a vintage")
+    return 0
+
+
+def _trees_quantify(store, args) -> int:
+    project = store.load_project(args.project_id)
+    current = store.tree_inventories(args.project_id, year=args.year)
+    if not current:
+        raise SystemExit(
+            f"no census inventory on or before {args.year}-12-31; "
+            f"a census credits what was counted")
+    prior = store.tree_inventories(args.project_id, year=args.year - 1)
+
+    result = methodology.census_pathway().quantify(
+        project, inventories=current, prior_inventories=prior,
+        reporting_year=args.year)
+    v = pipeline.record_vintage(store, result,
+                                actor=getattr(args, "actor", None) or "cli")
+    print(result.render())
+    print(f"\n  recorded as {v.id} ({v.status.value}), "
+          f"{v.issuable_whole:,} whole credit(s)")
+    return 0
+
+
+def _trees_status(store, args) -> int:
+    project = store.load_project(args.project_id)
+    inventories = store.tree_inventories(args.project_id)
+    counted = set(inventories) & set(project.creditable_plot_ids())
+    stems = sum(i.survival.stems_planted for i in inventories.values())
+    credited = sum(i.survival.surviving_stems for i in inventories.values())
+    stock = sum(i.stock()[0] for i in inventories.values())
+    generic = [p for p, i in inventories.items() if not i.uses_local_allometry]
+
+    print(f"{args.project_id} trees")
+    print(f"  plots enrolled     {len(project.plots):>6,}")
+    print(f"  plots inventoried  {len(counted):>6,}")
+    print(f"  stems planted      {stems:>6,}")
+    print(f"  stems credited     {credited:>6,}  (survival lower bound)")
+    print(f"  standing stock     {stock:>6.1f} tCO2e")
+    if generic:
+        print(f"  ! {len(generic)} plot(s) priced on a generic allometric "
+              f"equation")
+    benchmark = methodology.census_pathway().benchmark
+    if not benchmark.is_vetted:
+        print(f"  ! performance benchmark is '{benchmark.name}'; no issuance "
+              f"may rest on it until a Verra-vetted provider supplies one")
+    return 0
+
+
 def cmd_stack(args) -> int:
     with _store(args) as store:
         if args.stack_command == "add":
@@ -896,6 +1066,24 @@ def build_parser() -> argparse.ArgumentParser:
     q = tsub.add_parser("status", help="cores held and model state")
     q.add_argument("project_id")
     p.set_defaults(func=cmd_soil)
+
+    p = sub.add_parser("trees", parents=[actor_opt],
+                       help="agroforestry: census inventory, survival, quantify")
+    tsub = p.add_subparsers(dest="trees_command", required=True)
+    q = tsub.add_parser("species", help="the allometry catalogue")
+    q = tsub.add_parser("ingest", parents=[actor_opt],
+                        help="load a field census from CSV")
+    q.add_argument("project_id")
+    q.add_argument("csv_file")
+    q = tsub.add_parser("survival", help="survival by plot, and what is credited")
+    q.add_argument("project_id")
+    q = tsub.add_parser("quantify", parents=[actor_opt],
+                        help="credit inventory growth over the benchmark")
+    q.add_argument("project_id")
+    q.add_argument("--year", type=int, required=True)
+    q = tsub.add_parser("status", help="inventories held and allometry in use")
+    q.add_argument("project_id")
+    p.set_defaults(func=cmd_trees)
 
     p = sub.add_parser("stack", parents=[actor_opt],
                        help="pillar claims and double-counting control")

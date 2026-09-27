@@ -52,13 +52,16 @@ python -m carbonstack explain  project.json --year 2031
 
 ### What it does
 
-**Quantifies credits under two methodologies.** `VM0047` (afforestation,
-reforestation, revegetation — area-based) credits growth net of a dynamic
-performance benchmark, exactly as the methodology requires: the baseline is
-re-derived at each verification from what comparable land actually did, not
-argued once in a project document. `VM0042` (improved agricultural land
-management, including rice water management) credits practice adoption times
-an emission factor.
+**Quantifies credits under four methodologies.** `VM0047` (afforestation,
+reforestation, revegetation) credits growth net of a dynamic performance
+benchmark, exactly as the methodology requires: the baseline is re-derived at
+each verification from what comparable land actually did, not argued once in a
+project document. It ships both approaches — area-based off a stocking index,
+and census-based off counted stems, which is the only one that works over
+scattered trees. `VM0051` (improved rice management) credits avoided methane
+against a measured baseline water regime. `VM0042` (improved agricultural land
+management) credits practice adoption times an emission factor, and its soil
+pathway credits measured SOC change under `VMD0053`.
 
 **Refuses to credit what it cannot evidence.** A plot with undocumented
 tenure, a tenure claim with no reference document, or a farmer with no
@@ -108,7 +111,8 @@ carbonstack/
   remote_sensing.py Provider protocol, synthetic provider, field/satellite reconciliation
   sites.py          the two pilot sites — real places, real climatology
   feed.py           simulated monitoring on the real 5-day revisit cadence
-  methodology/      VM0051 (rice), VM0047 (ARR), VM0042 (cropland + soil)
+  methodology/      VM0051 (rice), VM0047 (ARR, area-based + census), VM0042 (cropland + soil)
+  agroforestry.py   species allometry, survival surveys, census inventory
   stacking.py       pillar claims per plot, and the double-counting engine
   soil.py           SOC stocks, equivalent soil mass, sampling, VMD0053
   article6.py       host-country authorisation, corresponding adjustments
@@ -494,6 +498,100 @@ were cancelled or never issued, because the code cannot see that registry.
 
 `claim_register.json` ships in the evidence pack — it is the page a buyer's
 counsel reads before signing and the one a CORSIA auditor asks for.
+
+## Agroforestry: count the trees, do not infer them
+
+The pathway the project leads with, and the one where the instrument choice
+changes the answer by more than any deduction does.
+
+`VM0047` ships two approaches and they are not interchangeable. The
+**area-based** approach reads a stocking index off the canopy. It works over a
+contiguous block. It fails completely over the planting most smallholder
+agroforestry actually is: a line of trees on a paddy bund is narrower than a
+10 m Sentinel-2 pixel, and an index that returns near zero over a thriving
+bund line is not a conservative estimate, it is a wrong one. So the
+**census-based** approach counts.
+
+```bash
+carbonstack trees species                                  # the allometry catalogue
+carbonstack trees ingest KE-NYR-01 field.csv --actor lalit # one row per measured stem
+carbonstack trees survival KE-NYR-01                       # what is credited, and why less
+carbonstack trees quantify KE-NYR-01 --year 2027 --actor lalit
+carbonstack trees status KE-NYR-01
+```
+
+### Planted is not established
+
+A survival rate asserted from the planting record is the easiest thing in an
+ARR project for a verifier to reject. Survival here is a sample with an
+interval, and the **lower bound** is what gets credited:
+
+```
+plot            visited       planted  sampled  alive    rate  credited
+KE-NYR-01-P1    2027-11-20        340       40     35     88%       269
+```
+
+269, not 298. The point estimate would claim thirty trees the surveyor did not
+find. The binomial standard error carries a finite population correction, so a
+census of every stem is charged no sampling error at all — the deduction
+tracks uncertainty that was actually incurred. Below **70% survival** a plot is
+excluded from the vintage and flagged for replanting rather than credited at a
+reduced rate: a failing planting needs replacing, not a smaller cheque.
+
+### Three error sources, added in quadrature
+
+Stem sampling error (forty stems standing for three hundred), allometric error,
+and survival sampling error are independent, so they combine in quadrature
+rather than summing — and all three reach the uncertainty deduction instead of
+a footnote. Chave et al. (2014) pantropical form is implemented because a
+verifier recognises it:
+
+```
+AGB(kg) = 0.0673 × (ρ · D² · H)^0.976
+```
+
+alongside per-species power laws on diameter or height alone. Height-only is
+deliberately the weakest and widest: measuring from the air is cheaper, and the
+methodology charges for it. Every species in the catalogue is a placeholder
+until a local fit replaces it, and `is_locally_calibrated` says so in the CLI,
+the API and the evidence pack. The allometry is **stored with the
+measurements**, so a local fit that lands next year cannot silently restate
+last year's inventory at a new number.
+
+### The two instruments disagree by 5x, and that is the finding
+
+Gatugi is shade coffee, so the upper canopy really is the shade trees and both
+approaches are legitimate there. Running both over the same trees is the only
+honest way to show what the census costs:
+
+| Vintage | Area-based tCO2e | Census tCO2e |
+|---|---|---|
+| 2029 | 47.6 | 6.7 |
+| 2030 | 54.8 | 10.0 |
+| 2031 | 57.2 | 11.4 |
+
+The area-based path credits about **5.4x** what the census does. Its stand fit
+assumes a closed canopy; at 100 stems/ha this block does not have one, so
+canopy height is reading coffee and gaps as forest. The census is the floor,
+and the economics on this site — which run off the area-based path — are
+optimistic by roughly that factor. The dashboard states this on the page
+rather than in a footnote, because a number nobody reconciled is how a project
+gets to validation before finding out.
+
+### What the census pathway refuses
+
+* Crediting the survival point estimate instead of the lower bound.
+* Issuing against an unvetted performance benchmark. A benchmark nobody vetted
+  turns every project into a high performer.
+* Crediting a plot that has no census. A census credits what was counted; a
+  plot without one contributes nothing rather than inheriting a neighbour's
+  average.
+* Storing a survival survey with no surveyor, for the same reason a soil core
+  with no lab reference is refused — an unattributable measurement is not
+  evidence, and storing it invites it into a claim later.
+
+`tree_inventory.csv` ships in the evidence pack: who walked the plot, how many
+stems they checked, which equation priced them, and what the uncertainty was.
 
 ## What is deliberately not real yet
 

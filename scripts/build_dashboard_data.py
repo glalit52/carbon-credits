@@ -22,6 +22,9 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "model"))
 
 from carbonstack import evidence, ledger, methodology, payments  # noqa: E402
+from carbonstack.agroforestry import (                     # noqa: E402
+    CensusInventory, StemMeasurement, SurvivalSurvey,
+)
 from carbonstack.biomass import co2e_per_ha                # noqa: E402
 from carbonstack.domain import TrackKind                   # noqa: E402
 from carbonstack.feed import (                             # noqa: E402
@@ -203,6 +206,7 @@ def coffee_block() -> dict:
         "readings": [r.to_dict() for r in readings],
         "standing_stock": stock,
         "vintages": vintages,
+        "census": census_block(site, project, vintages),
         "_results": results,
         "_project": project,
         "methodology": {
@@ -213,6 +217,152 @@ def coffee_block() -> dict:
                      "benchmark. Both the benchmark and the allometric "
                      "equation are placeholders."),
         },
+    }
+
+
+# The shade-tree census. Gatugi is a shade-coffee block, so the upper canopy
+# is the shade trees and the area-based path can read it. Most of the
+# agroforestry pipeline is not like that -- trees on a paddy bund are a line of
+# stems narrower than a Sentinel-2 pixel, and an index that returns near zero
+# over a thriving planting is not conservative, it is wrong. Running both
+# instruments over the one site where both are legitimate is the only way to
+# show what the census costs and what it buys.
+SHADE_STEMS_PER_HA = 100          # typical Nyeri shade-coffee stocking
+CENSUS_SAMPLE = 40                # stems measured per visit
+HEIGHT_TO_DBH = 2.0               # cm of diameter per metre of height
+FIRST_CENSUS_YEAR = 2026
+
+# A deterministic spread standing in for the variation a field crew measures.
+# Fixed rather than random so a rebuild reproduces the committed page exactly.
+SPREAD = [1 + (i - (CENSUS_SAMPLE - 1) / 2) * 0.009 for i in range(CENSUS_SAMPLE)]
+
+
+def _census_visit(site, provider, year: int, stems_planted: int):
+    """One annual census, derived from the same feed the area path reads.
+
+    Both instruments see the same trees. Deriving the census from the canopy
+    series rather than inventing a second dataset is what makes the comparison
+    honest: where they differ, the difference is the instrument.
+    """
+    on = date(year, 11, 20)
+    reading = provider._nearest(on, "canopy_height_m")
+    if reading is None or reading.canopy_height_m is None:
+        return None
+    height = reading.canopy_height_m
+    dbh = height * HEIGHT_TO_DBH
+
+    # Mortality is front-loaded: establishment losses, then attrition.
+    survival = max(0.80, 0.93 - 0.015 * (year - FIRST_CENSUS_YEAR))
+    alive = round(CENSUS_SAMPLE * survival)
+
+    return CensusInventory(
+        plot_id=f"{site.id}-P1", measured_on=on,
+        survival=SurvivalSurvey(
+            plot_id=f"{site.id}-P1", surveyed_on=on,
+            stems_planted=stems_planted, stems_sampled=CENSUS_SAMPLE,
+            stems_alive=alive, surveyor="field crew, Gatugi"),
+        sample=[StemMeasurement("grevillea_robusta",
+                                dbh_cm=round(dbh * f, 2),
+                                height_m=round(height * f, 2))
+                for f in SPREAD])
+
+
+def census_block(site, project, area_vintages: list[dict]) -> dict:
+    """Run the census-based approach beside the area-based one."""
+    stems = int(round(site.area_ha * SHADE_STEMS_PER_HA))
+    readings = series(site, site.enrolled_on, PROJECTION_END, stumping_year=2026)
+    provider = FeedProvider(readings)
+    pathway = methodology.census_pathway()
+
+    visits: dict[int, CensusInventory] = {}
+    for year in range(FIRST_CENSUS_YEAR, PROJECTION_END.year + 1):
+        visit = _census_visit(site, provider, year, stems)
+        if visit is not None:
+            visits[year] = visit
+
+    rows = []
+    vintages = []
+    for year, inventory in sorted(visits.items()):
+        survey = inventory.survival
+        stock, relative = inventory.stock()
+        rows.append({
+            "year": year,
+            "measured_on": inventory.measured_on.isoformat(),
+            "mean_dbh_cm": round(sum(m.dbh_cm for m in inventory.sample)
+                                 / len(inventory.sample), 2),
+            "mean_height_m": round(sum(m.height_m for m in inventory.sample)
+                                   / len(inventory.sample), 2),
+            "survival_rate": round(survey.survival_rate, 4),
+            "survival_lower_bound": round(survey.survival_lower_bound(), 4),
+            "stems_credited": survey.surviving_stems,
+            "stock_tco2e": round(stock, 3),
+            "relative_uncertainty": round(relative, 4),
+            "complete": inventory.measured_on <= TODAY,
+        })
+
+        prior = visits.get(year - 1)
+        result = pathway.quantify(
+            project, inventories={inventory.plot_id: inventory},
+            prior_inventories=({prior.plot_id: prior} if prior else None),
+            reporting_year=year)
+        payload = result.to_dict()
+        payload["complete"] = date(year, 12, 31) <= TODAY
+        vintages.append(payload)
+
+    by_year = {v["year"]: v for v in vintages}
+    comparison = [{
+        "year": v["year"],
+        "area_based_net_t": round(v["net_t"], 3),
+        "census_net_t": round(by_year[v["year"]]["net_t"], 3)
+        if v["year"] in by_year else None,
+    } for v in area_vintages if v["year"] in by_year]
+
+    # The two instruments disagree, and by how much is the finding. The
+    # area-based path reads a canopy-height stand fit that assumes a closed
+    # canopy; a shade-coffee block at 100 stems/ha does not have one, so it
+    # attributes forest biomass to ground that is mostly coffee. The census
+    # counts what is there. Where they diverge the census is the floor, and
+    # the committed economics -- which run off the area-based path -- are
+    # optimistic by roughly this ratio.
+    settled = [c for c in comparison if c["census_net_t"]]
+    ratio = (sum(c["area_based_net_t"] for c in settled)
+             / sum(c["census_net_t"] for c in settled)) if settled else None
+
+    return {
+        "approach": "VM0047 v1.1, census-based",
+        "instrument_gap": {
+            "ratio": round(ratio, 2) if ratio else None,
+            "finding": ("The area-based path credits about "
+                        f"{ratio:.1f}x what the census does over the same "
+                        "trees. Its stand fit assumes a closed canopy; at "
+                        f"{SHADE_STEMS_PER_HA} stems/ha this block does not "
+                        "have one, so canopy height is reading coffee and "
+                        "gaps as forest. The census is the floor, and the "
+                        "economics on this site are optimistic by roughly "
+                        "that factor." if ratio else ""),
+        },
+        "stems_planted": stems,
+        "stems_per_ha": SHADE_STEMS_PER_HA,
+        "sample_size": CENSUS_SAMPLE,
+        "allometry": "Chave et al. (2014) pantropical, generic wood density",
+        "locally_calibrated": False,
+        "benchmark_vetted": pathway.benchmark.is_vetted,
+        "visits": rows,
+        "vintages": vintages,
+        "comparison": comparison,
+        "note": ("Both instruments read the same trees. The area-based path "
+                 "reads a stocking index off the canopy; the census counts "
+                 "stems, measures a sample and credits the lower bound of the "
+                 "survival survey. Only one of them works on a bund line, "
+                 "which is most of the agroforestry pipeline."),
+        "caveats": [
+            "Survival and stem measurements are derived from the simulated "
+            "canopy series, not from a field crew.",
+            "The allometric equation is generic: a local fit is worth roughly "
+            "a quarter of the deduction.",
+            "The performance benchmark is a placeholder and no issuance may "
+            "rest on it.",
+        ],
     }
 
 

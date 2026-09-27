@@ -42,6 +42,7 @@ def build(store: Store, project_id: str, out_dir: str | Path) -> Path:
     pay_rows = payments.register(store, project_id=project_id)
     stack_report = stacking.audit(store, project_id)
     claims = article6.claim_register(store, project_id)
+    inventories = store.tree_inventories(project_id)
     intact, bad = store.verify_chain()
 
     # -- plot register -----------------------------------------------------
@@ -138,6 +139,37 @@ def build(store: Store, project_id: str, out_dir: str | Path) -> Path:
                ["id", "vintage_id", "farmer_id", "credits", "amount", "currency",
                 "status", "due_on", "paid_on", "reference"])
 
+    # Tree census. A census credits stems, so the register of what was
+    # counted, by whom, and on which equation is the claim's evidence -- the
+    # forestry equivalent of the lab reference on a soil core.
+    inventory_rows = []
+    for plot_id, inv in sorted(inventories.items()):
+        survey = inv.survival
+        stock, relative = inv.stock()
+        inventory_rows.append({
+            "plot_id": plot_id,
+            "measured_on": inv.measured_on.isoformat(),
+            "surveyed_on": survey.surveyed_on.isoformat(),
+            "surveyor": survey.surveyor,
+            "stems_planted": survey.stems_planted,
+            "stems_sampled": survey.stems_sampled,
+            "stems_alive": survey.stems_alive,
+            "survival_rate": round(survey.survival_rate, 4),
+            "survival_lower_bound": round(survey.survival_lower_bound(), 4),
+            "stems_credited": survey.surviving_stems,
+            "stems_measured": len(inv.sample),
+            "species": "; ".join(sorted({m.species_key for m in inv.sample})),
+            "allometry": "local fit" if inv.uses_local_allometry else "generic",
+            "mean_kgco2e_per_stem": round(inv.mean_co2e_per_stem_kg, 3),
+            "stock_tco2e": round(stock, 4),
+            "relative_uncertainty": round(relative, 4),
+            "needs_replanting": "yes" if survey.needs_replanting else "no",
+        })
+    _write_csv(out / "tree_inventory.csv", inventory_rows,
+               list(inventory_rows[0].keys()) if inventory_rows
+               else ["plot_id", "measured_on", "surveyor", "stems_planted",
+                     "stems_credited", "stock_tco2e"])
+
     # Stacking. "Zero hectares claimed twice" is a claim a verifier wants
     # evidence for, not a promise, so the audit ships with the pack.
     (out / "stacking_audit.json").write_text(
@@ -197,6 +229,19 @@ def build(store: Store, project_id: str, out_dir: str | Path) -> Path:
             "stacked_ha": stack_report["stacked_ha"],
             "clean": stack_report["clean"],
             "conflicts": len(stack_report["conflicts"]),
+        },
+        "trees": {
+            "plots_inventoried": len(inventories),
+            "stems_planted": sum(i.survival.stems_planted
+                                 for i in inventories.values()),
+            "stems_credited": sum(i.survival.surviving_stems
+                                  for i in inventories.values()),
+            "standing_stock_tco2e": round(
+                sum(i.stock()[0] for i in inventories.values()), 4),
+            "plots_below_survival_floor": sum(
+                1 for i in inventories.values() if i.survival.needs_replanting),
+            "plots_on_generic_allometry": sum(
+                1 for i in inventories.values() if not i.uses_local_allometry),
         },
         "area": {
             "enrolled_ha": round(project.area_ha, 4),
