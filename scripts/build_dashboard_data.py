@@ -22,7 +22,7 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "model"))
 
 from carbonstack import (                                  # noqa: E402
-    evidence, ledger, methodology, payments, pipeline,
+    evidence, forecast, ledger, methodology, payments, pipeline,
 )
 from carbonstack.agroforestry import (                     # noqa: E402
     CensusInventory, StemMeasurement, SurvivalSurvey,
@@ -584,6 +584,52 @@ def economics(blocks: list[dict]) -> dict:
     }
 
 
+def forecast_block(block: dict) -> dict:
+    """What this site could safely promise, and what aggregation would buy.
+
+    The page already shows a credit curve. A curve is a projection, and
+    nobody sells a projection -- they sell a contract, and a contract needs
+    the volume the project clears in nine futures out of ten. On a
+    single-plot pilot those two numbers are nothing like each other, and
+    the gap is the case for aggregating smallholders.
+    """
+    site = block["site"]
+    projections = forecast.from_vintages(block["vintages"],
+                                         track=site["track"])
+    if not projections:
+        return {}
+
+    risk = forecast.RiskModel()          # one plot, one farmer, one unit
+    f = forecast.run(projections, project_id=site["id"], risk=risk,
+                     trials=2500)
+    curve = forecast.aggregation_curve(projections, risk=risk, trials=800)
+
+    # The offtake a buyer would plausibly ask for: the project's own
+    # projection. Showing that it does not clear is the point.
+    offtake = forecast.assess_offtake(
+        f, projections, committed_t=f.projected_total_t,
+        replacement_price=PRICE[site["track"]] * 1.75, risk=risk)
+
+    return {
+        **f.to_dict(),
+        "aggregation": curve,
+        "offtake_at_projection": offtake.to_dict(),
+        "note": ("Delivery is simulated against the risks that actually "
+                 "stop a credit arriving -- a farmer leaving, a season not "
+                 "practised, a planting failing, a verification slipping -- "
+                 "not just measurement error. The safe volume is the level "
+                 "cleared in nine futures out of ten, and it is what may be "
+                 "sold forward."),
+        "caveats": [
+            "Attrition, lapse and verification rates are placeholders until "
+            "the portfolio has its own history.",
+            "A single plot is one independently-failing unit, which is why "
+            "the haircut is so large; the aggregation curve shows what that "
+            "costs.",
+        ],
+    }
+
+
 def govern(blocks: list[dict]) -> dict:
     """Run the real lifecycle into a real database, and report what happened.
 
@@ -683,6 +729,8 @@ def main() -> int:
     coffee = coffee_block()
 
     governance = govern([rice, coffee])
+    for block in (rice, coffee):
+        block["forecast"] = forecast_block(block)
     for block in (rice, coffee):
         block.pop("_results", None)
         block.pop("_project", None)

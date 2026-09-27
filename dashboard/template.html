@@ -1232,6 +1232,134 @@
       panel.appendChild(figC);
     }
 
+    // --- forward delivery ----------------------------------------------
+    // The curve above is a projection. Nobody sells a projection: they sell
+    // a contract, and a contract needs the volume the project clears in
+    // nine futures out of ten.
+    if (block.forecast && block.forecast.years) {
+      var fc = block.forecast;
+      var figF = el("figure");
+      var topF = el("div", "figtop");
+      topF.appendChild(el("h3", null, "What could actually be promised"));
+      topF.appendChild(el("span", "note",
+        fc.trials.toLocaleString() + " simulated portfolios · " +
+        (fc.confidence * 100).toFixed(0) + "% confidence"));
+      figF.appendChild(topF);
+
+      var pF = el("p", "empty");
+      pF.textContent = fc.note;
+      figF.appendChild(pF);
+
+      var gridF = el("div", "ledger-grid");
+      function fcell(k, v, sTxt, cls) {
+        var n = el("div");
+        n.appendChild(el("span", "k", k));
+        n.appendChild(el("span", "v", v));
+        n.appendChild(el("span", "s", sTxt));
+        gridF.appendChild(n);
+      }
+      fcell("Projected", num(fc.projected_total_t, 1) + " tCO2e",
+            "the engine's point estimate over the horizon");
+      fcell("Median delivery", num(fc.p50_total_t, 1) + " tCO2e",
+            "half of futures land above this");
+      fcell("Safe to sell", num(fc.safe_total_t, 1) + " tCO2e",
+            "a " + (fc.portfolio_haircut * 100).toFixed(0) +
+            "% haircut on the projection");
+      if (fc.dominant_risk) {
+        fcell("Biggest risk", fc.dominant_risk.risk,
+              "worth " + num(fc.dominant_risk.safe_volume_cost_t, 1) +
+              " tCO2e of safe volume if eliminated");
+      }
+      figF.appendChild(gridF);
+
+      var scrollF = el("div", "tscroll");
+      var tableF = el("table");
+      var theadF = el("thead"), hrF = el("tr");
+      ["Vintage", "Projected", "P10", "P50", "P90", "Safe", "Haircut"]
+        .forEach(function (h) { hrF.appendChild(el("th", null, h)); });
+      theadF.appendChild(hrF);
+      tableF.appendChild(theadF);
+      var tbodyF = el("tbody");
+      var horizonF = NOW.getFullYear() + 6;
+      var shownF = fc.years.filter(function (y) { return y.year <= horizonF; });
+      shownF.forEach(function (y) {
+        var tr = el("tr");
+        if (y.safe_t <= 0) tr.className = "projected";
+        tr.appendChild(el("td", null, String(y.year)));
+        tr.appendChild(el("td", null, num(y.projected_t, 1)));
+        tr.appendChild(el("td", "ded", num(y.p10, 1)));
+        tr.appendChild(el("td", null, num(y.p50, 1)));
+        tr.appendChild(el("td", "ded", num(y.p90, 1)));
+        tr.appendChild(el("td", "net", num(y.safe_t, 1)));
+        tr.appendChild(el("td", "ded", (y.haircut * 100).toFixed(0) + "%"));
+        tbodyF.appendChild(tr);
+      });
+      tableF.appendChild(tbodyF);
+      scrollF.appendChild(tableF);
+      figF.appendChild(scrollF);
+      if (fc.years.length > shownF.length) {
+        var moreF = el("div", "covnote");
+        moreF.innerHTML = "<span>" + (fc.years.length - shownF.length) +
+          " further vintage(s) to " + fc.years[fc.years.length - 1].year +
+          " are in the totals but not the table</span>";
+        figF.appendChild(moreF);
+      }
+
+      (fc.warnings || []).forEach(function (w) {
+        var n = el("p", "empty");
+        n.textContent = w;
+        figF.appendChild(n);
+      });
+
+      if (fc.aggregation && fc.aggregation.length) {
+        var topA = el("div", "figtop");
+        topA.appendChild(el("h3", null, "What aggregation buys"));
+        topA.appendChild(el("span", "note",
+          "safe volume against the number of independently-failing units"));
+        figF.appendChild(topA);
+
+        var scrollA = el("div", "tscroll");
+        var tableA = el("table");
+        var theadA = el("thead"), hrA = el("tr");
+        ["Farmers", "Safe tCO2e", "Haircut", "Gain over previous"]
+          .forEach(function (h) { hrA.appendChild(el("th", null, h)); });
+        theadA.appendChild(hrA);
+        tableA.appendChild(theadA);
+        var tbodyA = el("tbody");
+        fc.aggregation.forEach(function (r) {
+          var tr = el("tr");
+          tr.appendChild(el("td", null, r.units.toLocaleString()));
+          tr.appendChild(el("td", "net", num(r.safe_t, 1)));
+          tr.appendChild(el("td", "ded", (r.haircut * 100).toFixed(0) + "%"));
+          tr.appendChild(el("td", null, r.gain_over_previous_t == null ? "—"
+            : (r.gain_over_previous_t > 0 ? "+" : "") +
+              num(r.gain_over_previous_t, 1)));
+          tbodyA.appendChild(tr);
+        });
+        tableA.appendChild(tbodyA);
+        scrollA.appendChild(tableA);
+        figF.appendChild(scrollA);
+      }
+
+      if (fc.offtake_at_projection) {
+        var off = fc.offtake_at_projection;
+        var pOff = el("p", "empty");
+        pOff.textContent = "Selling the projection itself — " +
+          num(off.committed_t, 0) + " tCO2e — delivers in " +
+          (off.delivery_probability * 100).toFixed(0) +
+          "% of futures, with an expected shortfall of " +
+          num(off.expected_shortfall_t, 1) + " tCO2e costing " +
+          money(off.expected_cover_cost, 0) + " to cover at " +
+          money(off.replacement_price, 0) + "/t. " + off.verdict;
+        figF.appendChild(pOff);
+      }
+
+      var capF = el("div", "covnote");
+      capF.innerHTML = "<span>" + fc.caveats.join(" &middot; ") + "</span>";
+      figF.appendChild(capF);
+      panel.appendChild(figF);
+    }
+
     // --- ledger ---
     var gov = (DATA.governance && DATA.governance.sites &&
                DATA.governance.sites[site.id]) || null;

@@ -112,6 +112,7 @@ carbonstack/
   sites.py          the two pilot sites — real places, real climatology
   feed.py           simulated monitoring on the real 5-day revisit cadence
   sar.py            Sentinel-1 backscatter, water-regime detection, scoring
+  forecast.py       forward delivery, safe forward volume, offtake risk
   methodology/      VM0051 (rice), VM0047 (ARR, area-based + census), VM0042 (cropland + soil)
   agroforestry.py   species allometry, survival surveys, census inventory
   stacking.py       pillar claims per plot, and the double-counting engine
@@ -712,9 +713,104 @@ other measurement, and `water_regime.csv` in the evidence pack rebuilds every
 call from the database alone — if the stored observations cannot reproduce the
 call, the call is not evidence.
 
+## Forward delivery: what can actually be promised
+
+Everything above answers *how many credits does this vintage carry* — a
+backward-looking question about evidence already gathered. A developer has to
+answer a forward-looking one, and it is the question the business turns on:
+**how much can we sell forward without having to buy our way out of it?**
+
+```bash
+carbonstack forecast gatugi --through 2034 --units 40
+carbonstack forecast gatugi --aggregation
+carbonstack forecast gatugi --offtake 200 --replacement-price 45
+```
+
+### The point estimate is not the promise
+
+A vintage's `net_t` already has an uncertainty deduction taken. A forward
+commitment is a promise against a future the project does not control, and
+the ways it goes wrong are not measurement error:
+
+* **A farmer leaves.** Contracts lapse, land changes hands. Modelled as a
+  survival process, not a per-year coin flip — once they are gone they are
+  gone for every later vintage, and modelling it independently per year is
+  the easiest way to understate attrition.
+* **A season lapses.** The practice is not followed — and the product now
+  *detects* that rather than assuming it away.
+* **A planting fails.** Survival drops under the floor and the plot is
+  excluded rather than credited down.
+* **Verification slips.** The commonest cause of a missed offtake is not
+  that the carbon was absent, it is that the paperwork arrived in March.
+  That is a *timing* risk; modelling it as volume hides it, so slipped
+  credits land in the following year instead of vanishing.
+
+Selling the point estimate forward is the mistake the module exists to
+prevent: at P50 you miss half the time, and covering a shortfall means
+buying replacement credits at spot — into a market that is tight precisely
+when everyone's projects underdelivered for the same reason. So the headline
+output is `safe_forward_volume`, the level cleared in nine futures out of
+ten, read off the **lower** tail.
+
+### One farmer is not a portfolio
+
+The single most useful number the model produces is what aggregation buys.
+Gatugi projects 428 tCO2e to 2040. What it can promise:
+
+| Farmers | Safe tCO2e | Haircut | Gain |
+|---|---|---|---|
+| 1 | 34.3 | 92% | — |
+| 5 | 169.8 | 60% | +135.5 |
+| 25 | 211.3 | 51% | +41.5 |
+| 100 | 221.7 | 48% | +10.4 |
+| 2,000 | 225.4 | 47% | +4.4 |
+
+The curve rises steeply and then flattens hard. Past roughly 25 units,
+attrition and crop failure have diversified away, and what remains —
+verification timing, measurement error — is programme-level and does not
+care how many farmers there are. **That flattening point is where
+aggregation stops buying risk reduction and starts only buying volume**,
+and it is a number a developer can plan a cohort around rather than a
+slogan about scale.
+
+### Sell the horizon, not the year
+
+At 90% confidence, no single Gatugi vintage clears anything on its own while
+the horizon as a whole clears 31 t (at one farmer) or 211 t (at 25). That is
+not a carbon problem, it is a contract problem: a slipped verification is
+only a miss when the contract names a single December. The forecast says so
+in words rather than leaving a column of zeros to interpret.
+
+### Testing a contract before signing it
+
+```
+offtake of 200 tCO2e
+  delivers in                 79% of futures
+  expected shortfall           4.4 tCO2e
+  worst case                 109.4 tCO2e
+  expected cover cost   $      198 at $45/t replacement
+  under-collateralised: delivers in only 79% of futures; budget the cover
+  cost or cut the volume to 182 t
+```
+
+Both blocks above are the same run: Gatugi to 2034 across 40 farmers,
+projecting 373.8 tCO2e of which 182.1 is safe to promise. The sensitivity is
+one-at-a-time, so the answer to *what should we fix first* is a number
+rather than an opinion — there, farmer retention is worth 102.1 tCO2e of
+safe volume and everything else put together is worth 32.9.
+
+The aggregation table above uses the dashboard's longer horizon (to 2040),
+which is why its totals are larger. Horizon, unit count and confidence all
+move the answer, and none of them has a default that is right for every
+portfolio, so all three are arguments.
+
+The simulation is seeded and reproducible: a number in a term sheet has to
+be rebuildable months later, by someone else, from the committed inputs.
+The dashboard freshness check enforces exactly that.
+
 ## What is deliberately not real yet
 
-Four placeholders are marked in the source and must be replaced before any
+Five placeholders are marked in the source and must be replaced before any
 issuance. They are project milestones, not refinements:
 
 1. **The allometric equation.** A generic stand fit at 25% error. Replace with
@@ -733,6 +829,10 @@ issuance. They are project milestones, not refinements:
 4. **Detector validation.** The 96% accuracy above is against a simulation.
    Real validation needs field water-level loggers on a sample of plots,
    which is what VM0051 expects and what that number stands in for.
+5. **Delivery risk rates.** Attrition, practice lapse, planting failure and
+   verification slip are placeholders. They are the inputs a developer
+   should argue about with their own portfolio history, which is why they
+   are parameters rather than constants buried in the arithmetic.
 
 Emission factors for cropland practices are likewise conservative placeholders
 carrying Tier 1 uncertainty, which the engine already charges for.

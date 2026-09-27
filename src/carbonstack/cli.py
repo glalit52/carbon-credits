@@ -27,8 +27,8 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from . import (
-    article6, evidence, ledger, methodology, payments, pipeline, scenario,
-    serialize, sites, stacking,
+    article6, evidence, forecast, ledger, methodology, payments, pipeline,
+    scenario, serialize, sites, stacking,
 )
 from .agroforestry import (
     SPECIES, CensusInventory, StemMeasurement, SurvivalSurvey,
@@ -162,6 +162,46 @@ def cmd_monitor(args) -> int:
     return 0
 
 
+def _methodology_for(site, methodology_id: str, readings, year: int, *,
+                     tier: int = 1, jurisdiction: str = "",
+                     awd_penetration: float = 0.04,
+                     benchmark: float = 0.6):
+    """Build the methodology for one site-year, with its measured factors.
+
+    Extracted so `quantify` and `forecast` cannot drift: a projection that
+    used a different emission factor from the one the vintage will be
+    quantified with is not a projection of anything.
+    """
+    if methodology_id == "VM0051":
+        ss = [s for s in summarise_seasons(readings) if s.year == year]
+        if not ss:
+            raise SystemExit(f"no seasons found for {year}")
+        baseline = sum(s.baseline_ch4_kg_ha for s in ss) / max(len(ss), 1)
+        project_ch4 = sum(s.project_ch4_kg_ha for s in ss) / max(len(ss), 1)
+        factor = RiceEmissionFactor(
+            baseline_ch4_kg_ha_season=baseline,
+            project_ch4_kg_ha_season=project_ch4,
+            seasons_per_year=len(ss), tier=tier,
+            source=(f"measured from {sum(s.revisits for s in ss)} "
+                    f"revisits across {len(ss)} season(s)"))
+        return methodology.get(
+            "VM0051", factors={"awd": factor},
+            common_practice=CommonPractice(
+                jurisdiction=jurisdiction or site.admin,
+                awd_penetration=awd_penetration))
+    if methodology_id == "VM0042":
+        ss = [s for s in summarise_seasons(readings) if s.year == year]
+        if not ss:
+            raise SystemExit(f"no seasons found for {year}")
+        return methodology.get("VM0042", factors={"awd": EmissionFactor(
+            practice="awd",
+            t_co2e_per_ha_yr=sum(s.abatement_tco2e_ha for s in ss),
+            tier=tier,
+            source=f"measured from {sum(s.revisits for s in ss)} revisits")})
+    return methodology.get(
+        "VM0047", benchmark=PerformanceBenchmark(t_co2e_per_ha_yr=benchmark))
+
+
 def cmd_quantify(args) -> int:
     with _store(args) as store:
         meta = store.project_meta(args.project_id)
@@ -175,24 +215,12 @@ def cmd_quantify(args) -> int:
 
         if site is not None:
             provider, readings = _feed_provider(site, max(end, date.today()))
+            meth = _methodology_for(
+                site, meta["methodology_id"], readings, args.year,
+                tier=args.tier, jurisdiction=args.jurisdiction or "",
+                awd_penetration=args.awd_penetration,
+                benchmark=args.benchmark)
             if meta["methodology_id"] == "VM0051":
-                ss = [s for s in summarise_seasons(readings) if s.year == args.year]
-                if not ss:
-                    raise SystemExit(f"no seasons found for {args.year}")
-                baseline = sum(s.baseline_ch4_kg_ha for s in ss) / max(len(ss), 1)
-                project_ch4 = sum(s.project_ch4_kg_ha for s in ss) / max(len(ss), 1)
-                factor = RiceEmissionFactor(
-                    baseline_ch4_kg_ha_season=baseline,
-                    project_ch4_kg_ha_season=project_ch4,
-                    seasons_per_year=len(ss),
-                    tier=args.tier,
-                    source=(f"measured from {sum(s.revisits for s in ss)} "
-                            f"revisits across {len(ss)} season(s)"))
-                meth = methodology.get(
-                    "VM0051", factors={"awd": factor},
-                    common_practice=CommonPractice(
-                        jurisdiction=args.jurisdiction or site.admin,
-                        awd_penetration=args.awd_penetration))
                 # A season that wraps the new year is not over on 31
                 # December, and quantifying it early reads a partial season
                 # as a weak one. Say which, rather than letting the
@@ -201,20 +229,6 @@ def cmd_quantify(args) -> int:
                 open_seasons = [
                     s_.name for s_ in site.seasons
                     if s_.closes_in(args.year) > window_end]
-            elif meta["methodology_id"] == "VM0042":
-                ss = [s for s in summarise_seasons(readings) if s.year == args.year]
-                if not ss:
-                    raise SystemExit(f"no seasons found for {args.year}")
-                factor = EmissionFactor(
-                    practice="awd",
-                    t_co2e_per_ha_yr=sum(s.abatement_tco2e_ha for s in ss),
-                    tier=args.tier,
-                    source=f"measured from {sum(s.revisits for s in ss)} revisits")
-                meth = methodology.get("VM0042", factors={"awd": factor})
-            else:
-                meth = methodology.get(
-                    "VM0047",
-                    benchmark=PerformanceBenchmark(t_co2e_per_ha_yr=args.benchmark))
         else:
             provider = SyntheticProvider(planting_year=
                                          date.fromisoformat(meta["start_date"]).year)
@@ -643,6 +657,106 @@ def _soil_status(store, args) -> int:
 FIELD_COLUMNS = ("plot_id", "measured_on", "surveyed_on", "surveyor",
                  "stems_planted", "stems_sampled", "stems_alive",
                  "species_key")
+
+
+def _project_forward(site, methodology_id: str, through: int, *,
+                     benchmark: float = 0.6) -> list:
+    """Run the engine for every year to the horizon, without recording.
+
+    A forecast is a projection of vintages that do not exist yet, so this
+    quantifies them in memory. Nothing is written: a draft vintage for 2034
+    would sit in the review queue forever.
+    """
+    project = sites.as_project(site)
+    end = date(through, 12, 31)
+    provider, readings = _feed_provider(site, end)
+    settled_through = date.today().year - 1
+
+    out = []
+    for year in range(site.enrolled_on.year, through + 1):
+        try:
+            meth = _methodology_for(site, methodology_id, readings, year,
+                                    benchmark=benchmark)
+        except SystemExit:
+            continue                       # no season that year
+        result = meth.quantify(project, provider, year)
+        if result.net_t <= 0 and year < settled_through:
+            continue
+        out.append(forecast.VintageProjection(
+            year=year, net_t=result.net_t,
+            relative_uncertainty=result.relative_uncertainty,
+            track=site.track.value,
+            settled=year <= settled_through))
+    return out
+
+
+def cmd_forecast(args) -> int:
+    """What can be promised, as opposed to what is projected."""
+    site = _site(args.site)
+    methodology_id = {"rice": "VM0051", "cropland": "VM0042"}.get(
+        site.track.value, "VM0047")
+    projections = _project_forward(site, methodology_id, args.through)
+    if not projections:
+        raise SystemExit(f"nothing to forecast for {site.id}")
+
+    risk = forecast.RiskModel(enrolled_units=args.units)
+    f = forecast.run(projections, project_id=site.id, risk=risk,
+                     trials=args.trials, confidence=args.confidence)
+
+    print(f"{site.id} forward delivery to {args.through}")
+    print(f"  {args.trials:,} simulated portfolios · {args.units:,} "
+          f"independently-failing unit(s) · {args.confidence:.0%} confidence")
+    print()
+    print(f"  {'vintage':<10}{'projected':>11}{'P10':>9}{'P50':>9}{'P90':>9}"
+          f"{'safe':>9}{'haircut':>9}")
+    for y in f.years:
+        print(f"  {y.year:<10}{y.projected_t:>11,.1f}{y.p10:>9,.1f}"
+              f"{y.p50:>9,.1f}{y.p90:>9,.1f}{y.safe_t:>9,.1f}"
+              f"{y.haircut:>8.0%}")
+    print(f"  {'-' * 66}")
+    print(f"  {'total':<10}{f.projected_total_t:>11,.1f}"
+          f"{'':>9}{f.p50_total_t:>9,.1f}{'':>9}{f.safe_total_t:>9,.1f}"
+          f"{f.portfolio_haircut:>8.0%}")
+    print()
+    print(f"  safe to sell forward   {f.safe_total_t:>10,.1f} tCO2e")
+    print(f"  against a projection of {f.projected_total_t:>9,.1f} tCO2e")
+
+    if f.sensitivity:
+        print()
+        print("  what each risk costs in safe volume:")
+        for name, without in sorted(f.sensitivity.items(),
+                                    key=lambda kv: -kv[1]):
+            print(f"    {name:<26}{without - f.safe_total_t:>9,.1f} tCO2e")
+
+    for w in f.warnings:
+        print(f"\n  ! {w}")
+
+    if args.aggregation:
+        print()
+        print("  how many units before an offtake is signable:")
+        print(f"    {'units':>8}{'safe tCO2e':>13}{'haircut':>10}{'gain':>10}")
+        for row in forecast.aggregation_curve(
+                projections, risk=risk, confidence=args.confidence,
+                trials=max(500, args.trials // 3)):
+            gain = row["gain_over_previous_t"]
+            print(f"    {row['units']:>8,}{row['safe_t']:>13,.1f}"
+                  f"{row['haircut']:>9.0%}"
+                  f"{('—' if gain is None else f'{gain:+,.1f}'):>10}")
+
+    if args.offtake:
+        print()
+        a = forecast.assess_offtake(
+            f, projections, committed_t=args.offtake,
+            replacement_price=args.replacement_price, risk=risk)
+        print(f"  offtake of {a.committed_t:,.0f} tCO2e")
+        print(f"    delivers in           {a.delivery_probability:>8.0%} "
+              f"of futures")
+        print(f"    expected shortfall    {a.expected_shortfall_t:>8,.1f} tCO2e")
+        print(f"    worst case            {a.worst_case_shortfall_t:>8,.1f} tCO2e")
+        print(f"    expected cover cost   ${a.expected_cover_cost:>8,.0f} "
+              f"at ${a.replacement_price:,.0f}/t replacement")
+        print(f"    {a.verdict}")
+    return 0
 
 
 def cmd_rice(args) -> int:
@@ -1217,6 +1331,23 @@ def build_parser() -> argparse.ArgumentParser:
     q = tsub.add_parser("status", help="cores held and model state")
     q.add_argument("project_id")
     p.set_defaults(func=cmd_soil)
+
+    p = sub.add_parser("forecast",
+                       help="forward delivery, and what is safe to pre-sell")
+    p.add_argument("site")
+    p.add_argument("--through", type=int, default=date.today().year + 8,
+                   help="last vintage year to project")
+    p.add_argument("--units", type=int, default=1,
+                   help="independently-failing units (farmers) in the portfolio")
+    p.add_argument("--confidence", type=float, default=0.90)
+    p.add_argument("--trials", type=int, default=4000)
+    p.add_argument("--aggregation", action="store_true",
+                   help="safe volume against portfolio size")
+    p.add_argument("--offtake", type=float,
+                   help="test a forward commitment of this many tonnes")
+    p.add_argument("--replacement-price", type=float, default=45.0,
+                   help="spot price assumed when covering a shortfall")
+    p.set_defaults(func=cmd_forecast)
 
     p = sub.add_parser("rice", help="water regime detected from Sentinel-1")
     rsub = p.add_subparsers(dest="rice_command", required=True)
