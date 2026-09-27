@@ -2,12 +2,60 @@
   "IN-TNJ-01:2025": [
     {
       "citations": [
+        "Sentinel-1 C-band IW, VV+VH, 6-day revisit",
+        "VM0051 v1.1: the baseline water regime is monitored, not assumed"
+      ],
+      "name": "detected water regime, Kuruvai + Samba 2025",
+      "result": 0.712576343780144,
+      "terms": [
+        {
+          "detail": "",
+          "label": "passes in season",
+          "unit": "acquisitions",
+          "value": 37.0
+        },
+        {
+          "detail": "11 not separable at their crop stage",
+          "label": "usable passes",
+          "unit": "acquisitions",
+          "value": 26.0
+        },
+        {
+          "detail": "",
+          "label": "coverage",
+          "unit": "fraction",
+          "value": 0.7027027027027027
+        },
+        {
+          "detail": "",
+          "label": "passes called drained",
+          "unit": "passes",
+          "value": 11.0
+        },
+        {
+          "detail": "runs of >= 6 days",
+          "label": "qualifying dry spells",
+          "unit": "events",
+          "value": 4.0
+        },
+        {
+          "detail": "",
+          "label": "AWD target",
+          "unit": "events",
+          "value": 3.0
+        }
+      ],
+      "unit": "confidence"
+    },
+    {
+      "citations": [
         "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
         "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-        "awd: baseline 87.09433611839881 -> project 69.85865320299997 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 41 revisits across 2 season(s); 28.0x GWP100"
+        "awd: baseline 87.09433611839881 -> project 69.85865320299997 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 41 revisits across 2 season(s); 28.0x GWP100",
+        "water regime detected from feed: 26 of 37 passes separable, 4 AWD event(s)"
       ],
       "name": "VM0051 abatement, vintage 2025",
-      "result": 1.3762066918689686,
+      "result": 1.1139682382168663,
       "terms": [
         {
           "detail": "",
@@ -19,7 +67,7 @@
           "detail": "area x detected water-regime confidence",
           "label": "confidence-weighted area",
           "unit": "ha",
-          "value": 2.193581556113902
+          "value": 1.7755909747326486
         },
         {
           "detail": "Tamil Nadu, threshold 20%",
@@ -37,7 +85,7 @@
           "detail": "",
           "label": "gross abatement",
           "unit": "tCO2e",
-          "value": 2.117241064413798
+          "value": 1.7137972895644096
         },
         {
           "detail": "abatement-weighted across emission factor tiers",

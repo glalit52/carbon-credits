@@ -24,6 +24,9 @@ from dataclasses import dataclass, field
 from datetime import date, timedelta
 
 from .domain import TrackKind
+from .sar import (
+    S1_REVISIT_DAYS, SPECKLE_SIGMA_DB, SarPass, simulate_pass,
+)
 from .sites import Site
 
 REVISIT_DAYS = 5           # Sentinel-2 A+B combined revisit at these latitudes
@@ -280,6 +283,93 @@ def series(site: Site, start: date, end: date, *,
     return out
 
 
+def sar_series(site: Site, start: date, end: date, *,
+               awd_lapse_season: str | None = None,
+               awd_lapse_year: int | None = None) -> list[SarPass]:
+    """The Sentinel-1 series over a rice site, on the radar's own cadence.
+
+    The same hidden water state the optical series is drawn from, rendered
+    as backscatter. What leaves this function is a list of dB values and
+    viewing geometry: the detector downstream never sees `surface_water_frac`
+    or `dry_down`, which is the only arrangement in which its numbers mean
+    anything.
+
+    Radar has its own revisit -- 6 days, not the optical 5 -- and its own
+    viewing geometry, so the passes do not line up with the optical ones.
+    That is a feature of the evidence, not an inconvenience: through the
+    monsoon these are the only passes there are.
+    """
+    if site.track is not TrackKind.RICE:
+        raise ValueError(f"{site.id} is not a rice site")
+
+    out: list[SarPass] = []
+    d = start
+    while d <= end:
+        in_lapse = (
+            awd_lapse_year is not None
+            and d.year == awd_lapse_year
+            and any(s.name == awd_lapse_season and s.contains(d)
+                    for s in site.seasons)
+        )
+        r = _rice_reading(site, d, S1_REVISIT_DAYS, awd_active=not in_lapse)
+        # Canopy stage drives the double-bounce term. Taken from season
+        # progress rather than NDVI because NDVI is the thing cloud removes.
+        stage = (math.sin(math.pi * min(1.0, r.season_progress ** 0.82)) ** 0.75
+                 if r.season and r.season != "fallow" else 0.0)
+        # Descending and ascending tracks alternate over Thanjavur, and they
+        # look at the field from different angles.
+        ascending = (d.toordinal() // S1_REVISIT_DAYS) % 2 == 0
+        out.append(simulate_pass(
+            f"{site.id}|sar", d,
+            water_frac=r.surface_water_frac if r.surface_water_frac is not None else 0.0,
+            stage=stage, rain_mm=r.rain_mm,
+            incidence_deg=33.7 if ascending else 41.2,
+            relative_orbit=63 if ascending else 165))
+        d += timedelta(days=S1_REVISIT_DAYS)
+    return out
+
+
+def sar_truth(site: Site, start: date, end: date, *,
+              awd_lapse_season: str | None = None,
+              awd_lapse_year: int | None = None,
+              flooded_above: float = 0.45) -> dict[date, bool]:
+    """The hidden water state behind `sar_series`, keyed by pass date.
+
+    For scoring the detector in tests and in a validation report. Nothing in
+    the crediting path may call this -- in a real project it does not exist.
+    """
+    truth: dict[date, bool] = {}
+    d = start
+    while d <= end:
+        in_lapse = (
+            awd_lapse_year is not None
+            and d.year == awd_lapse_year
+            and any(s.name == awd_lapse_season and s.contains(d)
+                    for s in site.seasons)
+        )
+        r = _rice_reading(site, d, S1_REVISIT_DAYS, awd_active=not in_lapse)
+        if r.season and r.season != "fallow" and r.surface_water_frac is not None:
+            truth[d] = r.surface_water_frac >= flooded_above
+        d += timedelta(days=S1_REVISIT_DAYS)
+    return truth
+
+
+def sar_seasons(site: Site, passes: list[SarPass]) -> dict[tuple[int, str], list[SarPass]]:
+    """Group radar passes into the site's crop seasons.
+
+    Keyed the same way `summarise_seasons` keys the optical roll-up, so a
+    season can be compared across the two instruments.
+    """
+    buckets: dict[tuple[int, str], list[SarPass]] = {}
+    for p in passes:
+        for season in site.seasons:
+            if season.contains(p.day):
+                year = p.day.year if p.day.month > 3 else p.day.year - 1
+                buckets.setdefault((year, season.name), []).append(p)
+                break
+    return buckets
+
+
 def next_revisit(readings: list[Reading], after: date) -> date:
     """When the next satellite pass is due. Real cadence, so a real countdown."""
     if not readings:
@@ -391,10 +481,17 @@ class FeedProvider:
 
     def __init__(self, readings: list[Reading], *,
                  season_confidence: dict[int, float] | None = None,
-                 peak_height_m: float | None = None):
+                 peak_height_m: float | None = None,
+                 sar_passes: list[SarPass] | None = None,
+                 adoption: object | None = None):
         self._by_day = {r.day: r for r in readings}
         self._readings = sorted(readings, key=lambda r: r.day)
         self._season_confidence = season_confidence or {}
+        # Radar rides alongside the optical series rather than replacing it:
+        # the two instruments answer different questions, and the point of
+        # carrying both is that one of them still works under monsoon cloud.
+        self._sar = sorted(sar_passes or [], key=lambda p: p.day)
+        self._adoption = adoption
         heights = [r.canopy_height_m for r in readings
                    if r.canopy_height_m is not None]
         self._peak_height = peak_height_m or (max(heights) if heights else 0.0)
@@ -427,6 +524,23 @@ class FeedProvider:
         return min(candidates,
                    key=lambda r: (r.canopy_uncertainty_m
                                   if r.canopy_uncertainty_m is not None else 0.0))
+
+    # A detector wired in behind this provider has findings of its own --
+    # which passes it could not read, a season that scored badly alone. They
+    # have to reach the vintage, so they are forwarded rather than stopping
+    # at the wrapper.
+    def regime(self, year: int):
+        getter = getattr(self._adoption, "regime", None)
+        return getter(year) if callable(getter) else None
+
+    def warnings_for(self, year: int) -> list[str]:
+        getter = getattr(self._adoption, "warnings_for", None)
+        return getter(year) if callable(getter) else []
+
+    def _nearest_pass(self, on: date) -> SarPass | None:
+        """The most recent radar acquisition at or before a date."""
+        prior = [p for p in self._sar if p.day <= on]
+        return prior[-1] if prior else None
 
     def flags_near(self, on: date, window_days: int = 190) -> list[str]:
         """Anything the feed flagged in the run-up to a reporting date.
@@ -464,7 +578,20 @@ class FeedProvider:
             return Retrieval(plot.id, variable, si, "fraction",
                              max(0.03, 0.15 * si), r.day, "sentinel2")
 
+        if variable in ("vv_db", "vh_db"):
+            p = self._nearest_pass(on)
+            if p is None:
+                return None
+            value = p.vv_normalised_db if variable == "vv_db" else p.vh_normalised_db
+            # Radar's error bar is speckle, and it does not grow with cloud.
+            return Retrieval(plot.id, variable, value, "dB",
+                             SPECKLE_SIGMA_DB, p.day, "sentinel1")
+
         if variable == "practice_adopted":
+            # Where a detector is wired in, the adoption probability is
+            # detected rather than configured, and it says so in the source.
+            if self._adoption is not None:
+                return self._adoption.retrieve(plot, variable, on)
             confidence = self._season_confidence.get(on.year)
             if confidence is None:
                 return None

@@ -53,6 +53,19 @@ class Season:
             return start <= here <= end
         return here >= start or here <= end   # wraps the new year
 
+    @property
+    def wraps(self) -> bool:
+        return (self.end_month, self.end_day) < (self.start_month, self.start_day)
+
+    def closes_in(self, year: int) -> date:
+        """When the season that *starts* in `year` finishes.
+
+        Samba starts in August and finishes in January, so a 2026 vintage
+        cannot be read until 2027 -- the evidence for it does not exist yet.
+        """
+        return date(year + 1 if self.wraps else year,
+                    self.end_month, self.end_day)
+
     def progress(self, d: date) -> float:
         """0 at the start of the window, 1 at the end. Outside it, 0."""
         if not self.contains(d):

@@ -111,6 +111,7 @@ carbonstack/
   remote_sensing.py Provider protocol, synthetic provider, field/satellite reconciliation
   sites.py          the two pilot sites — real places, real climatology
   feed.py           simulated monitoring on the real 5-day revisit cadence
+  sar.py            Sentinel-1 backscatter, water-regime detection, scoring
   methodology/      VM0051 (rice), VM0047 (ARR, area-based + census), VM0042 (cropland + soil)
   agroforestry.py   species allometry, survival surveys, census inventory
   stacking.py       pillar claims per plot, and the double-counting engine
@@ -593,9 +594,127 @@ gets to validation before finding out.
 `tree_inventory.csv` ships in the evidence pack: who walked the plot, how many
 stems they checked, which equation priced them, and what the uncertainty was.
 
+## Rice methane: detecting the dry-down, not asserting it
+
+The rice pathway credits avoided methane, and methane is avoided when the
+paddy is not flooded. The whole claim rests on one observable — the water
+state of the field, several times a season, for every plot — and until now
+the product asserted it. The simulator knew whether a dry-down had happened
+and handed that straight to the confidence term. Nothing detected anything.
+
+```bash
+carbonstack rice regime vallam                       # season by season
+carbonstack rice passes vallam --year 2026 --season Kuruvai
+carbonstack rice validate vallam                     # score it against truth
+```
+
+### Why radar, and why it is harder than it looks
+
+**Cloud.** AWD is practised in the monsoon. Thanjavur's Samba season runs
+through the north-east monsoon and optical passes are lost exactly when the
+evidence matters — 60–67% usable against radar's 62–76%. C-band SAR does not
+care about cloud, and Sentinel-1 gives a 6-day revisit.
+
+**And then the signal inverts.** A *bare* flooded field is a mirror: it
+scatters the pulse away and comes back dark, around −19 dB. A flooded field
+with a rice canopy is **bright** — the stems and the water surface form a
+dihedral and the pulse comes back twice. So VV over flooded paddy climbs past
+a drained field's response by mid-season:
+
+```
+stage 0.0    flooded −19.0 dB   drained −12.5 dB    flooded is 6.5 dB darker
+stage 0.54   flooded −12.0 dB   drained −12.0 dB    no information at all
+stage 1.0    flooded  −6.0 dB   drained −11.5 dB    flooded is 5.5 dB brighter
+```
+
+A fixed threshold — which is how most published flood maps work — is right in
+June and inverted in September. `WaterRegimeDetector` estimates crop stage
+from VH, which tracks canopy volume and barely moves with what is underneath,
+then compares VV against what each state would produce *at that stage*.
+
+### It abstains
+
+Around the crossover the two states are separated by less than the speckle.
+There is no information there, so the detector returns AMBIGUOUS rather than a
+coin flip dressed up as a measurement. Roughly 30% of passes land there, and
+that shows up as coverage rather than as confident nonsense.
+
+An unreadable pass between two passes that **agree** — and that are within
+1.8 dB of it — is carried across, marked as inferred and discounted to 60% of
+a call the radar actually resolved. A gap between passes that *disagree* is
+never filled: the transition is exactly what must not be invented, because an
+AWD event conjured out of an unreadable pass is the failure this module
+exists to prevent.
+
+### The harvest drain is not an AWD event
+
+Every paddy is drained before harvest — in the project and in the baseline
+alike — so counting it would credit the counterfactual. The detector has no
+crop calendar; it has the canopy stage it estimated from VH, which rises to a
+peak and falls as the crop senesces. A spell that begins after that peak and
+runs to the last pass of the season is the harvest drain, and it is excluded
+by name:
+
+```
+dry 2026-09-18 to 2026-09-24   12 d  2 pass(es)  harvest drain
+```
+
+### What it recovered
+
+Scored against the water state the simulator actually used, which the
+detector never sees:
+
+| | |
+|---|---|
+| Passes | 158 |
+| Called | 75 |
+| Abstained | 33 (not separable at their crop stage) |
+| Accuracy | 96.0% |
+| Precision, flooded | 100% |
+| Called dry when flooded | 3 — *the error that over-credits* |
+| Called flooded when dry | 0 |
+
+### Measuring costs credits, and that is the point
+
+| Vintage | Asserted | Detected |
+|---|---|---|
+| 2025 | 88% | 71% |
+| 2026 | 54% | 51% |
+| 2027 | 86% | 61% |
+
+Detection is more conservative everywhere, because a third of the passes
+cannot be read and short drainages seen by a single unclean pass do not
+count. The 2025 vintage falls from 1.376 to 1.114 tCO2e net — 19% of the
+claim. On a 2.49 ha plot that is still one whole credit either way; across a
+programme it is the difference between a margin and a rounding error. It is
+also the honest number, and the derivation now carries the passes it came
+from:
+
+```
+detected water regime, Kuruvai + Samba 2025
+  passes in season          37 acquisitions
+  usable passes             26 acquisitions   11 not separable at their crop stage
+  coverage              0.7027 fraction
+  qualifying dry spells      4 events         runs of >= 6 days
+  ==========================================  0.7126 confidence
+```
+
+The lapsed season is found without being told about it: `2026 Kuruvai`
+detects zero AWD events, scores 25%, and raises *"Kuruvai scored 25% on its
+own; the year is carried by the other season and this one needs review"* —
+because a year rolled up by baseline exposure must not average a failed season
+into silence.
+
+Also enforced: a season that wraps the new year (Samba runs August to January)
+cannot be verified on 31 December, and a vintage quantified early says which
+season was still open. `vv_db` and `vh_db` are stored as observations like any
+other measurement, and `water_regime.csv` in the evidence pack rebuilds every
+call from the database alone — if the stored observations cannot reproduce the
+call, the call is not evidence.
+
 ## What is deliberately not real yet
 
-Three placeholders are marked in the source and must be replaced before any
+Four placeholders are marked in the source and must be replaced before any
 issuance. They are project milestones, not refinements:
 
 1. **The allometric equation.** A generic stand fit at 25% error. Replace with
@@ -606,9 +725,14 @@ issuance. They are project milestones, not refinements:
    benchmark set near zero turns every project into a high performer, which is
    the failure mode VM0047 exists to close.
 3. **The monitoring provider.** `SyntheticProvider` is deterministic fiction
-   that proves the pipeline. The real one is Sentinel-2 optical plus
+   that proves the pipeline, and `sar.simulate_pass` renders a hidden water
+   state as backscatter. The detector that reads it is real and is scored;
+   the granules it reads are not. The real source is Sentinel-2 optical plus
    Sentinel-1 SAR fused with GEDI spaceborne LiDAR, which drops into the same
    `Provider` interface without touching quantification.
+4. **Detector validation.** The 96% accuracy above is against a simulation.
+   Real validation needs field water-level loggers on a sample of plots,
+   which is what VM0051 expects and what that number stands in for.
 
 Emission factors for cropland practices are likewise conservative placeholders
 carrying Tier 1 uncertainty, which the engine already charges for.

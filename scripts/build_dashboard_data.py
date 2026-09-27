@@ -21,15 +21,20 @@ DASH = ROOT / "dashboard"
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "model"))
 
-from carbonstack import evidence, ledger, methodology, payments  # noqa: E402
+from carbonstack import (                                  # noqa: E402
+    evidence, ledger, methodology, payments, pipeline,
+)
 from carbonstack.agroforestry import (                     # noqa: E402
     CensusInventory, StemMeasurement, SurvivalSurvey,
 )
 from carbonstack.biomass import co2e_per_ha                # noqa: E402
 from carbonstack.domain import TrackKind                   # noqa: E402
 from carbonstack.feed import (                             # noqa: E402
-    CH4_GWP100, FeedProvider, REVISIT_DAYS, series, summarise_seasons,
-    year_confidence,
+    CH4_GWP100, FeedProvider, REVISIT_DAYS, sar_seasons, sar_series,
+    sar_truth, series, summarise_seasons, year_confidence,
+)
+from carbonstack.sar import (                              # noqa: E402
+    S1_REVISIT_DAYS, SarProvider, WaterRegimeDetector, score,
 )
 from carbonstack.methodology.vm0051 import (                # noqa: E402
     CommonPractice, RiceEmissionFactor,
@@ -58,6 +63,77 @@ MRV_COST_PER_HA_YR = {"rice": 18.0, "agroforestry": 26.0}
 FIXED_PROJECT_COST_YR = 190_000.0   # validation, verification, registry, ops
 
 
+def radar_block(site, optical_seasons) -> dict:
+    """Detect the water regime from Sentinel-1, and show the two instruments.
+
+    The rice claim is "the field was dry". Until now the page showed a
+    confidence the simulator had handed over. This runs a detector that sees
+    backscatter and nothing else, and reports what it recovered -- including
+    where it refused to call a pass.
+    """
+    passes = sar_series(site, site.enrolled_on, SERIES_END,
+                        awd_lapse_season="Kuruvai", awd_lapse_year=2026)
+    truth = sar_truth(site, site.enrolled_on, SERIES_END,
+                      awd_lapse_season="Kuruvai", awd_lapse_year=2026)
+    detector = WaterRegimeDetector()
+    seasons = sar_seasons(site, passes)
+    provider = SarProvider.from_passes(seasons, detector=detector)
+
+    calls = [c.to_dict() for c in detector.classify(passes)]
+    accuracy = score(detector.classify(passes), truth)
+
+    asserted = {}
+    by_year: dict[int, list] = {}
+    for s_ in optical_seasons:
+        by_year.setdefault(s_.year, []).append(s_)
+    for year, ss in by_year.items():
+        asserted[year] = round(year_confidence(ss), 4)
+
+    years = sorted(set(asserted) | {y for (y, _) in seasons})
+    comparison = []
+    for year in years:
+        regime = provider.regime(year)
+        optical = [s_ for s_ in optical_seasons if s_.year == year]
+        clear = sum(s_.clear_revisits for s_ in optical)
+        revisits = sum(s_.revisits for s_ in optical)
+        comparison.append({
+            "year": year,
+            "asserted_confidence": asserted.get(year),
+            "detected_confidence": (round(regime.adoption_confidence, 4)
+                                    if regime else None),
+            "optical_coverage": round(clear / revisits, 4) if revisits else None,
+            "radar_coverage": (round(regime.coverage, 4) if regime else None),
+            "radar_passes": regime.passes if regime else 0,
+            "awd_events": len(regime.qualifying_spells) if regime else 0,
+        })
+
+    return {
+        "provider": provider,
+        "passes": passes,
+        "instrument": "Sentinel-1 C-band IW, VV+VH, "
+                      f"{S1_REVISIT_DAYS}-day revisit",
+        "calls": calls,
+        "regimes": [provider.regime(y).to_dict() for y in years
+                    if provider.regime(y) is not None],
+        "comparison": comparison,
+        "validation": {k: (round(v, 4) if isinstance(v, float) else v)
+                       for k, v in accuracy.items()},
+        "note": ("A flooded paddy is a mirror and comes back dark -- until "
+                 "the canopy closes, when the stems and the water surface "
+                 "form a dihedral and it comes back brighter than a drained "
+                 "field. The two responses cross, and around the crossing "
+                 "there is no information in VV at all. The detector says so "
+                 "instead of guessing."),
+        "caveats": [
+            "Backscatter is simulated from the same hidden water state the "
+            "optical series is drawn from; the detector never sees it.",
+            "The validation scores are against that simulation. Real "
+            "validation needs field water-level loggers on a sample of "
+            "plots.",
+        ],
+    }
+
+
 def rice_block() -> dict:
     site = THANJAVUR
     project = as_project(site)
@@ -66,6 +142,9 @@ def rice_block() -> dict:
     readings = series(site, site.enrolled_on, SERIES_END,
                       awd_lapse_season="Kuruvai", awd_lapse_year=2026)
     seasons = summarise_seasons(readings)
+    radar = radar_block(site, seasons)
+    provider = FeedProvider(readings, sar_passes=radar["passes"],
+                            adoption=radar["provider"])
 
     # Roll seasons up to a crediting year, weighting confidence by abatement.
     by_year: dict[int, list] = {}
@@ -99,21 +178,27 @@ def rice_block() -> dict:
             common_practice=CommonPractice(
                 jurisdiction="Tamil Nadu", awd_penetration=0.04,
                 source="placeholder -- replace with a cited state-level survey"))
-        provider = FeedProvider(readings, season_confidence={year: confidence})
+        # The adoption probability is detected from radar, not asserted.
+        # Everything above this line is unchanged; what moved is where the
+        # number comes from, and it moves the credits with it.
         result = m.quantify(project, provider, year)
+        detected = radar["provider"].regime(year)
+        confidence = (detected.adoption_confidence if detected is not None
+                      else 0.0)
 
         payload = result.to_dict()
         payload["warnings"] = list(payload["warnings"])
-        for s_ in ss:
-            if s_.dry_down_events == 0:
+        for s_ in (detected.seasons if detected is not None else []):
+            if not s_.qualifying_spells:
                 payload["warnings"].append(
-                    f"{s_.season} {s_.year}: no dry-down detected across "
-                    f"{s_.revisits} revisits -- the practice may not have happened")
+                    f"{s_.season} {s_.year}: no AWD event detected across "
+                    f"{s_.passes} radar passes -- the practice may not have "
+                    f"happened")
             elif s_.adoption_confidence < 0.6:
                 payload["warnings"].append(
-                    f"{s_.season} {s_.year}: adoption confidence "
-                    f"{s_.adoption_confidence:.0%}, only {s_.clear_revisits} of "
-                    f"{s_.revisits} passes were clear")
+                    f"{s_.season} {s_.year}: detected adoption confidence "
+                    f"{s_.adoption_confidence:.0%}, with "
+                    f"{s_.usable_passes} of {s_.passes} passes separable")
         result.warnings = list(payload["warnings"])
         results.append(result)
         vintages.append({
@@ -122,6 +207,7 @@ def rice_block() -> dict:
             "seasons": [s.to_dict() for s in ss],
             "abatement_tco2e_ha": round(abatement_per_ha, 4),
             "adoption_confidence": round(confidence, 3),
+            "asserted_confidence": round(year_confidence(ss), 3),
         })
 
     # Project forward on the same model, so the credit curve can be charted
@@ -139,6 +225,9 @@ def rice_block() -> dict:
         "readings": [r.to_dict() for r in readings],
         "vintages": vintages,
         "projection": projection,
+        "_provider": provider,
+        "radar": {k: v for k, v in radar.items()
+                  if k not in ("provider", "passes")},
         "_results": results,
         "_project": project,
         "methodology": {
@@ -209,6 +298,7 @@ def coffee_block() -> dict:
         "census": census_block(site, project, vintages),
         "_results": results,
         "_project": project,
+        "_provider": provider,
         "methodology": {
             "id": "VM0047",
             "version": "v1.1",
@@ -519,6 +609,18 @@ def govern(blocks: list[dict]) -> dict:
             meth = {"rice": "VM0051", "cropland": "VM0042"}.get(track, "VM0047")
             store.save_project(project, methodology_id=meth)
 
+            # Monitor before quantifying, so the evidence pack carries the
+            # observations the claim rests on rather than only the totals.
+            # For rice that is the radar: water_regime.csv is rebuilt from
+            # these rows, and if the database cannot reproduce the call then
+            # the call is not evidence.
+            monitor_provider = block.get("_provider")
+            if monitor_provider is not None:
+                pipeline.monitor(
+                    store, site["id"], monitor_provider,
+                    start=date.fromisoformat(site["enrolled_on"]),
+                    end=min(TODAY, SERIES_END), actor="pipeline")
+
             settled = []
             for result in block["_results"]:
                 if date(result.year, 12, 31) > TODAY:
@@ -584,6 +686,7 @@ def main() -> int:
     for block in (rice, coffee):
         block.pop("_results", None)
         block.pop("_project", None)
+        block.pop("_provider", None)
 
     payload = {
         "generated_at": TODAY.isoformat(),

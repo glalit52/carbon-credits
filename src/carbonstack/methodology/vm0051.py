@@ -269,6 +269,25 @@ class VM0051:
                 f"{f_.project_ch4_kg_ha_season} kg CH4/ha/season over "
                 f"{f_.seasons_per_year} season(s), Tier {f_.tier} -- {f_.source}")
 
+        # Where the provider detected the water regime rather than being
+        # told it, its derivation and its caveats travel with the vintage.
+        # A reviewer asked to sign off a confidence of 0.71 needs to see the
+        # passes it came from, and a season that scored badly on its own
+        # must not be averaged into silence.
+        regime = getattr(provider, "regime", None)
+        if callable(regime):
+            detected = regime(reporting_year)
+            if detected is not None:
+                result.calculations.append(detected.report())
+                summary.cite(
+                    f"water regime detected from {provider.name}: "
+                    f"{detected.usable_passes} of {detected.passes} passes "
+                    f"separable, {len(detected.qualifying_spells)} AWD "
+                    f"event(s)")
+        warnings_for = getattr(provider, "warnings_for", None)
+        if callable(warnings_for):
+            result.warnings.extend(warnings_for(reporting_year))
+
         summary.add("enrolled area", enrolled_area, "ha")
         summary.add("confidence-weighted area", effective_area, "ha",
                     "area x detected water-regime confidence")

@@ -29,6 +29,47 @@ def _write_csv(path: Path, rows: list[dict], columns: list[str]) -> None:
             w.writerow(r)
 
 
+def _water_regime_rows(project) -> list[dict]:
+    """Classify every stored Sentinel-1 pass, from the observations alone."""
+    from .sar import (
+        REFERENCE_INCIDENCE_DEG, SarPass, WaterRegimeDetector,
+    )
+
+    bands: dict[tuple[str, object], dict[str, float]] = {}
+    for o in project.observations:
+        if o.variable not in ("vv_db", "vh_db") or o.source != "sentinel1":
+            continue
+        bands.setdefault((o.plot_id, o.observed_on), {})[o.variable] = o.value
+
+    detector = WaterRegimeDetector()
+    by_plot: dict[str, list[SarPass]] = {}
+    for (plot_id, day), values in sorted(bands.items()):
+        if "vv_db" not in values or "vh_db" not in values:
+            continue
+        # The stored values are already normalised to the reference
+        # incidence angle, so the pass is rebuilt at that angle.
+        by_plot.setdefault(plot_id, []).append(SarPass(
+            day=day, vv_db=values["vv_db"], vh_db=values["vh_db"],
+            incidence_deg=REFERENCE_INCIDENCE_DEG))
+
+    rows = []
+    for plot_id, passes in sorted(by_plot.items()):
+        for call in detector.classify(passes):
+            rows.append({
+                "plot_id": plot_id,
+                "day": call.day.isoformat(),
+                "vv_db": round(call.vv_normalised_db, 2),
+                "stage_estimate": round(call.stage_estimate, 3),
+                "separation_db": round(call.separation_db, 2),
+                "state": call.state.value,
+                "p_flooded": round(call.p_flooded, 4),
+                "confidence": round(call.confidence, 4),
+                "inferred": "yes" if call.inferred else "no",
+                "note": call.note,
+            })
+    return rows
+
+
 def build(store: Store, project_id: str, out_dir: str | Path) -> Path:
     """Write the pack and return its directory."""
     out = Path(out_dir)
@@ -139,6 +180,16 @@ def build(store: Store, project_id: str, out_dir: str | Path) -> Path:
                ["id", "vintage_id", "farmer_id", "credits", "amount", "currency",
                 "status", "due_on", "paid_on", "reference"])
 
+    # Water regime. The rice claim rests on whether the field was dry, and
+    # the only acceptable answer to "how do you know" is the radar passes it
+    # was read from. Rebuilt here from the stored observations rather than
+    # from the pipeline's memory: if the database cannot reproduce the call,
+    # the call is not evidence.
+    regime_rows = _water_regime_rows(project)
+    if regime_rows:
+        _write_csv(out / "water_regime.csv", regime_rows,
+                   list(regime_rows[0].keys()))
+
     # Tree census. A census credits stems, so the register of what was
     # counted, by whom, and on which equation is the claim's evidence -- the
     # forestry equivalent of the lab reference on a soil core.
@@ -230,6 +281,17 @@ def build(store: Store, project_id: str, out_dir: str | Path) -> Path:
             "clean": stack_report["clean"],
             "conflicts": len(stack_report["conflicts"]),
         },
+        "water_regime": {
+            "passes_classified": len(regime_rows),
+            "flooded": sum(1 for r in regime_rows if r["state"] == "flooded"),
+            "drained": sum(1 for r in regime_rows if r["state"] == "drained"),
+            "not_separable": sum(1 for r in regime_rows
+                                 if r["state"] == "ambiguous"),
+            "carried_across_gaps": sum(1 for r in regime_rows
+                                       if r["inferred"] == "yes"),
+            "source": "Sentinel-1 C-band IW VV+VH, rebuilt from the stored "
+                      "observations",
+        } if regime_rows else None,
         "trees": {
             "plots_inventoried": len(inventories),
             "stems_planted": sum(i.survival.stems_planted

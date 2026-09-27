@@ -1,0 +1,82 @@
+plot_id,day,vv_db,stage_estimate,separation_db,state,p_flooded,confidence,inferred,note
+IN-TNJ-01-P1,2025-06-01,-13.21,0.0,6.5,drained,0.0061,0.9877,no,
+IN-TNJ-01-P1,2025-06-07,-12.77,0.0,6.5,drained,0.0026,0.9949,no,
+IN-TNJ-01-P1,2025-06-13,-14.81,0.245,3.56,flooded,0.825,0.6501,no,
+IN-TNJ-01-P1,2025-06-19,-12.74,0.497,0.53,ambiguous,0.5,0.0,no,flooded and drained responses are within 0.5 dB at stage 0.50; the two states are not separable on this pass
+IN-TNJ-01-P1,2025-06-25,-10.57,0.744,2.43,ambiguous,0.4866,0.0,no,"call was 49% flooded, below the 55% confidence floor"
+IN-TNJ-01-P1,2025-07-01,-9.29,0.869,3.92,ambiguous,0.6822,0.0,no,"call was 68% flooded, below the 55% confidence floor"
+IN-TNJ-01-P1,2025-07-07,-7.74,0.945,4.84,flooded,0.9419,0.8837,no,
+IN-TNJ-01-P1,2025-07-13,-10.46,0.943,4.82,drained,0.0679,0.8642,no,
+IN-TNJ-01-P1,2025-07-19,-11.39,1.0,5.5,drained,0.0051,0.9898,no,
+IN-TNJ-01-P1,2025-07-25,-6.17,1.0,5.5,flooded,0.9943,0.9885,no,
+IN-TNJ-01-P1,2025-07-31,-6.56,1.0,5.5,flooded,0.9876,0.9751,no,
+IN-TNJ-01-P1,2025-08-06,-6.77,1.0,5.5,flooded,0.9813,0.9626,no,
+IN-TNJ-01-P1,2025-08-12,-10.63,0.931,4.68,drained,0.057,0.886,no,
+IN-TNJ-01-P1,2025-08-18,-10.35,0.885,4.12,drained,0.1683,0.6634,no,
+IN-TNJ-01-P1,2025-08-24,-9.02,0.786,2.93,flooded,0.9206,0.8412,no,
+IN-TNJ-01-P1,2025-08-30,-10.17,0.702,1.93,flooded,0.7919,0.5837,no,
+IN-TNJ-01-P1,2025-09-05,-11.89,0.636,1.14,ambiguous,0.5,0.0,no,flooded and drained responses are within 1.1 dB at stage 0.64; the two states are not separable on this pass
+IN-TNJ-01-P1,2025-09-11,-12.99,0.502,0.47,ambiguous,0.5,0.0,no,flooded and drained responses are within 0.5 dB at stage 0.50; the two states are not separable on this pass
+IN-TNJ-01-P1,2025-09-17,-12.87,0.269,3.27,drained,0.1206,0.7588,no,
+IN-TNJ-01-P1,2025-09-23,-11.97,0.091,5.4,drained,0.0019,0.9962,no,
+IN-TNJ-01-P1,2025-09-29,-7.44,0.918,4.52,flooded,0.9774,0.9549,no,
+IN-TNJ-01-P1,2025-10-05,-10.86,0.911,4.43,drained,0.0484,0.9032,no,
+IN-TNJ-01-P1,2025-10-11,-10.42,0.978,5.23,drained,0.0458,0.9083,no,
+IN-TNJ-01-P1,2025-10-17,-6.59,1.0,5.5,flooded,0.9869,0.9739,no,
+IN-TNJ-01-P1,2025-10-23,-6.63,1.0,5.5,flooded,0.9857,0.9715,no,
+IN-TNJ-01-P1,2025-10-29,-6.29,1.0,5.5,flooded,0.9927,0.9854,no,
+IN-TNJ-01-P1,2025-11-04,-6.87,1.0,5.5,flooded,0.9774,0.9549,no,
+IN-TNJ-01-P1,2025-11-10,-6.82,1.0,5.5,flooded,0.9793,0.9587,no,
+IN-TNJ-01-P1,2025-11-16,-8.21,1.0,5.5,ambiguous,0.7449,0.0,no,"call was 74% flooded, below the 55% confidence floor"
+IN-TNJ-01-P1,2025-11-22,-10.92,0.942,4.8,drained,0.0284,0.9432,no,
+IN-TNJ-01-P1,2025-11-28,-9.07,0.911,4.44,ambiguous,0.6459,0.0,no,"call was 65% flooded, below the 55% confidence floor"
+IN-TNJ-01-P1,2025-12-04,-9.27,0.796,3.05,flooded,0.8597,0.7195,no,
+IN-TNJ-01-P1,2025-12-10,-9.84,0.743,2.42,flooded,0.8026,0.6053,no,
+IN-TNJ-01-P1,2025-12-16,-11.09,0.727,2.22,ambiguous,0.2992,0.0,no,"call was 30% flooded, below the 55% confidence floor"
+IN-TNJ-01-P1,2025-12-22,-11.95,0.573,0.37,ambiguous,0.5,0.0,no,flooded and drained responses are within 0.4 dB at stage 0.57; the two states are not separable on this pass
+IN-TNJ-01-P1,2025-12-28,-13.05,0.504,0.46,ambiguous,0.5,0.0,no,flooded and drained responses are within 0.5 dB at stage 0.50; the two states are not separable on this pass
+IN-TNJ-01-P1,2026-01-03,-12.65,0.362,2.16,ambiguous,0.2453,0.0,no,"call was 25% flooded, below the 55% confidence floor"
+IN-TNJ-01-P1,2026-01-09,-12.87,0.301,2.89,drained,0.1756,0.6488,no,
+IN-TNJ-01-P1,2026-01-15,-13.15,0.129,4.95,drained,0.0325,0.9351,no,
+IN-TNJ-01-P1,2026-01-21,-12.84,0.0,6.5,drained,0.003,0.9941,no,
+IN-TNJ-01-P1,2026-01-27,-12.84,0.033,6.1,drained,0.0047,0.9905,no,
+IN-TNJ-01-P1,2026-02-02,-12.58,0.0,6.5,drained,0.0018,0.9965,no,
+IN-TNJ-01-P1,2026-02-08,-12.7,0.036,6.06,drained,0.0037,0.9925,no,
+IN-TNJ-01-P1,2026-02-14,-12.31,0.033,6.1,drained,0.0016,0.9967,no,
+IN-TNJ-01-P1,2026-02-20,-12.98,0.0,6.5,drained,0.0039,0.9922,no,
+IN-TNJ-01-P1,2026-02-26,-12.95,0.0,6.5,drained,0.0037,0.9926,no,
+IN-TNJ-01-P1,2026-03-04,-12.54,0.0,6.5,drained,0.0016,0.9967,no,
+IN-TNJ-01-P1,2026-03-10,-12.91,0.023,6.22,drained,0.0047,0.9906,no,
+IN-TNJ-01-P1,2026-03-16,-12.96,0.0,6.5,drained,0.0038,0.9924,no,
+IN-TNJ-01-P1,2026-03-22,-12.52,0.039,6.03,drained,0.0027,0.9946,no,
+IN-TNJ-01-P1,2026-03-28,-12.67,0.0,6.5,drained,0.0021,0.9958,no,
+IN-TNJ-01-P1,2026-04-03,-12.53,0.001,6.48,drained,0.0016,0.9967,no,
+IN-TNJ-01-P1,2026-04-09,-12.96,0.017,6.3,drained,0.0047,0.9905,no,
+IN-TNJ-01-P1,2026-04-15,-12.46,0.031,6.13,drained,0.0021,0.9957,no,
+IN-TNJ-01-P1,2026-04-21,-12.95,0.017,6.3,drained,0.0046,0.9907,no,
+IN-TNJ-01-P1,2026-04-27,-12.93,0.043,5.98,drained,0.0064,0.9871,no,
+IN-TNJ-01-P1,2026-05-03,-13.25,0.0,6.5,drained,0.0067,0.9867,no,
+IN-TNJ-01-P1,2026-05-09,-12.22,0.017,6.3,drained,0.0011,0.9978,no,
+IN-TNJ-01-P1,2026-05-15,-12.57,0.043,5.98,drained,0.0032,0.9937,no,
+IN-TNJ-01-P1,2026-05-21,-12.69,0.0,6.5,drained,0.0022,0.9956,no,
+IN-TNJ-01-P1,2026-05-27,-12.32,0.0,6.5,drained,0.0011,0.9979,no,
+IN-TNJ-01-P1,2026-06-02,-12.78,0.0,6.5,drained,0.0026,0.9947,no,
+IN-TNJ-01-P1,2026-06-08,-13.12,0.002,6.48,drained,0.0053,0.9893,no,
+IN-TNJ-01-P1,2026-06-14,-14.76,0.328,2.57,flooded,0.9319,0.8638,no,
+IN-TNJ-01-P1,2026-06-20,-12.0,0.58,0.46,ambiguous,0.5,0.0,no,flooded and drained responses are within 0.5 dB at stage 0.58; the two states are not separable on this pass
+IN-TNJ-01-P1,2026-06-26,-10.14,0.739,2.36,ambiguous,0.7054,0.0,no,"call was 71% flooded, below the 55% confidence floor"
+IN-TNJ-01-P1,2026-07-02,-9.22,0.852,3.73,ambiguous,0.7568,0.0,no,"call was 76% flooded, below the 55% confidence floor"
+IN-TNJ-01-P1,2026-07-08,-7.73,0.926,4.62,flooded,0.9557,0.9114,no,
+IN-TNJ-01-P1,2026-07-14,-7.13,0.989,5.37,flooded,0.9676,0.9352,no,
+IN-TNJ-01-P1,2026-07-20,-6.88,1.0,5.5,flooded,0.9767,0.9535,no,
+IN-TNJ-01-P1,2026-07-26,-6.38,1.0,5.5,flooded,0.9913,0.9826,no,
+IN-TNJ-01-P1,2026-08-01,-6.46,1.0,5.5,flooded,0.9899,0.9799,no,
+IN-TNJ-01-P1,2026-08-07,-7.02,0.982,5.29,flooded,0.976,0.952,no,
+IN-TNJ-01-P1,2026-08-13,-7.96,0.971,5.15,flooded,0.8785,0.7569,no,
+IN-TNJ-01-P1,2026-08-19,-8.17,0.878,4.03,flooded,0.9467,0.8934,no,
+IN-TNJ-01-P1,2026-08-25,-8.97,0.835,3.52,flooded,0.8651,0.7301,no,
+IN-TNJ-01-P1,2026-08-31,-10.71,0.722,2.17,ambiguous,0.4935,0.0,no,"call was 49% flooded, below the 55% confidence floor"
+IN-TNJ-01-P1,2026-09-06,-11.9,0.543,0.01,ambiguous,0.5,0.0,no,flooded and drained responses are within 0.0 dB at stage 0.54; the two states are not separable on this pass
+IN-TNJ-01-P1,2026-09-12,-13.61,0.428,1.36,flooded,0.8486,0.6971,no,
+IN-TNJ-01-P1,2026-09-18,-13.18,0.235,3.68,drained,0.1349,0.7303,no,
+IN-TNJ-01-P1,2026-09-24,-13.24,0.059,5.79,drained,0.0148,0.9703,no,

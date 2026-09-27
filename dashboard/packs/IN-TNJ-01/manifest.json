@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T12:43:23+00:00",
+  "generated_at": "2026-09-27T13:01:31+00:00",
   "project": {
     "id": "IN-TNJ-01",
     "name": "Vallam paddy block, Thanjavur district, Tamil Nadu",
@@ -24,9 +24,9 @@
     "farmers_total": 1
   },
   "claims": {
-    "issued_t": 1.0,
-    "offsettable_t": 0.0,
-    "unadjusted_t": 1.0,
+    "issued_t": 0,
+    "offsettable_t": 0,
+    "unadjusted_t": 0,
     "corsia_eligible_t": 0,
     "authorisations": 0,
     "clean": true
@@ -37,6 +37,14 @@
     "stacked_ha": 0,
     "clean": true,
     "conflicts": 0
+  },
+  "water_regime": {
+    "passes_classified": 81,
+    "flooded": 26,
+    "drained": 39,
+    "not_separable": 16,
+    "carried_across_gaps": 0,
+    "source": "Sentinel-1 C-band IW VV+VH, rebuilt from the stored observations"
   },
   "trees": {
     "plots_inventoried": 0,
@@ -54,17 +62,23 @@
     "farmers": 1
   },
   "monitoring": {
-    "observations": 0,
-    "variables": [],
-    "sources": [],
-    "first": null,
-    "last": null
+    "observations": 164,
+    "variables": [
+      "practice_adopted",
+      "vh_db",
+      "vv_db"
+    ],
+    "sources": [
+      "sentinel1"
+    ],
+    "first": "2025-06-01",
+    "last": "2027-01-16"
   },
   "credits": {
     "vintages": 1,
-    "gross_tco2e": 2.1172,
-    "net_tco2e": 1.3762,
-    "issued_credits": 1.0,
+    "gross_tco2e": 1.7138,
+    "net_tco2e": 1.114,
+    "issued_credits": 0,
     "buffer": {
       "held_t": 0,
       "released_t": 0,
@@ -72,20 +86,20 @@
     }
   },
   "payments": {
-    "payments": 1,
-    "farmers": 1,
+    "payments": 0,
+    "farmers": 0,
     "paid_total": 0,
-    "outstanding_total": 6.6,
+    "outstanding_total": 0,
     "overdue_count": 0,
     "overdue_total": 0,
     "failed_count": 0,
-    "currency": "USD"
+    "currency": ""
   },
   "integrity": {
-    "event_count": 7,
+    "event_count": 9,
     "chain_intact": true,
     "first_bad_event": null,
-    "head_hash": "4129102072a690407641eb34a8703eaf3028cadd0a98fc3f102709262fab3bf8"
+    "head_hash": "447fbc7f61dbc6ac85a225ffc8489dc7abacd97e2892492775ae15cca3156274"
   },
   "files": [
     "SUMMARY.md",
@@ -99,7 +113,8 @@
     "plot_register.csv",
     "stacking_audit.json",
     "tree_inventory.csv",
-    "vintages.csv"
+    "vintages.csv",
+    "water_regime.csv"
   ],
   "caveats": [
     "Allometric equation is a generic placeholder and must be replaced with a locally calibrated equation before issuance.",

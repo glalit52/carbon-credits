@@ -1,3 +1,7 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Vallam and Gatugi</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1021,6 +1025,118 @@
       fig5.appendChild(more);
     }
     panel.appendChild(fig5);
+
+    // --- radar, where the site has it ---------------------------------
+    // The rice claim is "the field was dry". This is the evidence for it,
+    // and the place where the page stops asserting and starts detecting.
+    if (block.radar) {
+      var rad = block.radar;
+      var figR = el("figure");
+      var topR = el("div", "figtop");
+      topR.appendChild(el("h3", null, "Was the field actually dry?"));
+      topR.appendChild(el("span", "note", rad.instrument));
+      figR.appendChild(topR);
+
+      var pR = el("p", "empty");
+      pR.textContent = rad.note;
+      figR.appendChild(pR);
+
+      var gridR = el("div", "ledger-grid");
+      function rcell(k, v, sTxt) {
+        var n = el("div");
+        n.appendChild(el("span", "k", k));
+        n.appendChild(el("span", "v", v));
+        n.appendChild(el("span", "s", sTxt));
+        gridR.appendChild(n);
+      }
+      var val = rad.validation || {};
+      var revealedCalls = (rad.calls || []).filter(function (c) {
+        return parseDay(c.day) <= NOW;
+      });
+      var sep = revealedCalls.filter(function (c) {
+        return c.state !== "ambiguous";
+      }).length;
+      rcell("Radar passes", String(revealedCalls.length),
+            "6-day revisit, unaffected by cloud");
+      rcell("Calls made", sep + " of " + revealedCalls.length,
+            "the rest fall where the two responses cross");
+      rcell("Accuracy", ((val.accuracy || 0) * 100).toFixed(0) + "%",
+            "against the simulated regime · " +
+            (val.false_negative || 0) + " dry calls on a flooded field");
+      var lastCmp = (rad.comparison || []).filter(function (c) {
+        return c.detected_confidence != null;
+      });
+      var lc = lastCmp.length ? lastCmp[lastCmp.length - 1] : null;
+      rcell("Adoption confidence",
+            lc ? (lc.detected_confidence * 100).toFixed(0) + "%" : "—",
+            lc ? "detected, against " +
+                 (lc.asserted_confidence * 100).toFixed(0) +
+                 "% when it was asserted" : "");
+      figR.appendChild(gridR);
+
+      var scrollR = el("div", "tscroll");
+      var tableR = el("table");
+      var theadR = el("thead"), hrR = el("tr");
+      ["Year", "Optical coverage", "Radar coverage", "AWD events",
+       "Asserted", "Detected"].forEach(function (h) {
+        hrR.appendChild(el("th", null, h));
+      });
+      theadR.appendChild(hrR);
+      tableR.appendChild(theadR);
+      var tbodyR = el("tbody");
+      (rad.comparison || []).forEach(function (c) {
+        var tr = el("tr");
+        tr.appendChild(el("td", null, String(c.year)));
+        tr.appendChild(el("td", "ded", c.optical_coverage != null
+          ? (c.optical_coverage * 100).toFixed(0) + "%" : "—"));
+        tr.appendChild(el("td", null, c.radar_coverage != null
+          ? (c.radar_coverage * 100).toFixed(0) + "%" : "—"));
+        tr.appendChild(el("td", null, String(c.awd_events)));
+        tr.appendChild(el("td", "ded", c.asserted_confidence != null
+          ? (c.asserted_confidence * 100).toFixed(0) + "%" : "—"));
+        tr.appendChild(el("td", "net", c.detected_confidence != null
+          ? (c.detected_confidence * 100).toFixed(0) + "%" : "—"));
+        tbodyR.appendChild(tr);
+      });
+      tableR.appendChild(tbodyR);
+      scrollR.appendChild(tableR);
+      figR.appendChild(scrollR);
+
+      // The last dozen acquisitions, so the table above resolves to passes.
+      var recent = revealedCalls.slice(-12);
+      if (recent.length) {
+        var scrollP = el("div", "tscroll");
+        var tableP = el("table");
+        var theadP = el("thead"), hrP = el("tr");
+        ["Pass", "VV dB", "Stage", "Separation", "Call", "Confidence"]
+          .forEach(function (h) { hrP.appendChild(el("th", null, h)); });
+        theadP.appendChild(hrP);
+        tableP.appendChild(theadP);
+        var tbodyP = el("tbody");
+        recent.forEach(function (c) {
+          var tr = el("tr");
+          if (c.state === "ambiguous") tr.className = "projected";
+          tr.appendChild(el("td", null, fmtDay(parseDay(c.day))));
+          tr.appendChild(el("td", null, num(c.vv_db, 1)));
+          tr.appendChild(el("td", null, num(c.stage_estimate, 2)));
+          tr.appendChild(el("td", null, num(c.separation_db, 1)));
+          tr.appendChild(el("td", c.state === "ambiguous" ? "ded" : "net",
+            c.state + (c.inferred ? " ~" : "")));
+          tr.appendChild(el("td", null,
+            c.state === "ambiguous" ? "—"
+              : (c.confidence * 100).toFixed(0) + "%"));
+          tbodyP.appendChild(tr);
+        });
+        tableP.appendChild(tbodyP);
+        scrollP.appendChild(tableP);
+        figR.appendChild(scrollP);
+      }
+
+      var capR = el("div", "covnote");
+      capR.innerHTML = "<span>" + rad.caveats.join(" &middot; ") + "</span>";
+      figR.appendChild(capR);
+      panel.appendChild(figR);
+    }
 
     // --- census, where the site has one -------------------------------
     // Two instruments over the same trees. Shown together because the choice

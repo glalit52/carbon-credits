@@ -34,8 +34,10 @@ from .agroforestry import (
     SPECIES, CensusInventory, StemMeasurement, SurvivalSurvey,
 )
 from .feed import (
-    FeedProvider, season_warnings, series, summarise_seasons, year_confidence,
+    FeedProvider, sar_seasons, sar_series, sar_truth, season_warnings,
+    series, summarise_seasons, year_confidence,
 )
+from .sar import SarProvider, WaterRegimeDetector, WaterState, score
 from .methodology.vm0042 import EmissionFactor
 from .methodology.vm0047 import PerformanceBenchmark
 from .methodology.vm0051 import CommonPractice, RiceEmissionFactor
@@ -69,22 +71,32 @@ def _site(name: str):
     raise SystemExit(f"unknown site {name!r}; known: {known}")
 
 
+#: The lapse the demo injects, so a review workflow has something to review.
+RICE_LAPSE = {"awd_lapse_season": "Kuruvai", "awd_lapse_year": 2026}
+
+
+def _sar_provider(site, end: date):
+    """Detect the water regime from radar, season by season.
+
+    The adoption probability a rice vintage is multiplied by used to be
+    handed over by the simulator that generated the dry-downs. It is now the
+    output of a detector that sees backscatter and nothing else.
+    """
+    passes = sar_series(site, site.enrolled_on, end, **RICE_LAPSE)
+    provider = SarProvider.from_passes(sar_seasons(site, passes))
+    return provider, passes
+
+
 def _feed_provider(site, end: date):
     """The pilot sites are driven by the simulated feed; real projects would
     name a real provider here and nothing downstream would change."""
-    kwargs = {}
     if site.track.value == "rice":
-        kwargs = {"awd_lapse_season": "Kuruvai", "awd_lapse_year": 2026}
-    else:
-        kwargs = {"stumping_year": 2026}
-    readings = series(site, site.enrolled_on, end, **kwargs)
-    confidences = {}
-    if site.track.value == "rice":
-        by_year: dict[int, list] = {}
-        for s in summarise_seasons(readings):
-            by_year.setdefault(s.year, []).append(s)
-        confidences = {y: year_confidence(ss) for y, ss in by_year.items()}
-    return FeedProvider(readings, season_confidence=confidences), readings
+        readings = series(site, site.enrolled_on, end, **RICE_LAPSE)
+        detector, passes = _sar_provider(site, end)
+        return FeedProvider(readings, sar_passes=passes,
+                            adoption=detector), readings
+    readings = series(site, site.enrolled_on, end, stumping_year=2026)
+    return FeedProvider(readings), readings
 
 
 # ---------------------------------------------------------------------------
@@ -159,6 +171,7 @@ def cmd_quantify(args) -> int:
             site = _site(args.project_id)
         except SystemExit:
             site = None
+        open_seasons: list[str] = []
 
         if site is not None:
             provider, readings = _feed_provider(site, max(end, date.today()))
@@ -180,6 +193,14 @@ def cmd_quantify(args) -> int:
                     common_practice=CommonPractice(
                         jurisdiction=args.jurisdiction or site.admin,
                         awd_penetration=args.awd_penetration))
+                # A season that wraps the new year is not over on 31
+                # December, and quantifying it early reads a partial season
+                # as a weak one. Say which, rather than letting the
+                # confidence quietly absorb it.
+                window_end = max(end, date.today())
+                open_seasons = [
+                    s_.name for s_ in site.seasons
+                    if s_.closes_in(args.year) > window_end]
             elif meta["methodology_id"] == "VM0042":
                 ss = [s for s in summarise_seasons(readings) if s.year == args.year]
                 if not ss:
@@ -203,6 +224,11 @@ def cmd_quantify(args) -> int:
         if site is not None and meta["methodology_id"] == "VM0042":
             extra = season_warnings(
                 [s for s in summarise_seasons(readings) if s.year == args.year])
+        if site is not None and meta["methodology_id"] == "VM0051" and open_seasons:
+            extra.append(
+                f"{', '.join(open_seasons)} had not closed by "
+                f"{max(end, date.today())}, so this vintage reads a partial "
+                f"season; a wrapping season cannot be verified on 31 December")
         v = pipeline.quantify(store, args.project_id, meth, provider, args.year,
                               actor=getattr(args, "actor", None) or "cli",
                               extra_warnings=extra)
@@ -617,6 +643,131 @@ def _soil_status(store, args) -> int:
 FIELD_COLUMNS = ("plot_id", "measured_on", "surveyed_on", "surveyor",
                  "stems_planted", "stems_sampled", "stems_alive",
                  "species_key")
+
+
+def cmd_rice(args) -> int:
+    site = _site(args.site)
+    if site.track.value != "rice":
+        raise SystemExit(f"{site.id} is not a rice site")
+    end = date.fromisoformat(args.to) if args.to else date.today()
+    passes = sar_series(site, site.enrolled_on, end, **RICE_LAPSE)
+    detector = WaterRegimeDetector()
+    seasons = sar_seasons(site, passes)
+
+    if args.rice_command == "regime":
+        return _rice_regime(site, seasons, detector, args)
+    if args.rice_command == "passes":
+        return _rice_passes(site, seasons, detector, args)
+    if args.rice_command == "validate":
+        return _rice_validate(site, passes, detector, end)
+    return 0
+
+
+def _rice_regime(site, seasons, detector, args) -> int:
+    """Season by season: what the radar saw, and what it is worth."""
+    provider = SarProvider.from_passes(seasons, detector=detector)
+    print(f"{site.id} water regime, detected from Sentinel-1")
+    print(f"  {'season':<18}{'passes':>8}{'usable':>8}{'drained':>9}"
+          f"{'AWD':>6}{'confidence':>12}")
+    years = sorted({y for (y, _) in seasons})
+    for year in years:
+        if args.year and year != args.year:
+            continue
+        regime = provider.regime(year)
+        if regime is None:
+            continue
+        for s_ in regime.seasons:
+            print(f"  {s_.season + ' ' + str(s_.year):<18}{s_.passes:>8}"
+                  f"{s_.usable_passes:>8}{s_.drained_passes:>9}"
+                  f"{len(s_.qualifying_spells):>6}"
+                  f"{s_.adoption_confidence:>11.0%}")
+        if len(regime.seasons) > 1:
+            print(f"  {'-> ' + str(year):<18}{regime.passes:>8}"
+                  f"{regime.usable_passes:>8}{regime.drained_passes:>9}"
+                  f"{len(regime.qualifying_spells):>6}"
+                  f"{regime.adoption_confidence:>11.0%}")
+        for w in regime.warnings:
+            print(f"    ! {w}")
+        print()
+    if args.year:
+        regime = provider.regime(args.year)
+        if regime is not None:
+            print(regime.report().render("  "))
+    return 0
+
+
+def _rice_passes(site, seasons, detector, args) -> int:
+    """Every acquisition, and the call made on it.
+
+    Printed because a verifier's first question about a detected regime is
+    which passes it rests on, and the answer must not be a number.
+    """
+    keys = [k for k in sorted(seasons)
+            if (not args.year or k[0] == args.year)
+            and (not args.season or k[1].lower() == args.season.lower())]
+    if not keys:
+        raise SystemExit("no season matches; try --year / --season")
+
+    for key in keys:
+        calls = detector.classify(seasons[key])
+        print(f"{key[1]} {key[0]}")
+        print(f"  {'date':<12}{'VV dB':>8}{'stage':>7}{'sep dB':>8}"
+              f"{'state':>11}{'conf':>7}  note")
+        for c in calls:
+            mark = "~" if c.inferred else " "
+            print(f"  {c.day.isoformat():<12}{c.vv_normalised_db:>8.1f}"
+                  f"{c.stage_estimate:>7.2f}{c.separation_db:>8.1f}"
+                  f"{c.state.value:>11}{mark}{c.confidence:>6.0%}  "
+                  f"{c.note[:52]}")
+        regime = summarise_regime_for(calls, key)
+        print()
+        for spell in regime.spells:
+            label = "harvest drain" if spell.terminal else (
+                "AWD event" if spell in regime.qualifying_spells
+                else "not counted")
+            print(f"  dry {spell.start} to {spell.end}  {spell.days:>3} d  "
+                  f"{spell.passes} pass(es)  {label}")
+        print()
+    print("  ~ marks a call carried across an unreadable pass from its "
+          "neighbours")
+    return 0
+
+
+def summarise_regime_for(calls, key):
+    from .sar import summarise_regime
+    return summarise_regime(calls, season=key[1], year=key[0])
+
+
+def _rice_validate(site, passes, detector, end: date) -> int:
+    """Score the detector against the state the simulator actually used.
+
+    Only possible because the water regime here is generated. In a real
+    project this command has no input, which is the point of printing it:
+    these numbers come from a simulation and belong in a validation report,
+    never in a claim.
+    """
+    truth = sar_truth(site, site.enrolled_on, end, **RICE_LAPSE)
+    calls = detector.classify(passes)
+    result = score(calls, truth)
+
+    print(f"{site.id} detector validation, {site.enrolled_on} to {end}")
+    print(f"  passes                {len(calls):>6,}")
+    print(f"  called                {result['called']:>6,}")
+    print(f"  abstained             {result['abstained']:>6,}   "
+          f"(not separable at their crop stage)")
+    print(f"  accuracy              {result['accuracy']:>6.1%}")
+    print(f"  precision, flooded    {result['precision_flooded']:>6.1%}")
+    print(f"  recall, flooded       {result['recall_flooded']:>6.1%}")
+    print(f"  accuracy, drained     {result['drained_accuracy']:>6.1%}")
+    print(f"  called dry when flooded {result['false_negative']:>4,}   "
+          f"this is the error that over-credits")
+    print(f"  called flooded when dry {result['false_positive']:>4,}   "
+          f"this one loses real abatement")
+    print()
+    print("  ! Scored against a simulated water regime. Real validation "
+          "needs field water-level loggers on a sample of plots, which is "
+          "what VM0051 expects and what this number stands in for.")
+    return 0
 
 
 def cmd_trees(args) -> int:
@@ -1066,6 +1217,20 @@ def build_parser() -> argparse.ArgumentParser:
     q = tsub.add_parser("status", help="cores held and model state")
     q.add_argument("project_id")
     p.set_defaults(func=cmd_soil)
+
+    p = sub.add_parser("rice", help="water regime detected from Sentinel-1")
+    rsub = p.add_subparsers(dest="rice_command", required=True)
+    for name, helptext in (("regime", "season summaries and adoption confidence"),
+                           ("passes", "every acquisition and the call made on it"),
+                           ("validate", "score the detector against known truth")):
+        q = rsub.add_parser(name, help=helptext)
+        q.add_argument("site")
+        q.add_argument("--to", help="end of the window (default today)")
+        if name != "validate":
+            q.add_argument("--year", type=int)
+        if name == "passes":
+            q.add_argument("--season")
+    p.set_defaults(func=cmd_rice)
 
     p = sub.add_parser("trees", parents=[actor_opt],
                        help="agroforestry: census inventory, survival, quantify")
