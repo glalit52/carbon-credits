@@ -57,7 +57,7 @@ class VintageResult:
 
     @property
     def total_deducted(self) -> float:
-        return sum(amount for _, amount in self.deductions)
+        return math.fsum(amount for _, amount in self.deductions)
 
     def render(self) -> str:
         lines = [
@@ -142,8 +142,8 @@ def combine_uncertainty(sigmas: list[float], total: float) -> float:
     """
     if total <= 0 or not sigmas:
         return 0.0
-    independent = math.sqrt(sum(s ** 2 for s in sigmas))
-    correlated = sum(sigmas)
+    independent = math.sqrt(math.fsum(s ** 2 for s in sigmas))
+    correlated = math.fsum(sigmas)
     blended = math.sqrt(independent * correlated)
     return blended / total
 

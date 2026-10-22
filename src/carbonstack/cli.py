@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from datetime import date, timedelta
 from pathlib import Path
@@ -176,8 +177,8 @@ def _methodology_for(site, methodology_id: str, readings, year: int, *,
         ss = [s for s in summarise_seasons(readings) if s.year == year]
         if not ss:
             raise SystemExit(f"no seasons found for {year}")
-        baseline = sum(s.baseline_ch4_kg_ha for s in ss) / max(len(ss), 1)
-        project_ch4 = sum(s.project_ch4_kg_ha for s in ss) / max(len(ss), 1)
+        baseline = math.fsum(s.baseline_ch4_kg_ha for s in ss) / max(len(ss), 1)
+        project_ch4 = math.fsum(s.project_ch4_kg_ha for s in ss) / max(len(ss), 1)
         factor = RiceEmissionFactor(
             baseline_ch4_kg_ha_season=baseline,
             project_ch4_kg_ha_season=project_ch4,
@@ -195,7 +196,7 @@ def _methodology_for(site, methodology_id: str, readings, year: int, *,
             raise SystemExit(f"no seasons found for {year}")
         return methodology.get("VM0042", factors={"awd": EmissionFactor(
             practice="awd",
-            t_co2e_per_ha_yr=sum(s.abatement_tco2e_ha for s in ss),
+            t_co2e_per_ha_yr=math.fsum(s.abatement_tco2e_ha for s in ss),
             tier=tier,
             source=f"measured from {sum(s.revisits for s in ss)} revisits")})
     return methodology.get(
@@ -336,7 +337,7 @@ def cmd_pay(args) -> int:
                                           currency=args.currency)
             made = payments.raise_payments(store, args.vintage_id, terms,
                                            actor=actor)
-            total = sum(p.amount for p in made)
+            total = math.fsum(p.amount for p in made)
             print(f"raised {len(made)} payment(s), {total:,.2f} {args.currency}")
             for p in made[:10]:
                 print(f"  {p.farmer_id:<18} {p.credits:>9,.3f} cr  "
@@ -1026,7 +1027,7 @@ def _trees_status(store, args) -> int:
     counted = set(inventories) & set(project.creditable_plot_ids())
     stems = sum(i.survival.stems_planted for i in inventories.values())
     credited = sum(i.survival.surviving_stems for i in inventories.values())
-    stock = sum(i.stock()[0] for i in inventories.values())
+    stock = math.fsum(i.stock()[0] for i in inventories.values())
     generic = [p for p, i in inventories.items() if not i.uses_local_allometry]
 
     print(f"{args.project_id} trees")

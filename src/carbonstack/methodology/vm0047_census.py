@@ -153,7 +153,7 @@ class VM0047Census:
                 "inventory growth did not exceed the performance benchmark -- "
                 "no credits this vintage, and additionality is in question")
 
-        relative = (math.sqrt(sum(s ** 2 for s in sigmas)) / stock_now
+        relative = (math.sqrt(math.fsum(s ** 2 for s in sigmas)) / stock_now
                     if stock_now > 0 and sigmas else 0.0)
         summary.add("relative uncertainty", relative, "fraction")
 

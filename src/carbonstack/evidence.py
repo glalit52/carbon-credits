@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import csv
 import json
+import math
 from datetime import date, datetime, timezone
 from pathlib import Path
 
@@ -299,7 +300,7 @@ def build(store: Store, project_id: str, out_dir: str | Path) -> Path:
             "stems_credited": sum(i.survival.surviving_stems
                                   for i in inventories.values()),
             "standing_stock_tco2e": round(
-                sum(i.stock()[0] for i in inventories.values()), 4),
+                math.fsum(i.stock()[0] for i in inventories.values()), 4),
             "plots_below_survival_floor": sum(
                 1 for i in inventories.values() if i.survival.needs_replanting),
             "plots_on_generic_allometry": sum(
@@ -323,8 +324,8 @@ def build(store: Store, project_id: str, out_dir: str | Path) -> Path:
         },
         "credits": {
             "vintages": len(vintages),
-            "gross_tco2e": round(sum(v.gross_t for v in vintages), 4),
-            "net_tco2e": round(sum(v.net_t for v in vintages), 4),
+            "gross_tco2e": round(math.fsum(v.gross_t for v in vintages), 4),
+            "net_tco2e": round(math.fsum(v.net_t for v in vintages), 4),
             "issued_credits": sum(i.quantity for i in issued),
             "buffer": ledger.buffer_balance(store, project_id),
         },

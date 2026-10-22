@@ -9,6 +9,7 @@ and a schema that smooths them over just moves the problem to audit time.
 from __future__ import annotations
 
 import hashlib
+import math
 from dataclasses import dataclass, field
 from datetime import date
 from enum import Enum
@@ -317,7 +318,7 @@ class Project:
 
     @property
     def area_ha(self) -> float:
-        return sum(self.plots[e.plot_id].area_ha for e in self.enrollments)
+        return math.fsum(self.plots[e.plot_id].area_ha for e in self.enrollments)
 
     def cohorts(self) -> list[Cohort]:
         by_year: dict[int, list[str]] = {}
@@ -326,7 +327,7 @@ class Project:
         return [Cohort(year=y, plot_ids=p) for y, p in sorted(by_year.items())]
 
     def cohort_area_ha(self, cohort: Cohort) -> float:
-        return sum(self.plots[pid].area_ha for pid in cohort.plot_ids)
+        return math.fsum(self.plots[pid].area_ha for pid in cohort.plot_ids)
 
     def observations_for(self, plot_id: str, variable: str) -> list[Observation]:
         return sorted(
@@ -393,4 +394,4 @@ class Project:
         return {e.plot_id for e in self.enrollments} - blocked
 
     def creditable_area_ha(self) -> float:
-        return sum(self.plots[p].area_ha for p in self.creditable_plot_ids())
+        return math.fsum(self.plots[p].area_ha for p in self.creditable_plot_ids())

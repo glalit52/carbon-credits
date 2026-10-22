@@ -258,7 +258,7 @@ class CensusInventory:
     def mean_co2e_per_stem_kg(self) -> float:
         if not self.sample:
             return 0.0
-        total = sum(
+        total = math.fsum(
             self.species[m.species_key].co2e_kg(dbh_cm=m.dbh_cm,
                                                 height_m=m.height_m)
             for m in self.sample)
@@ -277,10 +277,10 @@ class CensusInventory:
         values = [self.species[m.species_key].co2e_kg(dbh_cm=m.dbh_cm,
                                                       height_m=m.height_m)
                   for m in self.sample]
-        mean = sum(values) / n
+        mean = math.fsum(values) / n
         if mean <= 0:
             return 1.0
-        variance = sum((v - mean) ** 2 for v in values) / (n - 1)
+        variance = math.fsum((v - mean) ** 2 for v in values) / (n - 1)
         return (math.sqrt(variance / n)) / mean
 
     @property
@@ -288,7 +288,7 @@ class CensusInventory:
         """Sample-weighted allometric error across the species present."""
         if not self.sample:
             return 1.0
-        return sum(self.species[m.species_key].relative_error
+        return math.fsum(self.species[m.species_key].relative_error
                    for m in self.sample) / len(self.sample)
 
     @property

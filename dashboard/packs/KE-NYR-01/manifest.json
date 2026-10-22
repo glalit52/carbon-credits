@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T17:55:46+00:00",
+  "generated_at": "2026-10-22T18:36:34+00:00",
   "project": {
     "id": "KE-NYR-01",
     "name": "Gatugi shade-coffee block, Nyeri County, Central Highlands",
@@ -24,17 +24,17 @@
     "farmers_total": 1
   },
   "claims": {
-    "issued_t": 0,
-    "offsettable_t": 0,
-    "unadjusted_t": 0,
-    "corsia_eligible_t": 0,
+    "issued_t": 0.0,
+    "offsettable_t": 0.0,
+    "unadjusted_t": 0.0,
+    "corsia_eligible_t": 0.0,
     "authorisations": 0,
     "clean": true
   },
   "stacking": {
     "claims": 0,
     "stacked_plots": 0,
-    "stacked_ha": 0,
+    "stacked_ha": 0.0,
     "clean": true,
     "conflicts": 0
   },
@@ -43,7 +43,7 @@
     "plots_inventoried": 0,
     "stems_planted": 0,
     "stems_credited": 0,
-    "standing_stock_tco2e": 0,
+    "standing_stock_tco2e": 0.0,
     "plots_below_survival_floor": 0,
     "plots_on_generic_allometry": 0
   },
@@ -69,8 +69,8 @@
   },
   "credits": {
     "vintages": 0,
-    "gross_tco2e": 0,
-    "net_tco2e": 0,
+    "gross_tco2e": 0.0,
+    "net_tco2e": 0.0,
     "issued_credits": 0,
     "buffer": {
       "held_t": 0,
@@ -81,10 +81,10 @@
   "payments": {
     "payments": 0,
     "farmers": 0,
-    "paid_total": 0,
-    "outstanding_total": 0,
+    "paid_total": 0.0,
+    "outstanding_total": 0.0,
     "overdue_count": 0,
-    "overdue_total": 0,
+    "overdue_total": 0.0,
     "failed_count": 0,
     "currency": ""
   },
@@ -92,7 +92,7 @@
     "event_count": 10,
     "chain_intact": true,
     "first_bad_event": null,
-    "head_hash": "b49343dca2b07aad96b0bdfab5a011e9e535423aa1bd9254896f2b43d48533a0"
+    "head_hash": "5e050f8c3b04b8636c63eb1809124468300f49acac2303671596d66ea1a1eadc"
   },
   "files": [
     "SUMMARY.md",
