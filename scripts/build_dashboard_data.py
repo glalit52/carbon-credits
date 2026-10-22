@@ -42,6 +42,7 @@ from carbonstack.methodology.vm0051 import (                # noqa: E402
 from carbonstack.methodology.vm0047 import PerformanceBenchmark  # noqa: E402
 from carbonstack.sites import NYERI, THANJAVUR, as_project  # noqa: E402
 from carbonstack.store import Store                        # noqa: E402
+from carbonstack import standards                          # noqa: E402
 from carbonstack.store.repo import StoreError              # noqa: E402
 
 SERIES_END = date(2027, 12, 31)      # the live feed the dashboard reveals
@@ -630,6 +631,24 @@ def forecast_block(block: dict) -> dict:
     }
 
 
+def routes_block(block: dict) -> dict:
+    """The same tonnes run through every registry route for this pathway.
+
+    Uses the block's highest-volume vintage -- for the coffee block that is a
+    projected one near canopy closure, which is labelled -- because that is
+    the scale a registration decision is made at, not the tail of the growth
+    curve. Every route carries how well its rules are known; see
+    docs/research/02-methodologies-and-standards.md.
+    """
+    site = block["site"]
+    v = max(block["vintages"], key=lambda x: x["gross_t"])
+    pathway = "rice" if site["track"] == "rice" else "arr"
+    cmp = standards.compare(pathway, gross_t=v["gross_t"],
+                            relative_uncertainty=v["relative_uncertainty"],
+                            vintage=v["year"], country=site["country"])
+    return {**cmp.to_dict(), "vintage_complete": bool(v.get("complete"))}
+
+
 def govern(blocks: list[dict]) -> dict:
     """Run the real lifecycle into a real database, and report what happened.
 
@@ -731,6 +750,7 @@ def main() -> int:
     governance = govern([rice, coffee])
     for block in (rice, coffee):
         block["forecast"] = forecast_block(block)
+        block["routes"] = routes_block(block)
     for block in (rice, coffee):
         block.pop("_results", None)
         block.pop("_project", None)
