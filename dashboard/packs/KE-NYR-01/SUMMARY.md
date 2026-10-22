@@ -1,6 +1,6 @@
 # Evidence pack — Gatugi shade-coffee block, Nyeri County, Central Highlands
 
-Generated 2026-10-22T18:25:12+00:00 · project `KE-NYR-01` · methodology `VM0047 VM0047 v1.1`
+Generated 2026-10-22T18:26:45+00:00 · project `KE-NYR-01` · methodology `VM0047 VM0047 v1.1`
 
 ## Project
 
@@ -60,7 +60,7 @@ An authorisation is a promise; a corresponding adjustment is the promise kept. O
 
 - 10 events in the log
 - Hash chain: **intact**
-- Head hash: `a7c2b6b18be26d677b4ee59e263caa0377dfe4facf679ebf6f49f75dfee9cc57`
+- Head hash: `add49d39edbc8536e68c5e80e5a76bbb382c8ae4b4acd7e86d7cf4c4a6c9b1be`
 
 Every event's hash covers its own content and its predecessor's hash. Recompute the chain from `event_log.csv` to confirm nothing was edited after the fact.
 
