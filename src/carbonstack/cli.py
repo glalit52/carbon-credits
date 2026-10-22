@@ -1414,6 +1414,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--port", type=int, default=8000)
     p.set_defaults(func=cmd_serve)
 
+    from .cli_integrations import register as register_integrations
+    register_integrations(sub, actor_opt)
+
     p = sub.add_parser("export", help="write a demo project to JSON")
     p.add_argument("which", choices=["estate", "bridge"])
     p.add_argument("--out", default="project.json")

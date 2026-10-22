@@ -253,9 +253,17 @@
   }
 
   /* ---------- portfolio ---------- */
-  .portfolio{margin-top:46px;padding-top:30px;border-top:1px solid var(--line)}
-  .portfolio h2{font-family:var(--f-display);font-weight:500;font-size:1.6rem;margin:0 0 10px}
-  .portfolio > p{color:var(--ink-2);max-width:66ch;margin:0 0 22px}
+  .portfolio,.routes{margin-top:46px;padding-top:30px;border-top:1px solid var(--line)}
+  .portfolio h2,.routes h2{font-family:var(--f-display);font-weight:500;font-size:1.6rem;margin:0 0 10px}
+  .portfolio > p,.routes > p{color:var(--ink-2);max-width:66ch;margin:0 0 22px}
+  .routes h3{font-family:var(--f-body);font-size:.95rem;font-weight:600;margin:22px 0 8px}
+  .routes .why{font-size:.8rem;color:var(--ink-2);margin:2px 0 0}
+  .routes .blocked{color:var(--block)}
+  .routes .tag{font-family:var(--f-mono);font-size:10px;color:var(--muted)}
+  .routes td:first-child{white-space:normal;min-width:240px;max-width:380px}
+  .routes th,.routes td{padding:10px 9px}
+  @media (max-width:700px){ .routes td:first-child{min-width:170px} }
+  .routes .ctx{font-size:.82rem;color:var(--ink-2);margin:8px 0 0;max-width:80ch}
   .verdicts{display:grid;grid-template-columns:repeat(auto-fit,minmax(266px,1fr));gap:16px;margin-bottom:26px}
   .verdict{border:1px solid var(--line);border-radius:3px;background:var(--surface);padding:18px}
   .verdict h3{font-family:var(--f-body);font-size:.92rem;font-weight:600;margin:0 0 3px;
@@ -329,6 +337,19 @@
       is what gets managed.</p>
     <div class="verdicts" id="verdicts"></div>
     <div class="tscroll" id="econtable"></div>
+  </section>
+
+  <section class="routes">
+    <h2>Where to register it</h2>
+    <p>The same tonnes, run through every standard that has a methodology for the
+      pathway. The buffer, the label and the price differ. Some routes are closed by
+      a rule that has nothing to do with carbon, and those are shown as blocked, not
+      as a smaller number. A route whose buffer rate could not be confirmed shows its
+      net as an upper bound and ranks below the routes whose deductions are all known.
+      Every fact is tagged by how it was sourced; nothing tagged
+      <span class="tag">[secondary]</span> or <span class="tag">[unconfirmed]</span>
+      should be relied on before checking the standard's own document.</p>
+    <div id="routes"></div>
   </section>
 
   <footer id="foot"></footer>
@@ -1630,6 +1651,49 @@
   t.appendChild(tb);
   et.appendChild(t);
 
+  // ---- registry routes ----------------------------------------------------
+  (function () {
+    var host = document.getElementById("routes");
+    DATA.blocks.forEach(function (b) {
+      var r = b.routes;
+      if (!r) return;
+      host.appendChild(el("h3", null, b.site.label + " — " + num(r.gross_t, 1) +
+        " tCO2e gross, vintage " + r.vintage + (r.vintage_complete ? "" : " (projected)") +
+        ", " + (r.relative_uncertainty * 100).toFixed(0) + "% uncertainty"));
+      var wrap = el("div", "tscroll");
+      var t = el("table");
+      t.innerHTML = "<thead><tr><th>Route</th><th>Unit</th><th>Buffer</th>" +
+        "<th>Net t</th><th>$/t</th><th>Revenue</th><th>CCP</th><th>CORSIA</th></tr></thead>";
+      var tb = el("tbody");
+      r.routes.forEach(function (o) {
+        var tr = el("tr");
+        var buf = o.deductions.filter(function (d) { return d.name === "buffer pool"; })[0];
+        var name = el("td");
+        name.appendChild(el("div", null, o.standard + " · " + o.route));
+        if (o.leans_on !== "primary") name.appendChild(el("span", "tag", "[" + o.leans_on + "]"));
+        o.blockers.forEach(function (x) { name.appendChild(el("div", "why blocked", "Blocked: " + x)); });
+        o.warnings.forEach(function (x) { name.appendChild(el("div", "why", x)); });
+        tr.appendChild(name);
+        tr.appendChild(el("td", null, o.unit));
+        tr.appendChild(el("td", null, o.net_is_upper_bound ? "?" :
+          (buf ? (buf.fraction * 100).toFixed(0) + "%" : "0%")));
+        tr.appendChild(el("td", null, (o.net_is_upper_bound ? "≤ " : "") + num(o.net_t, 2)));
+        tr.appendChild(el("td", null, o.price_usd == null ? "—" : money(o.price_usd, 0)));
+        tr.appendChild(el("td", o.issuable ? null : "blocked",
+          o.revenue_usd == null ? "—" : money(o.revenue_usd)));
+        tr.appendChild(el("td", null, o.ccp.replace(/ \[.*\]$/, "")));
+        tr.appendChild(el("td", null, o.corsia.replace(/ \[.*\]$/, "")));
+        tb.appendChild(tr);
+      });
+      t.appendChild(tb);
+      wrap.appendChild(t);
+      host.appendChild(wrap);
+      (r.context || []).forEach(function (c) {
+        host.appendChild(el("p", "ctx", c.note + (c.status === "primary" ? "" : " [" + c.status + "]")));
+      });
+    });
+  })();
+
   // ---- chain of custody ---------------------------------------------------
   (function () {
     var g = DATA.governance;
@@ -1690,7 +1754,7 @@
 
   document.getElementById("foot").innerHTML =
     "Quantification runs on the same engine as the command line: VM0047 area-based " +
-    "for the agroforestry block, VM0042 practice-based for the paddy. Deductions, " +
+    "for the agroforestry block, VM0051 for the paddy. Deductions, " +
     "uncertainty propagation and eligibility gates are the engine's, not the " +
     "dashboard's. Three inputs are marked placeholders in the source and must be " +
     "replaced before any issuance: the allometric equation, the performance " +

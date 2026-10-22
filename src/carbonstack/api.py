@@ -23,7 +23,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable
 from urllib.parse import parse_qs, urlparse
 
-from . import agroforestry, article6, ledger, payments, stacking
+from . import agroforestry, article6, ledger, payments, sites, stacking, standards
 from .pipeline import health
 from .store.repo import Store, StoreError
 
@@ -415,6 +415,78 @@ def api_mark_paid(store: Store, payment_id: str, body: dict, **_) -> dict:
                               paid_on=date.fromisoformat(body["paid_on"])
                               if body.get("paid_on") else None,
                               actor=_actor(body)).to_dict()
+
+
+# ---------------------------------------------------------------------------
+# Standards and projections -- stateless, so they work on the read-only
+# deployment too
+# ---------------------------------------------------------------------------
+
+def _q(query: dict, key: str, default=None, *, required: bool = False):
+    value = query.get(key, [default])[0]
+    if required and value in (None, ""):
+        raise ApiError(400, f"query parameter {key!r} is required")
+    return value
+
+
+@route("GET", "/api/standards")
+def api_standards(store: Store, query: dict, **_) -> dict:
+    """Every registry route, with how well each rule is known."""
+    pathway = _q(query, "pathway")
+    routes = (standards.routes_for(pathway) if pathway
+              else list(standards.ROUTES.values()))
+
+    def fact(f):
+        return None if f is None else {"value": f.value, "status": f.status.value,
+                                       "source": f.source}
+    return {"routes": [{
+        "id": r.id, "standard": r.standard, "methodology": r.methodology,
+        "pathway": r.pathway.value, "unit": r.unit, "version": fact(r.version),
+        "buffer": fact(r.buffer), "ccp": fact(r.ccp), "corsia": fact(r.corsia),
+        "durability": fact(r.durability), "notes": list(r.notes),
+    } for r in routes]}
+
+
+@route("GET", "/api/standards/compare")
+def api_standards_compare(store: Store, query: dict, **_) -> dict:
+    nprt = _q(query, "nprt")
+    h_corg = _q(query, "h_corg")
+    return standards.compare(
+        _q(query, "pathway", required=True),
+        gross_t=float(_q(query, "gross", required=True)),
+        relative_uncertainty=float(_q(query, "uncertainty", required=True)),
+        vintage=int(_q(query, "vintage", date.today().year)),
+        country=_q(query, "country", ""),
+        nprt=standards.NprtScore(*(float(x) for x in nprt.split(","))) if nprt else None,
+        paris_aligned=_q(query, "paris_aligned", "false") in ("1", "true"),
+        wants_corsia=_q(query, "corsia", "false") in ("1", "true"),
+        biochar_h_corg=float(h_corg) if h_corg else None,
+        biochar_random_reflectance=_q(query, "ro", "false") in ("1", "true"),
+    ).to_dict()
+
+
+@route("GET", "/api/sites/{site_id}/soc")
+def api_site_soc(store: Store, site_id: str, query: dict, **_) -> dict:
+    """RothC projection on the site's published normals. Ex-ante only."""
+    from .cli_integrations import _flooded_months
+    from .connectors.weather import from_normals
+    from .rothc import Management, project_soc
+
+    site = sites.SITES.get(site_id)
+    if site is None:
+        raise ApiError(404, f"no site {site_id!r}")
+    c = site.climate
+    climate = from_normals(site.lat, site.lon, c.monthly_rain_mm, c.mean_temp_c,
+                           c.temp_amplitude_c, label=f"{site.id} published normals")
+    return project_soc(
+        climate, clay_pct=float(_q(query, "clay", required=True)),
+        initial_soc_t_c_ha=float(_q(query, "soc", required=True)),
+        baseline=Management("baseline", flooded=_flooded_months(site)),
+        practices=query.get("practice", []),
+        start_year=int(_q(query, "start_year", date.today().year)),
+        horizon=min(50, int(_q(query, "horizon", 20))),
+        draws=min(300, int(_q(query, "draws", 100))),
+    ).to_dict()
 
 
 # ---------------------------------------------------------------------------

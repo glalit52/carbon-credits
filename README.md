@@ -7,14 +7,14 @@ financial model that gates it, and `carbonstack`, the dMRV core it runs on.
 
 | Path | What it is |
 |---|---|
-| `docs/research/` | Teardown of Mitti Labs and Varaha, and what it implies for us |
+| `docs/research/` | Teardown of Mitti Labs and Varaha; the methodology and standards fact base |
 | `model/carbon_model.py` | Portfolio cashflow model — the go/no-go gate |
 | `src/carbonstack/` | The product — see the map below |
 | `src/carbonstack/sites.py` | The two pilot sites — real places, real climatology |
 | `src/carbonstack/feed.py` | Simulated monitoring on the real 5-day revisit cadence |
 | `dashboard/` | The live MRV dashboard, its dataset and example evidence packs |
 | `scripts/` | Build the dashboard dataset and page |
-| `tests/` | 294 tests, stdlib only |
+| `tests/` | 433 tests, stdlib only |
 
 ## The two numbers that shape everything
 
@@ -41,7 +41,7 @@ python3 model/carbon_model.py            # cashflow, peak funding need, sensitiv
 
 ```bash
 pip install -e ".[dev]"
-python -m pytest                         # 294 tests
+python -m pytest                         # 433 tests
 
 python -m carbonstack demo               # both tracks against synthetic monitoring
 python -m carbonstack export estate --out project.json
@@ -118,6 +118,9 @@ carbonstack/
   stacking.py       pillar claims per plot, and the double-counting engine
   soil.py           SOC stocks, equivalent soil mass, sampling, VMD0053
   article6.py       host-country authorisation, corresponding adjustments
+  standards.py      every registry route side by side, each rule tagged by source
+  rothc.py          RothC-26.3 soil carbon projection, solved steady state
+  connectors/       weather, SoilGrids, STAC imagery, field loggers, registry exports
   store/            SQLite schema, migrations, repositories, hash-chained events
   pipeline.py       batch monitoring, quantification, project health
   ledger.py         vintage lifecycle, issuance, serials, buffer pool
@@ -808,6 +811,110 @@ The simulation is seeded and reproducible: a number in a term sheet has to
 be rebuildable months later, by someone else, from the committed inputs.
 The dashboard freshness check enforces exactly that.
 
+## Integrations, prediction, and which registry
+
+Three questions the engine could not answer until now: what does the outside
+world say about this plot, what is a soil practice expected to do before the
+cores exist, and which standard should the tonnes be registered under.
+The fact base behind the third is `docs/research/02-methodologies-and-standards.md`.
+
+```bash
+carbonstack data climate vallam --source open-meteo --from 2015-01-01 --to 2024-12-31
+carbonstack data soil vallam                      # SoilGrids prior, never a baseline
+carbonstack data imagery vallam --sensor s1 --from 2025-06-10 --to 2025-09-25
+carbonstack soc project gatugi --clay 45 --soc 55 --practice cover_crop
+carbonstack sensors ingest loggers.csv            # AWD field-tube water levels
+carbonstack sensors validate vallam loggers.csv   # score the radar against them
+carbonstack registry reconcile export.csv --registry Verra --project IN-TNJ-01
+carbonstack standards compare --pathway rice --gross 1200 --uncertainty 0.22 --country India
+```
+
+### Outside data is pinned, or it is not evidence
+
+Every connector goes through a transport, and every response is recorded
+with its URL, parameters, retrieval time and SHA-256. `--record DIR` pins a
+live run; `--replay DIR` (or `CARBONSTACK_REPLAY`) serves the same requests
+from disk with no network. A pinned file edited after recording is refused
+on load. That is how CI runs, and how a verifier rebuilds our numbers
+without our network or keys. A source that cannot be reached raises with the
+reason and the fix; nothing falls back to a default series dressed as a
+retrieved one.
+
+| Connector | Source | What it feeds |
+|---|---|---|
+| `weather` | Open-Meteo ERA5 archive (with FAO-56 ET0), NASA POWER monthly | RothC's moisture deficit; partial months are dropped, not averaged |
+| `soilgrids` | ISRIC SoilGrids 2.0, with 5–95% quantiles | clay for RothC, a stratification prior; `as_baseline()` refuses — VM0042's CCP approval excludes digital soil mapping |
+| `stac` | Earth Search or Copernicus Data Space | the measured revisit and the **longest gap**, which decides whether a dry-down can hide between two looks |
+| `sensors` | field water-level loggers (CSV or webhook JSON) | ground truth for the SAR detector, with spikes, flatlines and gaps removed and reported |
+| `registry` | Verra / Gold Standard / Puro / Isometric CSV exports | reconciliation of our serials against the registry's, columns matched by alias |
+
+The network policy in the environment this was built in blocks all of these
+hosts, so every connector is tested against responses in each source's
+documented shape. The first live `--record` run is a milestone, not a
+formality.
+
+### The radar finally has something real to be scored against
+
+The 96% detector accuracy above is against a simulation. `sensors validate`
+scores the same detector against measured water: days are classified with a
+dead band (ponded at +2 cm, drained below −5 cm, neither in between), days
+where two loggers on one plot disagree are dropped, and fewer than thirty
+matched passes is reported as insufficient. A dry spell only counts as an AWD
+event if the water table reaches the IRRI safe-AWD threshold of −15 cm, the
+same rule applied to the measurement as to the claim. This is the asset
+neither Mitti Labs nor Varaha started with: SenseGrass hardware already in
+the field.
+
+### RothC: what a soil practice should do, before cores say so
+
+A project description needs an ex-ante number long before the second round
+of cores. RothC-26.3 is implemented from the published equations, and the
+baseline is initialised by **solving** the steady state exactly — one model
+year is an affine map on the four active pools, so equilibrium is
+`(I − A)⁻¹ b`, not a ten-thousand-year spin-up. The plant input that holds
+the measured stock at equilibrium is solved from it, and the practice change
+is layered on top.
+
+```
+SOC change after 15 years       2.97 t C/ha   90% interval 1.41 to 4.31
+mean annual removal             0.73 tCO2e/ha/yr
+uncertainty deduction           34%           48.8% relative uncertainty vs 15%
+=====================================         0.48 tCO2e/ha/yr ex-ante
+! Reduced or zero tillage: RothC has no tillage term; any gain here would
+  be invented. It contributes nothing to this projection.
+```
+
+(Gatugi, cover crop plus reduced tillage, published normals.) The interval
+comes from redrawing clay, the initial stock and the size of the practice
+effect over seeded draws, re-solving the equilibrium each time. Paddy months
+use the Shirato & Yokozawa flooded-rate factor and say so. Practice effects
+are placeholders until a local trial replaces them, and the projection is
+ex-ante only: crediting still runs through measured cores and a
+VMD0053-validated model.
+
+### Which registry: the same tonne, every route
+
+`standards compare` runs one vintage's gross tonnes through every route for
+the pathway — Verra, Gold Standard, Isometric, Puro.earth, India's CCTS —
+applying each route's buffer, its CCP label premium, and the gates that close
+it outright. The dashboard's *Where to register it* section is this, for both
+pilots.
+
+| Rule | Effect |
+|---|---|
+| Avoided CH4 cannot reverse | 0% buffer on every rice route |
+| Verra AFOLU NPRT v5.0 | risk-scored, **12% floor**; a category over its threshold fails the tool |
+| Gold Standard land use | flat **20%** buffer |
+| GS 2026+ vintages | **blocked** without a Paris-aligned methodology version |
+| CORSIA from India | **blocked**: ag and nature-based activities appear absent from India's Article 6 lists |
+| Biochar | Puro CORC200+ needs H/Corg < 0.7; Isometric 200-yr needs < 0.5 or measured random reflectance |
+| Unknown buffer | net shown as `≤`, ranked below every route whose deductions are known |
+
+Every rule is a `Fact` tagged `primary`, `secondary` or `unconfirmed`, and
+each route prints the weakest tag it leans on. The primary documents could
+not be fetched for this research, so the tags are not decoration: an
+unconfirmed buffer rate is a question for the registry, not a parameter.
+
 ## What is deliberately not real yet
 
 Five placeholders are marked in the source and must be replaced before any
@@ -823,12 +930,13 @@ issuance. They are project milestones, not refinements:
 3. **The monitoring provider.** `SyntheticProvider` is deterministic fiction
    that proves the pipeline, and `sar.simulate_pass` renders a hidden water
    state as backscatter. The detector that reads it is real and is scored;
-   the granules it reads are not. The real source is Sentinel-2 optical plus
+   the granules it reads are not. The STAC connector now finds the real
+   scenes; reading their pixels is the next step. The real source is Sentinel-2 optical plus
    Sentinel-1 SAR fused with GEDI spaceborne LiDAR, which drops into the same
    `Provider` interface without touching quantification.
 4. **Detector validation.** The 96% accuracy above is against a simulation.
-   Real validation needs field water-level loggers on a sample of plots,
-   which is what VM0051 expects and what that number stands in for.
+   `sensors validate` is built and tested; it needs real logger files from
+   a sample of plots, which is what VM0051 expects.
 5. **Delivery risk rates.** Attrition, practice lapse, planting failure and
    verification slip are placeholders. They are the inputs a developer
    should argue about with their own portfolio history, which is why they
