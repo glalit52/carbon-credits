@@ -457,7 +457,7 @@ class RegimeSummary:
         if self.confidence_override is not None:
             return self.confidence_override
         events = min(1.0, len(self.qualifying_spells) / self.target_events)
-        quality = (sum(s.mean_confidence for s in self.qualifying_spells)
+        quality = (math.fsum(s.mean_confidence for s in self.qualifying_spells)
                    / len(self.qualifying_spells)) if self.qualifying_spells else 0.0
         return max(0.0, min(1.0, 0.35 * self.coverage
                             + 0.50 * events + 0.15 * quality))
@@ -516,7 +516,7 @@ def dry_spells(calls: list[Classification], *,
         if run:
             spells.append(DrySpell(
                 start=run[0].day, end=run[-1].day, passes=len(run),
-                mean_confidence=sum(c.confidence for c in run) / len(run),
+                mean_confidence=math.fsum(c.confidence for c in run) / len(run),
                 spanned_ambiguous=spanned))
         run = []
         spanned = 0
@@ -623,7 +623,7 @@ def _roll_up(regimes: list[RegimeSummary]) -> RegimeSummary:
         return only
 
     weight = sum(r.passes for r in regimes) or 1
-    blended = sum(r.adoption_confidence * r.passes for r in regimes) / weight
+    blended = math.fsum(r.adoption_confidence * r.passes for r in regimes) / weight
 
     rolled = RegimeSummary(
         season=" + ".join(r.season for r in regimes),

@@ -37,6 +37,7 @@ arrangement shares.
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass, field
 from datetime import date
 from enum import Enum
@@ -281,7 +282,7 @@ def classify(*, project_id: str, vintage_year: int, issued_t: float,
     reasons: list[str] = []
     warnings: list[str] = []
 
-    adjusted = sum(a.volume_t for a in adjustments
+    adjusted = math.fsum(a.volume_t for a in adjustments
                    if a.vintage_year == vintage_year
                    and (authorisation is None or a.authorisation_id == authorisation.id))
 
@@ -522,11 +523,11 @@ def claim_register(store: Store, project_id: str, *,
     return {
         "project_id": project_id,
         "vintages": [s.to_dict() for s in statuses],
-        "issued_t": round(sum(s.issued_t for s in statuses), 4),
-        "offsettable_t": round(sum(s.offsettable_t for s in statuses), 4),
-        "unadjusted_t": round(sum(s.unadjusted_t for s in statuses), 4),
+        "issued_t": round(math.fsum(s.issued_t for s in statuses), 4),
+        "offsettable_t": round(math.fsum(s.offsettable_t for s in statuses), 4),
+        "unadjusted_t": round(math.fsum(s.unadjusted_t for s in statuses), 4),
         "corsia_eligible_t": round(
-            sum(s.offsettable_t for s in statuses if s.corsia_eligible), 4),
+            math.fsum(s.offsettable_t for s in statuses if s.corsia_eligible), 4),
         "authorisations": [a.to_dict() for a in authorisations(store, project_id)],
         "warnings": [w for s in statuses for w in s.warnings],
         "clean": not any(s.warnings for s in statuses),

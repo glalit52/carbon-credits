@@ -415,7 +415,7 @@ def run(projections: list[VintageProjection], *,
         return forecast
 
     draws = _simulate(projections, risk, trials, seed)
-    totals = sorted(sum(draws[y][i] for y in draws) for i in range(trials))
+    totals = sorted(math.fsum(draws[y][i] for y in draws) for i in range(trials))
 
     for p in projections:
         if any(y.year == p.year for y in forecast.years):
@@ -424,11 +424,11 @@ def run(projections: list[VintageProjection], *,
         same_year = [q.net_t for q in projections if q.year == p.year]
         forecast.years.append(YearForecast(
             year=p.year,
-            projected_t=sum(same_year),
+            projected_t=math.fsum(same_year),
             p10=_quantile(values, 0.10),
             p50=_quantile(values, 0.50),
             p90=_quantile(values, 0.90),
-            mean=sum(values) / len(values),
+            mean=math.fsum(values) / len(values),
             # The safe level is the LOWER tail: the volume exceeded in
             # `confidence` of futures. Reading the upper quantile here is
             # the error that sells a project into a shortfall.
@@ -437,7 +437,7 @@ def run(projections: list[VintageProjection], *,
             zero_rate=sum(1 for v in values if v <= 0) / len(values),
         ))
 
-    forecast.projected_total_t = sum(p.net_t for p in projections)
+    forecast.projected_total_t = math.fsum(p.net_t for p in projections)
     forecast.p50_total_t = _quantile(totals, 0.50)
     forecast.safe_total_t = _quantile(totals, 1 - confidence)
 
@@ -446,7 +446,7 @@ def run(projections: list[VintageProjection], *,
                      "verification slip", "measurement uncertainty"):
             alt = _simulate(projections, risk, trials, seed, disable=name)
             alt_totals = sorted(
-                sum(alt[y][i] for y in alt) for i in range(trials))
+                math.fsum(alt[y][i] for y in alt) for i in range(trials))
             forecast.sensitivity[name] = _quantile(alt_totals, 1 - confidence)
 
     unsettled = [p for p in projections if not p.settled]
@@ -527,11 +527,11 @@ def assess_offtake(forecast: Forecast, projections: list[VintageProjection],
     """
     risk = risk or RiskModel()
     draws = _simulate(projections, risk, forecast.trials, seed)
-    totals = [sum(draws[y][i] for y in draws) for i in range(forecast.trials)]
+    totals = [math.fsum(draws[y][i] for y in draws) for i in range(forecast.trials)]
 
     shortfalls = [max(0.0, committed_t - t) for t in totals]
     met = sum(1 for s in shortfalls if s <= 0) / len(shortfalls)
-    expected = sum(shortfalls) / len(shortfalls)
+    expected = math.fsum(shortfalls) / len(shortfalls)
     worst = max(shortfalls)
 
     if met >= forecast.confidence:
