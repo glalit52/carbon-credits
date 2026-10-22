@@ -123,7 +123,10 @@ argument for locally calibrated allometry."""
 
 def uncertainty_deduction(relative_uncertainty: float,
                           allowance: float = UNCERTAINTY_ALLOWANCE) -> Deduction:
-    excess = max(0.0, relative_uncertainty - allowance)
+    # Capped at 1.0: past 115% relative uncertainty the vintage credits
+    # nothing. Uncapped, the deduction exceeds gross, the running remainder
+    # goes negative, and every deduction after it (the buffer) inverts sign.
+    excess = min(1.0, max(0.0, relative_uncertainty - allowance))
     return Deduction(
         name="uncertainty",
         fraction=excess,
