@@ -465,6 +465,20 @@ def api_standards_compare(store: Store, query: dict, **_) -> dict:
     ).to_dict()
 
 
+@route("POST", "/api/estimate")
+def api_estimate(store: Store, body: dict, **_) -> dict:
+    """Credit estimate for any farm from its boundary and crop calendar.
+
+    Stateless: it reads nothing from the store and writes nothing, which is
+    why the read-only deployment can serve it. See carbonstack.estimate.
+    """
+    from .estimate import EstimateError, estimate
+    try:
+        return estimate(body)
+    except EstimateError as exc:
+        raise ApiError(422, str(exc)) from exc
+
+
 @route("GET", "/api/sites/{site_id}/soc")
 def api_site_soc(store: Store, site_id: str, query: dict, **_) -> dict:
     """RothC projection on the site's published normals. Ex-ante only."""

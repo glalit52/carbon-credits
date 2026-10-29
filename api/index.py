@@ -13,10 +13,15 @@ or any managed SQLite — or running the API on a host with a real disk. Until
 then this deployment is a public read surface over a committed demo database:
 projects, plots, eligibility, vintages, derivations, issuances, payments and
 the event chain, all queryable.
+
+One POST is served: /api/estimate, which computes a farm's credit estimate
+and stores nothing. It needs CARBONSTACK_ENGINE_TOKEN set here and sent as a
+bearer token, because it fetches weather on the caller's behalf.
 """
 
 from __future__ import annotations
 
+import hmac
 import json
 import os
 import shutil
@@ -47,6 +52,10 @@ WRITE_REFUSED = {
         "SQLite), or run `carbonstack serve` on a host with a real disk."
     ),
 }
+
+#: POST routes that compute without writing, so this deployment can serve them.
+STATELESS_POSTS = {"/api/estimate"}
+MAX_BODY = 1_000_000
 
 _store: Store | None = None
 
@@ -83,12 +92,12 @@ class handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass  # Vercel captures stdout; the default access log is noise
 
-    def _send(self, status: int, payload: dict) -> None:
+    def _send(self, status: int, payload: dict, *, cache: bool = True) -> None:
         raw = json.dumps(payload, indent=2, default=str).encode()
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(raw)))
-        self.send_header("Cache-Control", "public, max-age=60")
+        self.send_header("Cache-Control", "public, max-age=60" if cache else "no-store")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(raw)
@@ -116,8 +125,35 @@ class handler(BaseHTTPRequestHandler):
         self._send(status, payload)
 
     def do_POST(self) -> None:
-        path, _ = resolve(self.path)
-        self._send(503, {**WRITE_REFUSED, "path": path})
+        path, query = resolve(self.path)
+        if path not in STATELESS_POSTS:
+            self._send(503, {**WRITE_REFUSED, "path": path})
+            return
+        # The estimate fetches weather on the caller's behalf, so it is not
+        # left open to the internet: the web app's server holds the token.
+        token = os.environ.get("CARBONSTACK_ENGINE_TOKEN")
+        if not token:
+            self._send(503, {"error": "estimates are disabled",
+                             "fix": "set CARBONSTACK_ENGINE_TOKEN on this deployment"})
+            return
+        if not hmac.compare_digest(self.headers.get("Authorization", ""), f"Bearer {token}"):
+            self._send(401, {"error": "bearer token required"})
+            return
+        length = int(self.headers.get("Content-Length") or 0)
+        if length > MAX_BODY:
+            self._send(413, {"error": f"request body over {MAX_BODY} bytes"})
+            return
+        try:
+            body = json.loads(self.rfile.read(length) or b"{}")
+        except json.JSONDecodeError as exc:
+            self._send(400, {"error": f"body is not JSON ({exc})"})
+            return
+        try:
+            status, payload = dispatch(get_store(), "POST", path, query, body)
+        except Exception as exc:                           # pragma: no cover
+            self._send(500, {"error": str(exc)})
+            return
+        self._send(status, payload, cache=False)
 
     def do_OPTIONS(self) -> None:
         self.send_response(204)

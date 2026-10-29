@@ -1,0 +1,86 @@
+@import "tailwindcss";
+/* MapLibre's own stylesheet, loaded once for every map. */
+@import "maplibre-gl/dist/maplibre-gl.css";
+
+/* Design tokens. Light by default, dark when the OS asks for it. Colours are
+   named for their job, not their hue, so components never hard-code a shade. */
+:root {
+  --bg: #f6f7f4;
+  --surface: #ffffff;
+  --surface-2: #f0f2ec;
+  --border: #e1e5dc;
+  --text: #17201a;
+  --muted: #5d6a60;
+  --brand: #1f7a4d;
+  --brand-strong: #145c39;
+  --brand-soft: #e3f2e9;
+  --accent: #b7791f;
+  --accent-soft: #fbf1e1;
+  --danger: #b42318;
+  --danger-soft: #fdecea;
+  --info: #1d5fa8;
+  --info-soft: #e6effa;
+  --ring: #1f7a4d55;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1411;
+    --surface: #161d18;
+    --surface-2: #1c241f;
+    --border: #2a352d;
+    --text: #e7ece8;
+    --muted: #97a59b;
+    --brand: #49b07a;
+    --brand-strong: #6cc795;
+    --brand-soft: #173325;
+    --accent: #e0a64a;
+    --accent-soft: #33281a;
+    --danger: #f2705f;
+    --danger-soft: #3a1f1b;
+    --info: #6ea8ea;
+    --info-soft: #172a40;
+    --ring: #49b07a66;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-soft: var(--brand-soft);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}

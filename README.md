@@ -13,8 +13,11 @@ financial model that gates it, and `carbonstack`, the dMRV core it runs on.
 | `src/carbonstack/sites.py` | The two pilot sites — real places, real climatology |
 | `src/carbonstack/feed.py` | Simulated monitoring on the real 5-day revisit cadence |
 | `dashboard/` | The live MRV dashboard, its dataset and example evidence packs |
-| `scripts/` | Build the dashboard dataset and page |
-| `tests/` | 433 tests, stdlib only |
+| `scripts/` | Build the dashboard dataset and page, and the web app's demo data |
+| `web/` | The web app: sign-up, organisations, farms on a map, bulk import, credits review, payments — see `web/README.md` |
+| `supabase/` | The web app's Postgres schema, row-level security, and the tests that prove it |
+| `src/carbonstack/estimate.py` | A credit estimate for any farm from its polygon and crop calendar (`POST /api/estimate`) |
+| `tests/` | 456 tests, stdlib only |
 
 ## The two numbers that shape everything
 
@@ -914,6 +917,23 @@ Every rule is a `Fact` tagged `primary`, `secondary` or `unconfirmed`, and
 each route prints the weakest tag it leans on. The primary documents could
 not be fetched for this research, so the tags are not decoration: an
 unconfirmed buffer rate is a question for the registry, not a parameter.
+
+## The web app
+
+`web/` is the product a project developer uses day to day, in the shape Varaha's
+field app and Mitti Labs' dashboard pointed at. Field agents enrol farms by
+drawing, walking (GPS) or uploading a boundary, or import thousands at once
+from CSV, KML or GeoJSON with every row checked before anything is written.
+Each farm gets a credit estimate from `POST /api/estimate`, run on its own ten
+years of ERA5 climate and its own crop calendar, split into what is creditable
+now and what missing paperwork is holding back, with every generic input
+named. Vintages are built from farm estimates, approved by a second person,
+issued with serials, and paid out to farmers by their share.
+
+Access control lives in Postgres: every table is scoped to an organisation by
+row-level security, tested on a real database in CI (`supabase/tests/`). With
+no Supabase configured the app runs as a read-only demo of 18 farms around the
+two pilots, estimated by the real engine. Setup is in `web/README.md`.
 
 ## What is deliberately not real yet
 
