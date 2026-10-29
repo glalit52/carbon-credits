@@ -479,6 +479,16 @@ def api_estimate(store: Store, body: dict, **_) -> dict:
         raise ApiError(422, str(exc)) from exc
 
 
+@route("POST", "/api/forecast")
+def api_forecast(store: Store, body: dict, **_) -> dict:
+    """Forward delivery for a project's projected vintages. Stateless."""
+    from .forecast_api import ForecastError, forecast_request
+    try:
+        return forecast_request(body)
+    except ForecastError as exc:
+        raise ApiError(422, str(exc)) from exc
+
+
 @route("GET", "/api/sites/{site_id}/soc")
 def api_site_soc(store: Store, site_id: str, query: dict, **_) -> dict:
     """RothC projection on the site's published normals. Ex-ante only."""

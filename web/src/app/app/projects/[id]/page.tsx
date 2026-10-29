@@ -51,6 +51,9 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         description={`${PATHWAY_LABEL[project.pathway]} · ${project.methodology}${project.registry ? ` · ${project.registry}` : ""} · ${[project.region, project.country].filter(Boolean).join(", ")}`}
         actions={
           <>
+            <ButtonLink href={`/app/projects/${project.id}/forecast`} variant="secondary">
+              Forward sales
+            </ButtonLink>
             <DownloadLink href={`/app/export/estimates.csv?project=${project.id}`}>
               <Download className="h-4 w-4" /> Estimates CSV
             </DownloadLink>

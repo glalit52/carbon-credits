@@ -3,6 +3,7 @@
 import {
   Activity,
   BadgeCheck,
+  FileCheck2,
   FolderKanban,
   LayoutDashboard,
   Menu,
@@ -27,6 +28,7 @@ const ITEMS = [
   { href: "/app/farmers", label: "Farmers", icon: Users },
   { href: "/app/import", label: "Import data", icon: Upload },
   { href: "/app/credits", label: "Credits", icon: BadgeCheck },
+  { href: "/app/claims", label: "Claims & retirement", icon: FileCheck2 },
   { href: "/app/payments", label: "Payments", icon: Wallet },
   { href: "/app/integrations", label: "Integrations", icon: Plug },
   { href: "/app/activity", label: "Activity", icon: Activity },

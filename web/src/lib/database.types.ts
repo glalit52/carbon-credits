@@ -262,6 +262,92 @@ export type AuditEvent = {
   at: string;
 };
 
+export type AuthorisedUse = "other_party_ndc" | "corsia" | "other_international_mitigation_purposes";
+export type RetirementPurpose = "contribution" | "offset" | "corsia";
+
+export type Authorisation = {
+  id: string;
+  org_id: string;
+  project_id: string;
+  authority: string;
+  reference: string;
+  issued_on: string;
+  authorised_use: AuthorisedUse;
+  authorised_volume_t: number;
+  adjustment_committed: boolean;
+  first_vintage: number;
+  last_vintage: number;
+  valid_until: string | null;
+  revoked_on: string | null;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type Adjustment = {
+  id: string;
+  org_id: string;
+  authorisation_id: string;
+  vintage_year: number;
+  volume_t: number;
+  reported_on: string;
+  reference: string;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type Retirement = {
+  id: string;
+  org_id: string;
+  vintage_id: string;
+  serial_start: number;
+  serial_end: number;
+  quantity: number;
+  beneficiary: string;
+  purpose: RetirementPurpose;
+  claim: string;
+  retired_by: string | null;
+  retired_at: string;
+};
+
+/** public.claim_basis(): what a vintage permits a buyer to say. */
+export type ClaimBasis = {
+  basis: "unadjusted_voluntary" | "authorised_itmo";
+  authorisation: { reference: string; authority: string; authorised_use: AuthorisedUse; adjustment_committed: boolean } | null;
+  adjusted_t: number;
+  offsettable_credits: number;
+  offset_remaining: number;
+  corsia_eligible: boolean;
+  reasons: string[];
+};
+
+/** public.public_vintage(): registry facts anyone may see. */
+export type PublicVintage = {
+  organisation: string;
+  org_code: string;
+  project: string;
+  methodology: string;
+  registry: string | null;
+  country: string | null;
+  region: string | null;
+  vintage_year: number;
+  net_t: number;
+  serial_start: number;
+  serial_end: number;
+  issued_at: string | null;
+  claim_basis: ClaimBasis;
+};
+
+export type PublicRetirement = Pick<
+  Retirement,
+  "id" | "beneficiary" | "purpose" | "claim" | "retired_at" | "serial_start" | "serial_end" | "quantity"
+>;
+
+export type VerifyResult =
+  | { found: false; reason?: string }
+  | { found: true; serial: number; code: string; vintage: PublicVintage; retirement: PublicRetirement | null };
+
+export type CertificateResult = { found: false } | ({ found: true; vintage: PublicVintage } & PublicRetirement);
+
 export type Database = {
   public: {
     Tables: {
@@ -298,6 +384,21 @@ export type Database = {
       payments: Table<Payment, "org_id" | "vintage_id" | "farmer_id" | "credits" | "amount">;
       integrations: Table<Integration, "org_id" | "provider">;
       audit_events: Table<AuditEvent, "org_id" | "action" | "entity">;
+      authorisations: Table<
+        Authorisation,
+        | "org_id"
+        | "project_id"
+        | "authority"
+        | "reference"
+        | "issued_on"
+        | "authorised_use"
+        | "authorised_volume_t"
+        | "adjustment_committed"
+        | "first_vintage"
+        | "last_vintage"
+      >;
+      adjustments: Table<Adjustment, "org_id" | "authorisation_id" | "vintage_year" | "volume_t" | "reported_on" | "reference">;
+      retirements: Table<Retirement, "org_id" | "vintage_id" | "serial_start" | "serial_end" | "beneficiary" | "purpose" | "claim">;
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -306,6 +407,13 @@ export type Database = {
         Returns: string;
       };
       accept_invitation: { Args: { invite_token: string }; Returns: string };
+      retire_credits: {
+        Args: { vintage: string; credits: number; beneficiary_name: string; retire_purpose: RetirementPurpose };
+        Returns: Retirement;
+      };
+      vintage_claims: { Args: { org: string }; Returns: { vintage_id: string; basis: ClaimBasis }[] };
+      verify_credit: { Args: { code: string }; Returns: VerifyResult };
+      retirement_certificate: { Args: { retirement: string }; Returns: CertificateResult };
       transition_vintage: {
         Args: { vintage: string; to_state: VintageStatus; review_note?: string | null };
         Returns: Vintage;

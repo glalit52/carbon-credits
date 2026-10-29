@@ -24,7 +24,7 @@ write says it is the demo.
 
 1. Create a project at supabase.com.
 2. Run the migrations, in order, in the SQL editor (or `supabase db push`):
-   `supabase/migrations/20261029000001_core.sql`, then `…02_storage.sql`.
+   `supabase/migrations/20261029000001_core.sql`, `…02_storage.sql`, then `…03_claims.sql`.
 3. Authentication → URL configuration: set the site URL and add
    `https://<your-domain>/auth/callback` to the redirect URLs.
 4. Optional: Authentication → Providers → Google, for "Continue with Google".
@@ -66,6 +66,25 @@ Vintage status changes go only through `transition_vintage()`, which enforces
 the order (draft → submitted → approved → issued, with on-hold), the second
 approver, and serial allocation. Every change to a commercial record is written
 to `audit_events` by trigger; nobody, admins included, can edit or delete it.
+
+## Selling forward, claims and verification
+
+- **Forward sales** (project → Forward sales) runs the engine's delivery
+  simulation (`POST /api/forecast`) on the project's estimates: farmer
+  dropout, lapsed seasons, failed plantings and slipped verification, across
+  4,000 seeded futures. It reports the volume that is safe to promise at the
+  chosen confidence, which risk costs the most, how the safe share grows with
+  more farmers, and whether a proposed sale is signable.
+- **Claims & retirement** records Article 6 authorisations and the
+  corresponding adjustments a host country actually reports, and retires
+  credits in serial order. `retire_credits()` refuses to retire anything as an
+  offset or for CORSIA unless an adjustment stands behind it; everything else
+  can only be retired as a contribution. Each retirement keeps the exact
+  claim wording it was issued with.
+- **Public verification** at `/verify` and `/certificate/<id>` needs no
+  account. Credit codes look like `7C3E9A51-2025-6`: the issuer's prefix, the
+  vintage year and the serial. The lookups are two Postgres functions granted
+  to `anon`, and they return registry facts only, never farmer or farm data.
 
 ## Checks
 

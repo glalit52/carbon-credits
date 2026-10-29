@@ -1,6 +1,45 @@
 {
+ "adjustments": [
+  {
+   "authorisation_id": "70022de8-402c-b080-beba-7eff3a3dac7c",
+   "created_at": "2026-07-01T10:00:00+00:00",
+   "created_by": "00000000-0000-4000-8000-0000000000a2",
+   "id": "fe4b0fe1-d949-079e-53b0-4c904493423d",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
+   "reference": "India BTR 2026, Table 4.1",
+   "reported_on": "2026-06-30",
+   "vintage_year": 2025,
+   "volume_t": 5.0
+  }
+ ],
  "as_of": "2026-10-29",
  "audit": [
+  {
+   "action": "insert",
+   "actor": "00000000-0000-4000-8000-0000000000a2",
+   "at": "2026-09-14T11:00:00+00:00",
+   "detail": {
+    "beneficiary": "Acme Foods Ltd",
+    "quantity": 4
+   },
+   "entity": "retirements",
+   "entity_id": "0b0b20c0-d820-d284-b2f2-c0ce1a72fb58",
+   "id": 35,
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
+  },
+  {
+   "action": "insert",
+   "actor": "00000000-0000-4000-8000-0000000000a2",
+   "at": "2026-08-20T11:00:00+00:00",
+   "detail": {
+    "beneficiary": "Skyline Airways",
+    "quantity": 3
+   },
+   "entity": "retirements",
+   "entity_id": "f038d29b-6298-86dc-fbea-0d9ba0e71f12",
+   "id": 34,
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
+  },
   {
    "action": "update",
    "actor": "00000000-0000-4000-8000-0000000000a2",
@@ -11,7 +50,7 @@
    "entity": "payments",
    "entity_id": "e374d4ba-c515-f174-7443-d2f6c686a916",
    "id": 33,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "update",
@@ -23,7 +62,7 @@
    "entity": "payments",
    "entity_id": "6e87c01b-0614-727e-b72e-6661d541b26f",
    "id": 32,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "update",
@@ -35,7 +74,7 @@
    "entity": "payments",
    "entity_id": "a9a159c5-884d-4053-6ef6-96440edc8fa7",
    "id": 31,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "update",
@@ -47,7 +86,7 @@
    "entity": "payments",
    "entity_id": "aa1c18f2-bcc9-d035-4e27-94f10afc041c",
    "id": 30,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "update",
@@ -59,7 +98,7 @@
    "entity": "payments",
    "entity_id": "107dc3d8-8baa-86e6-3760-b6f44cc5096f",
    "id": 29,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "update",
@@ -71,7 +110,7 @@
    "entity": "payments",
    "entity_id": "0034a7de-49ce-b147-d06b-3e1be0728122",
    "id": 28,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "update",
@@ -83,7 +122,7 @@
    "entity": "payments",
    "entity_id": "1b57ba3e-138c-deaa-7052-f9fda4d273b6",
    "id": 27,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "update",
@@ -95,7 +134,7 @@
    "entity": "vintages",
    "entity_id": "c838c00c-e3ae-c7bc-3ab4-ad5d457edc59",
    "id": 26,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "update",
@@ -107,7 +146,7 @@
    "entity": "vintages",
    "entity_id": "c838c00c-e3ae-c7bc-3ab4-ad5d457edc59",
    "id": 25,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "update",
@@ -119,7 +158,7 @@
    "entity": "vintages",
    "entity_id": "c838c00c-e3ae-c7bc-3ab4-ad5d457edc59",
    "id": 24,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "update",
@@ -131,7 +170,7 @@
    "entity": "vintages",
    "entity_id": "c838c00c-e3ae-c7bc-3ab4-ad5d457edc59",
    "id": 23,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "update",
@@ -143,7 +182,7 @@
    "entity": "vintages",
    "entity_id": "b30b5977-9284-2e52-b996-c88c6778279b",
    "id": 22,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "update",
@@ -155,7 +194,7 @@
    "entity": "vintages",
    "entity_id": "c838c00c-e3ae-c7bc-3ab4-ad5d457edc59",
    "id": 21,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "update",
@@ -167,7 +206,7 @@
    "entity": "vintages",
    "entity_id": "c87cdc65-c82f-4d41-b7c3-0177081e3897",
    "id": 20,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "update",
@@ -179,7 +218,7 @@
    "entity": "vintages",
    "entity_id": "b30b5977-9284-2e52-b996-c88c6778279b",
    "id": 19,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "insert",
@@ -191,7 +230,7 @@
    "entity": "farms",
    "entity_id": "e453fec4-2262-3a30-dad7-c39dcb34680c",
    "id": 18,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "insert",
@@ -203,7 +242,7 @@
    "entity": "farms",
    "entity_id": "0bff3670-a55a-caac-068c-11b9634f7d91",
    "id": 17,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "insert",
@@ -215,7 +254,7 @@
    "entity": "farms",
    "entity_id": "ac9b89a3-85c9-b96c-4bf8-bad377339b05",
    "id": 16,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "insert",
@@ -227,7 +266,7 @@
    "entity": "farms",
    "entity_id": "a10d1a3f-25f2-a6d7-60ca-4c992583ef3a",
    "id": 15,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "insert",
@@ -239,7 +278,7 @@
    "entity": "farms",
    "entity_id": "ddd2a9ff-557d-dd45-8309-a8e5c3849ebf",
    "id": 14,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "insert",
@@ -251,7 +290,7 @@
    "entity": "farms",
    "entity_id": "2d939df0-837f-9e5b-7e21-1f78d5bcfaed",
    "id": 13,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "insert",
@@ -263,7 +302,7 @@
    "entity": "farms",
    "entity_id": "ead3eb6f-e915-b396-4e97-b5e0efcc7a30",
    "id": 12,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "insert",
@@ -275,7 +314,7 @@
    "entity": "farms",
    "entity_id": "9d3b3956-e944-4d88-6878-4ce92bd7a6c4",
    "id": 11,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "insert",
@@ -287,7 +326,7 @@
    "entity": "farms",
    "entity_id": "1818dadd-80e5-5e6d-5b17-8ed3f6e59df9",
    "id": 10,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "insert",
@@ -299,7 +338,7 @@
    "entity": "farms",
    "entity_id": "568cb4bf-d579-a06a-d553-0a13ff752cba",
    "id": 9,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "insert",
@@ -311,7 +350,7 @@
    "entity": "farms",
    "entity_id": "139cc3e0-9cdd-4082-2d75-16f0fcec8db4",
    "id": 8,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "insert",
@@ -323,7 +362,7 @@
    "entity": "farms",
    "entity_id": "b33ca6ae-2f39-a0e9-43b1-dcfa45d455ce",
    "id": 7,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "insert",
@@ -335,7 +374,7 @@
    "entity": "farms",
    "entity_id": "2a27b26e-58d9-3c69-99fc-af8f15f378a2",
    "id": 6,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "insert",
@@ -347,7 +386,7 @@
    "entity": "farms",
    "entity_id": "1cf8fefd-4218-d9c7-4fa0-5435a22c24a5",
    "id": 5,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "insert",
@@ -359,7 +398,7 @@
    "entity": "farms",
    "entity_id": "34420bb8-706b-c9f9-cd12-05d24df399ed",
    "id": 4,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "insert",
@@ -371,7 +410,7 @@
    "entity": "farms",
    "entity_id": "8ee23d7c-d20f-e316-b99c-5f7834642130",
    "id": 3,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "insert",
@@ -383,7 +422,7 @@
    "entity": "farms",
    "entity_id": "5983270d-9e0f-3ac4-e304-d0bc60686ebf",
    "id": 2,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   },
   {
    "action": "insert",
@@ -395,9 +434,82 @@
    "entity": "farms",
    "entity_id": "817909c0-a8b3-32d5-f1b0-7527d8c83305",
    "id": 1,
-   "org_id": "00000000-0000-4000-8000-000000000001"
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
   }
  ],
+ "authorisations": [
+  {
+   "adjustment_committed": true,
+   "authorised_use": "corsia",
+   "authorised_volume_t": 50.0,
+   "authority": "MoEFCC, Government of India",
+   "created_at": "2026-04-03T10:00:00+00:00",
+   "created_by": "00000000-0000-4000-8000-0000000000a2",
+   "first_vintage": 2025,
+   "id": "70022de8-402c-b080-beba-7eff3a3dac7c",
+   "issued_on": "2026-04-02",
+   "last_vintage": 2027,
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
+   "project_id": "514b078a-b6b6-0685-8fce-b2ed61c74c67",
+   "reference": "LoA/IN/2026/0042",
+   "revoked_on": null,
+   "valid_until": null
+  }
+ ],
+ "claims": {
+  "01a6d60f-7ff1-ba46-7e51-8230fee47df5": {
+   "adjusted_t": 0,
+   "authorisation": null,
+   "basis": "unadjusted_voluntary",
+   "corsia_eligible": false,
+   "offset_remaining": 0,
+   "offsettable_credits": 0,
+   "reasons": [
+    "no host-country authorisation on record"
+   ]
+  },
+  "b30b5977-9284-2e52-b996-c88c6778279b": {
+   "adjusted_t": 0,
+   "authorisation": null,
+   "basis": "unadjusted_voluntary",
+   "corsia_eligible": false,
+   "offset_remaining": 0,
+   "offsettable_credits": 0,
+   "reasons": [
+    "no host-country authorisation on record"
+   ]
+  },
+  "c838c00c-e3ae-c7bc-3ab4-ad5d457edc59": {
+   "adjusted_t": 5.0,
+   "authorisation": {
+    "adjustment_committed": true,
+    "authorised_use": "corsia",
+    "authority": "MoEFCC, Government of India",
+    "reference": "LoA/IN/2026/0042"
+   },
+   "basis": "authorised_itmo",
+   "corsia_eligible": true,
+   "offset_remaining": 2,
+   "offsettable_credits": 5,
+   "reasons": []
+  },
+  "c87cdc65-c82f-4d41-b7c3-0177081e3897": {
+   "adjusted_t": 0,
+   "authorisation": {
+    "adjustment_committed": true,
+    "authorised_use": "corsia",
+    "authority": "MoEFCC, Government of India",
+    "reference": "LoA/IN/2026/0042"
+   },
+   "basis": "authorised_itmo",
+   "corsia_eligible": false,
+   "offset_remaining": 0,
+   "offsettable_credits": 0,
+   "reasons": [
+    "authorised, but no corresponding adjustment has been applied for this vintage yet"
+   ]
+  }
+ },
  "estimates": [
   {
    "created_at": "2026-10-26T08:00:00+00:00",
@@ -498,7 +610,7 @@
    },
    "methodology": "VM0051",
    "net_t": 0.4933,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -979,7 +1091,7 @@
    },
    "methodology": "VM0051",
    "net_t": 0.6463,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -1460,7 +1572,7 @@
    },
    "methodology": "VM0051",
    "net_t": 1.3514,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -1939,7 +2051,7 @@
    },
    "methodology": "VM0051",
    "net_t": 1.4234,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -2421,7 +2533,7 @@
    },
    "methodology": "VM0051",
    "net_t": 0.7734,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -2902,7 +3014,7 @@
    },
    "methodology": "VM0051",
    "net_t": 0.9661,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -3383,7 +3495,7 @@
    },
    "methodology": "VM0051",
    "net_t": 0.0,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [
@@ -3872,7 +3984,7 @@
    },
    "methodology": "VM0051",
    "net_t": 0.0,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [
@@ -4359,7 +4471,7 @@
    },
    "methodology": "VM0051",
    "net_t": 1.7089,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -4839,7 +4951,7 @@
    },
    "methodology": "VM0051",
    "net_t": 1.6277,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -5319,7 +5431,7 @@
    },
    "methodology": "VM0051",
    "net_t": 0.6251,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -5800,7 +5912,7 @@
    },
    "methodology": "VM0051",
    "net_t": 0.5159,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -6279,7 +6391,7 @@
    },
    "methodology": "VM0051",
    "net_t": 0.9315,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -6759,7 +6871,7 @@
    },
    "methodology": "VM0051",
    "net_t": 0.9142,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -7239,7 +7351,7 @@
    },
    "methodology": "VM0051",
    "net_t": 0.0,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [
@@ -7724,7 +7836,7 @@
    },
    "methodology": "VM0051",
    "net_t": 0.0,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [
@@ -8210,7 +8322,7 @@
    },
    "methodology": "VM0051",
    "net_t": 1.0326,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -8688,7 +8800,7 @@
    },
    "methodology": "VM0051",
    "net_t": 0.9705,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -9168,7 +9280,7 @@
    },
    "methodology": "VM0051",
    "net_t": 0.0,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [
@@ -9655,7 +9767,7 @@
    },
    "methodology": "VM0051",
    "net_t": 0.0,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [
@@ -10140,7 +10252,7 @@
    },
    "methodology": "VM0051",
    "net_t": 1.269,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -10618,7 +10730,7 @@
    },
    "methodology": "VM0051",
    "net_t": 0.7282,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -11101,7 +11213,7 @@
    },
    "methodology": "VM0051",
    "net_t": 1.1998,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -11581,7 +11693,7 @@
    },
    "methodology": "VM0051",
    "net_t": 1.216,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -12050,7 +12162,7 @@
    },
    "methodology": "VM0047",
    "net_t": 10.4986,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -12480,7 +12592,7 @@
    },
    "methodology": "VM0047",
    "net_t": 9.9115,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -12912,7 +13024,7 @@
    },
    "methodology": "VM0047",
    "net_t": 16.0077,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -13342,7 +13454,7 @@
    },
    "methodology": "VM0047",
    "net_t": 15.9218,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -13774,7 +13886,7 @@
    },
    "methodology": "VM0047",
    "net_t": 7.1889,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -14204,7 +14316,7 @@
    },
    "methodology": "VM0047",
    "net_t": 7.071,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -14636,7 +14748,7 @@
    },
    "methodology": "VM0047",
    "net_t": 11.1721,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -15066,7 +15178,7 @@
    },
    "methodology": "VM0047",
    "net_t": 10.8841,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -15498,7 +15610,7 @@
    },
    "methodology": "VM0047",
    "net_t": 0.0,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [
@@ -15876,7 +15988,7 @@
    },
    "methodology": "VM0047",
    "net_t": 0.0,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [
@@ -16256,7 +16368,7 @@
    },
    "methodology": "VM0047",
    "net_t": 7.3352,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -16686,7 +16798,7 @@
    },
    "methodology": "VM0047",
    "net_t": 8.2176,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "requested_by": "00000000-0000-4000-8000-0000000000a4",
    "result": {
     "blockers": [],
@@ -17044,7 +17156,7 @@
    "external_ref": "TNJ-F001",
    "id": "9b2c8c5e-59e6-7d82-8259-fb5128b977fc",
    "name": "Murugan K",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "payout_method": "upi",
    "payout_reference": "****1188",
    "phone": "+91 909172187",
@@ -17063,7 +17175,7 @@
    "external_ref": "TNJ-F002",
    "id": "7c078cf8-92bb-6381-4466-785e7ea9f750",
    "name": "Selvi R",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "payout_method": "upi",
    "payout_reference": "****0924",
    "phone": "+91 964106274",
@@ -17082,7 +17194,7 @@
    "external_ref": "TNJ-F003",
    "id": "baf1639a-e6a7-fb00-1de7-5abafff76f50",
    "name": "Arumugam P",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "payout_method": "upi",
    "payout_reference": "****1971",
    "phone": "+91 961355729",
@@ -17101,7 +17213,7 @@
    "external_ref": "TNJ-F004",
    "id": "27a31f56-fe4b-ace6-38ef-ed4a3b79666c",
    "name": "Lakshmi S",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "payout_method": "upi",
    "payout_reference": "****9321",
    "phone": "+91 902728813",
@@ -17120,7 +17232,7 @@
    "external_ref": "TNJ-F005",
    "id": "a22c04c4-5b60-7985-8af2-fa48ffbb73de",
    "name": "Karthik V",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "payout_method": "upi",
    "payout_reference": "****3215",
    "phone": "+91 923484335",
@@ -17139,7 +17251,7 @@
    "external_ref": "TNJ-F006",
    "id": "6cbdfa80-430c-6b67-5df1-6d43a81f451b",
    "name": "Meena T",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "payout_method": "upi",
    "payout_reference": "****1377",
    "phone": "+91 994750620",
@@ -17158,7 +17270,7 @@
    "external_ref": "TNJ-F007",
    "id": "630d1891-4046-7bdd-5868-8b9913f29d87",
    "name": "Rajendran M",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "payout_method": "upi",
    "payout_reference": "****3212",
    "phone": "+91 998977266",
@@ -17177,7 +17289,7 @@
    "external_ref": "TNJ-F008",
    "id": "8f2d95f7-5c33-a946-4066-c1d883c00978",
    "name": "Kavitha N",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "payout_method": "upi",
    "payout_reference": "****1483",
    "phone": "+91 919571563",
@@ -17196,7 +17308,7 @@
    "external_ref": "TNJ-F009",
    "id": "969488d6-6d78-6c18-0fbb-2a080f8bb18d",
    "name": "Senthil A",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "payout_method": "upi",
    "payout_reference": "****1818",
    "phone": "+91 963873089",
@@ -17215,7 +17327,7 @@
    "external_ref": "TNJ-F010",
    "id": "6fb412da-0004-3712-1742-8de9f2c347ef",
    "name": "Pandian G",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "payout_method": "upi",
    "payout_reference": "****3217",
    "phone": "+91 919277582",
@@ -17234,7 +17346,7 @@
    "external_ref": "TNJ-F011",
    "id": "fc56e3d7-5857-1ad1-75e6-58689c36ac15",
    "name": "Revathi B",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "payout_method": "upi",
    "payout_reference": "****5540",
    "phone": "+91 952353261",
@@ -17253,7 +17365,7 @@
    "external_ref": "TNJ-F012",
    "id": "c523e7c8-0500-c687-f338-317fc5e9b05f",
    "name": "Elango D",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "payout_method": "upi",
    "payout_reference": "****1244",
    "phone": "+91 928136444",
@@ -17272,7 +17384,7 @@
    "external_ref": "NYR-F001",
    "id": "b31201ad-559b-ff52-dfd0-2975fda4e907",
    "name": "Wanjiru M",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "payout_method": "mobile_money",
    "payout_reference": "****6129",
    "phone": "+254 785260635",
@@ -17291,7 +17403,7 @@
    "external_ref": "NYR-F002",
    "id": "4a88dce6-cb4c-f97d-3955-e4436aba720a",
    "name": "Kamau J",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "payout_method": "mobile_money",
    "payout_reference": "****0208",
    "phone": "+254 766464099",
@@ -17310,7 +17422,7 @@
    "external_ref": "NYR-F003",
    "id": "68999db8-8b27-7f3b-6c94-667ce056a5ee",
    "name": "Njeri W",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "payout_method": "mobile_money",
    "payout_reference": "****6598",
    "phone": "+254 710827025",
@@ -17329,7 +17441,7 @@
    "external_ref": "NYR-F004",
    "id": "4fad975a-09f6-482d-eab3-a1be51885029",
    "name": "Mwangi P",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "payout_method": "mobile_money",
    "payout_reference": "****3429",
    "phone": "+254 776458246",
@@ -17348,7 +17460,7 @@
    "external_ref": "NYR-F005",
    "id": "eb5c1de9-ca6f-c65c-27d0-5e8c2e03b435",
    "name": "Wambui K",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "payout_method": "mobile_money",
    "payout_reference": "****9591",
    "phone": "+254 751184008",
@@ -17367,7 +17479,7 @@
    "external_ref": "NYR-F006",
    "id": "e7b4ab90-dbe5-649c-db6b-a137c5a78fac",
    "name": "Githinji S",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "payout_method": "mobile_money",
    "payout_reference": "****0491",
    "phone": "+254 728485046",
@@ -17419,7 +17531,7 @@
    "farmer_id": "9b2c8c5e-59e6-7d82-8259-fb5128b977fc",
    "id": "ac9b89a3-85c9-b96c-4bf8-bad377339b05",
    "name": "Murugan \u2014 Vallam 1",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "project_id": "514b078a-b6b6-0685-8fce-b2ed61c74c67",
    "rice_ecosystem": "irrigated_lowland",
@@ -17491,7 +17603,7 @@
    "farmer_id": "7c078cf8-92bb-6381-4466-785e7ea9f750",
    "id": "139cc3e0-9cdd-4082-2d75-16f0fcec8db4",
    "name": "Selvi \u2014 Budalur 2",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "project_id": "514b078a-b6b6-0685-8fce-b2ed61c74c67",
    "rice_ecosystem": "irrigated_lowland",
@@ -17563,7 +17675,7 @@
    "farmer_id": "baf1639a-e6a7-fb00-1de7-5abafff76f50",
    "id": "a10d1a3f-25f2-a6d7-60ca-4c992583ef3a",
    "name": "Arumugam \u2014 Thirukattupalli 3",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "project_id": "514b078a-b6b6-0685-8fce-b2ed61c74c67",
    "rice_ecosystem": "irrigated_lowland",
@@ -17635,7 +17747,7 @@
    "farmer_id": "27a31f56-fe4b-ace6-38ef-ed4a3b79666c",
    "id": "1818dadd-80e5-5e6d-5b17-8ed3f6e59df9",
    "name": "Lakshmi \u2014 Sengipatti 4",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "project_id": "514b078a-b6b6-0685-8fce-b2ed61c74c67",
    "rice_ecosystem": "irrigated_lowland",
@@ -17707,7 +17819,7 @@
    "farmer_id": "a22c04c4-5b60-7985-8af2-fa48ffbb73de",
    "id": "ead3eb6f-e915-b396-4e97-b5e0efcc7a30",
    "name": "Karthik \u2014 Vallam 5",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "project_id": "514b078a-b6b6-0685-8fce-b2ed61c74c67",
    "rice_ecosystem": "irrigated_lowland",
@@ -17779,7 +17891,7 @@
    "farmer_id": "6cbdfa80-430c-6b67-5df1-6d43a81f451b",
    "id": "568cb4bf-d579-a06a-d553-0a13ff752cba",
    "name": "Meena \u2014 Budalur 6",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "project_id": "514b078a-b6b6-0685-8fce-b2ed61c74c67",
    "rice_ecosystem": "irrigated_lowland",
@@ -17851,7 +17963,7 @@
    "farmer_id": "630d1891-4046-7bdd-5868-8b9913f29d87",
    "id": "9d3b3956-e944-4d88-6878-4ce92bd7a6c4",
    "name": "Rajendran \u2014 Thirukattupalli 7",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "project_id": "514b078a-b6b6-0685-8fce-b2ed61c74c67",
    "rice_ecosystem": "irrigated_lowland",
@@ -17923,7 +18035,7 @@
    "farmer_id": "8f2d95f7-5c33-a946-4066-c1d883c00978",
    "id": "b33ca6ae-2f39-a0e9-43b1-dcfa45d455ce",
    "name": "Kavitha \u2014 Sengipatti 8",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "project_id": "514b078a-b6b6-0685-8fce-b2ed61c74c67",
    "rice_ecosystem": "irrigated_lowland",
@@ -17995,7 +18107,7 @@
    "farmer_id": "969488d6-6d78-6c18-0fbb-2a080f8bb18d",
    "id": "ddd2a9ff-557d-dd45-8309-a8e5c3849ebf",
    "name": "Senthil \u2014 Vallam 9",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "project_id": "514b078a-b6b6-0685-8fce-b2ed61c74c67",
    "rice_ecosystem": "irrigated_lowland",
@@ -18067,7 +18179,7 @@
    "farmer_id": "6fb412da-0004-3712-1742-8de9f2c347ef",
    "id": "0bff3670-a55a-caac-068c-11b9634f7d91",
    "name": "Pandian \u2014 Budalur 10",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "project_id": "514b078a-b6b6-0685-8fce-b2ed61c74c67",
    "rice_ecosystem": "irrigated_lowland",
@@ -18139,7 +18251,7 @@
    "farmer_id": "fc56e3d7-5857-1ad1-75e6-58689c36ac15",
    "id": "2d939df0-837f-9e5b-7e21-1f78d5bcfaed",
    "name": "Revathi \u2014 Thirukattupalli 11",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "project_id": "514b078a-b6b6-0685-8fce-b2ed61c74c67",
    "rice_ecosystem": "irrigated_lowland",
@@ -18211,7 +18323,7 @@
    "farmer_id": "c523e7c8-0500-c687-f338-317fc5e9b05f",
    "id": "e453fec4-2262-3a30-dad7-c39dcb34680c",
    "name": "Elango \u2014 Sengipatti 12",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "project_id": "514b078a-b6b6-0685-8fce-b2ed61c74c67",
    "rice_ecosystem": "irrigated_lowland",
@@ -18283,7 +18395,7 @@
    "farmer_id": "b31201ad-559b-ff52-dfd0-2975fda4e907",
    "id": "817909c0-a8b3-32d5-f1b0-7527d8c83305",
    "name": "Wanjiru \u2014 Gatugi 1",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "shade_trees",
    "project_id": "76013c7e-d68d-3676-1ae0-c83f422b5404",
    "rice_ecosystem": null,
@@ -18344,7 +18456,7 @@
    "farmer_id": "4a88dce6-cb4c-f97d-3955-e4436aba720a",
    "id": "5983270d-9e0f-3ac4-e304-d0bc60686ebf",
    "name": "Kamau \u2014 Gatugi 2",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "shade_trees",
    "project_id": "76013c7e-d68d-3676-1ae0-c83f422b5404",
    "rice_ecosystem": null,
@@ -18405,7 +18517,7 @@
    "farmer_id": "68999db8-8b27-7f3b-6c94-667ce056a5ee",
    "id": "1cf8fefd-4218-d9c7-4fa0-5435a22c24a5",
    "name": "Njeri \u2014 Gatugi 3",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "shade_trees",
    "project_id": "76013c7e-d68d-3676-1ae0-c83f422b5404",
    "rice_ecosystem": null,
@@ -18466,7 +18578,7 @@
    "farmer_id": "4fad975a-09f6-482d-eab3-a1be51885029",
    "id": "34420bb8-706b-c9f9-cd12-05d24df399ed",
    "name": "Mwangi \u2014 Gatugi 4",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "shade_trees",
    "project_id": "76013c7e-d68d-3676-1ae0-c83f422b5404",
    "rice_ecosystem": null,
@@ -18527,7 +18639,7 @@
    "farmer_id": "eb5c1de9-ca6f-c65c-27d0-5e8c2e03b435",
    "id": "2a27b26e-58d9-3c69-99fc-af8f15f378a2",
    "name": "Wambui \u2014 Gatugi 5",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "shade_trees",
    "project_id": "76013c7e-d68d-3676-1ae0-c83f422b5404",
    "rice_ecosystem": null,
@@ -18588,7 +18700,7 @@
    "farmer_id": "e7b4ab90-dbe5-649c-db6b-a137c5a78fac",
    "id": "8ee23d7c-d20f-e316-b99c-5f7834642130",
    "name": "Githinji \u2014 Gatugi 6",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "shade_trees",
    "project_id": "76013c7e-d68d-3676-1ae0-c83f422b5404",
    "rice_ecosystem": null,
@@ -18607,6 +18719,423 @@
    "water_control": null
   }
  ],
+ "forecasts": {
+  "514b078a-b6b6-0685-8fce-b2ed61c74c67": {
+   "projections": [
+    {
+     "carried": false,
+     "net_t": 9.385,
+     "relative_uncertainty": 0.5,
+     "settled": true,
+     "year": 2025
+    },
+    {
+     "carried": false,
+     "net_t": 9.0083,
+     "relative_uncertainty": 0.5,
+     "settled": false,
+     "year": 2026
+    },
+    {
+     "carried": true,
+     "net_t": 9.385,
+     "relative_uncertainty": 0.5,
+     "settled": false,
+     "year": 2027
+    },
+    {
+     "carried": true,
+     "net_t": 9.385,
+     "relative_uncertainty": 0.5,
+     "settled": false,
+     "year": 2028
+    },
+    {
+     "carried": true,
+     "net_t": 9.385,
+     "relative_uncertainty": 0.5,
+     "settled": false,
+     "year": 2029
+    },
+    {
+     "carried": true,
+     "net_t": 9.385,
+     "relative_uncertainty": 0.5,
+     "settled": false,
+     "year": 2030
+    }
+   ],
+   "result": {
+    "aggregation": [
+     {
+      "gain_over_previous_t": null,
+      "haircut": 0.7652,
+      "p50_t": 42.456,
+      "safe_t": 13.131,
+      "units": 1
+     },
+     {
+      "gain_over_previous_t": 13.095,
+      "haircut": 0.5311,
+      "p50_t": 39.495,
+      "safe_t": 26.225,
+      "units": 5
+     },
+     {
+      "gain_over_previous_t": 2.387,
+      "haircut": 0.4885,
+      "p50_t": 40.438,
+      "safe_t": 28.612,
+      "units": 12
+     },
+     {
+      "gain_over_previous_t": -0.492,
+      "haircut": 0.4973,
+      "p50_t": 40.053,
+      "safe_t": 28.12,
+      "units": 25
+     },
+     {
+      "gain_over_previous_t": -0.066,
+      "haircut": 0.4984,
+      "p50_t": 40.309,
+      "safe_t": 28.054,
+      "units": 100
+     },
+     {
+      "gain_over_previous_t": 0.959,
+      "haircut": 0.4813,
+      "p50_t": 40.228,
+      "safe_t": 29.013,
+      "units": 500
+     },
+     {
+      "gain_over_previous_t": 0.028,
+      "haircut": 0.4808,
+      "p50_t": 40.669,
+      "safe_t": 29.041,
+      "units": 2000
+     }
+    ],
+    "forecast": {
+     "confidence": 0.9,
+     "dominant_risk": {
+      "risk": "farmer dropout",
+      "safe_volume_cost_t": 6.748
+     },
+     "p50_total_t": 40.082,
+     "portfolio_haircut": 0.5022,
+     "project_id": "514b078a-b6b6-0685-8fce-b2ed61c74c67",
+     "projected_total_t": 55.933,
+     "risk_source": "placeholder rates -- replace with the portfolio's own attrition, lapse and verification history",
+     "safe_total_t": 27.846,
+     "sensitivity": {
+      "farmer dropout": 34.595,
+      "measurement uncertainty": 33.41,
+      "planting failure": 27.846,
+      "practice lapse": 31.177,
+      "verification slip": 29.752
+     },
+     "trials": 4000,
+     "warnings": [
+      "50% of the projected volume is not safe to promise; a forward sale at the projection would be a short position",
+      "5 of 6 vintages clear nothing at 90% on their own, while the horizon as a whole clears 28 t: sell the period as a basket with a delivery window, not year by year. A slipped verification is only a miss when the contract names a single December"
+     ],
+     "years": [
+      {
+       "confidence": 0.9,
+       "haircut": 0.6277,
+       "mean": 9.436,
+       "p10": 3.494,
+       "p50": 9.313,
+       "p90": 15.429,
+       "projected_t": 9.385,
+       "safe_t": 3.494,
+       "year": 2025,
+       "zero_rate": 0.022
+      },
+      {
+       "confidence": 0.9,
+       "haircut": 1.0,
+       "mean": 5.952,
+       "p10": 0.0,
+       "p50": 6.053,
+       "p90": 11.701,
+       "projected_t": 9.008,
+       "safe_t": 0.0,
+       "year": 2026,
+       "zero_rate": 0.2042
+      },
+      {
+       "confidence": 0.9,
+       "haircut": 1.0,
+       "mean": 6.916,
+       "p10": 0.0,
+       "p50": 6.529,
+       "p90": 14.325,
+       "projected_t": 9.385,
+       "safe_t": 0.0,
+       "year": 2027,
+       "zero_rate": 0.192
+      },
+      {
+       "confidence": 0.9,
+       "haircut": 1.0,
+       "mean": 6.459,
+       "p10": 0.0,
+       "p50": 5.814,
+       "p90": 13.592,
+       "projected_t": 9.385,
+       "safe_t": 0.0,
+       "year": 2028,
+       "zero_rate": 0.2
+      },
+      {
+       "confidence": 0.9,
+       "haircut": 1.0,
+       "mean": 6.086,
+       "p10": 0.0,
+       "p50": 5.44,
+       "p90": 12.74,
+       "projected_t": 9.385,
+       "safe_t": 0.0,
+       "year": 2029,
+       "zero_rate": 0.1915
+      },
+      {
+       "confidence": 0.9,
+       "haircut": 1.0,
+       "mean": 5.527,
+       "p10": 0.0,
+       "p50": 4.81,
+       "p90": 11.558,
+       "projected_t": 9.385,
+       "safe_t": 0.0,
+       "year": 2030,
+       "zero_rate": 0.1983
+      }
+     ]
+    },
+    "offtake": null,
+    "risk": {
+     "dropout_per_year": 0.08,
+     "enrolled_units": 12,
+     "planting_failure_per_year": 0.05,
+     "practice_lapse_per_year": 0.12,
+     "source": "placeholder rates -- replace with the portfolio's own attrition, lapse and verification history",
+     "verification_slip_per_year": 0.18
+    }
+   },
+   "units": 12
+  },
+  "76013c7e-d68d-3676-1ae0-c83f422b5404": {
+   "projections": [
+    {
+     "carried": false,
+     "net_t": 52.2025,
+     "relative_uncertainty": 0.5205,
+     "settled": true,
+     "year": 2025
+    },
+    {
+     "carried": false,
+     "net_t": 52.006,
+     "relative_uncertainty": 0.4127,
+     "settled": false,
+     "year": 2026
+    },
+    {
+     "carried": true,
+     "net_t": 52.2025,
+     "relative_uncertainty": 0.5205,
+     "settled": false,
+     "year": 2027
+    },
+    {
+     "carried": true,
+     "net_t": 52.2025,
+     "relative_uncertainty": 0.5205,
+     "settled": false,
+     "year": 2028
+    },
+    {
+     "carried": true,
+     "net_t": 52.2025,
+     "relative_uncertainty": 0.5205,
+     "settled": false,
+     "year": 2029
+    },
+    {
+     "carried": true,
+     "net_t": 52.2025,
+     "relative_uncertainty": 0.5205,
+     "settled": false,
+     "year": 2030
+    }
+   ],
+   "result": {
+    "aggregation": [
+     {
+      "gain_over_previous_t": null,
+      "haircut": 0.7188,
+      "p50_t": 254.301,
+      "safe_t": 88.018,
+      "units": 1
+     },
+     {
+      "gain_over_previous_t": 71.469,
+      "haircut": 0.4905,
+      "p50_t": 237.433,
+      "safe_t": 159.487,
+      "units": 5
+     },
+     {
+      "gain_over_previous_t": 2.697,
+      "haircut": 0.4819,
+      "p50_t": 237.83,
+      "safe_t": 162.184,
+      "units": 6
+     },
+     {
+      "gain_over_previous_t": 6.85,
+      "haircut": 0.46,
+      "p50_t": 237.853,
+      "safe_t": 169.034,
+      "units": 25
+     },
+     {
+      "gain_over_previous_t": -1.535,
+      "haircut": 0.4649,
+      "p50_t": 239.23,
+      "safe_t": 167.498,
+      "units": 100
+     },
+     {
+      "gain_over_previous_t": 5.444,
+      "haircut": 0.4475,
+      "p50_t": 239.372,
+      "safe_t": 172.942,
+      "units": 500
+     },
+     {
+      "gain_over_previous_t": -0.379,
+      "haircut": 0.4487,
+      "p50_t": 241.33,
+      "safe_t": 172.563,
+      "units": 2000
+     }
+    ],
+    "forecast": {
+     "confidence": 0.9,
+     "dominant_risk": {
+      "risk": "farmer dropout",
+      "safe_volume_cost_t": 47.643
+     },
+     "p50_total_t": 236.568,
+     "portfolio_haircut": 0.483,
+     "project_id": "76013c7e-d68d-3676-1ae0-c83f422b5404",
+     "projected_total_t": 313.018,
+     "risk_source": "placeholder rates -- replace with the portfolio's own attrition, lapse and verification history",
+     "safe_total_t": 161.835,
+     "sensitivity": {
+      "farmer dropout": 209.478,
+      "measurement uncertainty": 191.213,
+      "planting failure": 167.831,
+      "practice lapse": 161.835,
+      "verification slip": 172.473
+     },
+     "trials": 4000,
+     "warnings": [
+      "5 of 6 vintages clear nothing at 90% on their own, while the horizon as a whole clears 162 t: sell the period as a basket with a delivery window, not year by year. A slipped verification is only a miss when the contract names a single December"
+     ],
+     "years": [
+      {
+       "confidence": 0.9,
+       "haircut": 0.6661,
+       "mean": 52.387,
+       "p10": 17.431,
+       "p50": 52.162,
+       "p90": 86.906,
+       "projected_t": 52.203,
+       "safe_t": 17.431,
+       "year": 2025,
+       "zero_rate": 0.0267
+      },
+      {
+       "confidence": 0.9,
+       "haircut": 1.0,
+       "mean": 37.23,
+       "p10": 0.0,
+       "p50": 39.196,
+       "p90": 69.402,
+       "projected_t": 52.006,
+       "safe_t": 0.0,
+       "year": 2026,
+       "zero_rate": 0.1855
+      },
+      {
+       "confidence": 0.9,
+       "haircut": 1.0,
+       "mean": 41.256,
+       "p10": 0.0,
+       "p50": 38.245,
+       "p90": 87.307,
+       "projected_t": 52.203,
+       "safe_t": 0.0,
+       "year": 2027,
+       "zero_rate": 0.2045
+      },
+      {
+       "confidence": 0.9,
+       "haircut": 1.0,
+       "mean": 39.073,
+       "p10": 0.0,
+       "p50": 34.769,
+       "p90": 83.647,
+       "projected_t": 52.203,
+       "safe_t": 0.0,
+       "year": 2028,
+       "zero_rate": 0.1995
+      },
+      {
+       "confidence": 0.9,
+       "haircut": 1.0,
+       "mean": 36.181,
+       "p10": 0.0,
+       "p50": 31.02,
+       "p90": 77.812,
+       "projected_t": 52.203,
+       "safe_t": 0.0,
+       "year": 2029,
+       "zero_rate": 0.1998
+      },
+      {
+       "confidence": 0.9,
+       "haircut": 1.0,
+       "mean": 33.704,
+       "p10": 0.0,
+       "p50": 28.836,
+       "p90": 72.168,
+       "projected_t": 52.203,
+       "safe_t": 0.0,
+       "year": 2030,
+       "zero_rate": 0.2013
+      }
+     ]
+    },
+    "offtake": null,
+    "risk": {
+     "dropout_per_year": 0.08,
+     "enrolled_units": 6,
+     "planting_failure_per_year": 0.05,
+     "practice_lapse_per_year": 0.12,
+     "source": "placeholder rates -- replace with the portfolio's own attrition, lapse and verification history",
+     "verification_slip_per_year": 0.18
+    }
+   },
+   "units": 6
+  }
+ },
  "generated_by": "scripts/build_web_demo.py",
  "integrations": [
   {
@@ -18616,7 +19145,7 @@
    "id": "b43fa386-8cd2-ce25-6f6f-bd853c6ebc4a",
    "last_status": null,
    "last_sync_at": null,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "provider": "open-meteo"
   },
   {
@@ -18626,7 +19155,7 @@
    "id": "64651e5f-752c-168a-11f6-5b3efc28639d",
    "last_status": null,
    "last_sync_at": null,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "provider": "nasa-power"
   },
   {
@@ -18636,7 +19165,7 @@
    "id": "04b137a9-5e37-6537-899f-a06a0a803e3e",
    "last_status": null,
    "last_sync_at": null,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "provider": "field-sensors"
   },
   {
@@ -18646,7 +19175,7 @@
    "id": "d830a0e3-6880-600d-33ec-14673b7c77b9",
    "last_status": null,
    "last_sync_at": null,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "provider": "verra-registry"
   }
  ],
@@ -18658,7 +19187,7 @@
    "expires_at": "2026-11-08T10:00:00+00:00",
    "id": "dd4e67d7-ca22-db3d-fcb8-9b904020f4e6",
    "invited_by": "00000000-0000-4000-8000-0000000000a1",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "role": "viewer",
    "token": "demo"
   }
@@ -18668,7 +19197,7 @@
    "created_at": "2025-05-02T10:00:00+00:00",
    "email": "priya@demo.carbonstack.dev",
    "full_name": "Priya Raman",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "role": "owner",
    "user_id": "00000000-0000-4000-8000-0000000000a1"
   },
@@ -18676,7 +19205,7 @@
    "created_at": "2025-05-02T10:00:00+00:00",
    "email": "daniel@demo.carbonstack.dev",
    "full_name": "Daniel Otieno",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "role": "admin",
    "user_id": "00000000-0000-4000-8000-0000000000a2"
   },
@@ -18684,7 +19213,7 @@
    "created_at": "2025-05-02T10:00:00+00:00",
    "email": "anjali@demo.carbonstack.dev",
    "full_name": "Anjali Iyer",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "role": "reviewer",
    "user_id": "00000000-0000-4000-8000-0000000000a3"
   },
@@ -18692,7 +19221,7 @@
    "created_at": "2025-05-02T10:00:00+00:00",
    "email": "ravi@demo.carbonstack.dev",
    "full_name": "Ravi Shankar",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "role": "analyst",
    "user_id": "00000000-0000-4000-8000-0000000000a4"
   },
@@ -18700,7 +19229,7 @@
    "created_at": "2025-05-02T10:00:00+00:00",
    "email": "muthu@demo.carbonstack.dev",
    "full_name": "Muthu Kumar",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "role": "field_agent",
    "user_id": "00000000-0000-4000-8000-0000000000a5"
   },
@@ -18708,7 +19237,7 @@
    "created_at": "2025-05-02T10:00:00+00:00",
    "email": "grace@demo.carbonstack.dev",
    "full_name": "Grace Wairimu",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "role": "field_agent",
    "user_id": "00000000-0000-4000-8000-0000000000a6"
   }
@@ -18717,7 +19246,7 @@
   "country": "India",
   "created_at": "2025-05-02T10:00:00+00:00",
   "created_by": "00000000-0000-4000-8000-0000000000a1",
-  "id": "00000000-0000-4000-8000-000000000001",
+  "id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
   "kind": "developer",
   "name": "Demo: Cauvery & Nyeri pilots"
  },
@@ -18730,7 +19259,7 @@
    "due_on": "2026-08-15",
    "farmer_id": "9b2c8c5e-59e6-7d82-8259-fb5128b977fc",
    "id": "8b66b0ec-69bd-2c89-1f86-db9704161ebb",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "paid_on": null,
    "reference": null,
    "status": "approved",
@@ -18744,7 +19273,7 @@
    "due_on": "2026-08-15",
    "farmer_id": "7c078cf8-92bb-6381-4466-785e7ea9f750",
    "id": "e374d4ba-c515-f174-7443-d2f6c686a916",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "paid_on": "2026-08-09",
    "reference": "UPI-423686909",
    "status": "paid",
@@ -18758,7 +19287,7 @@
    "due_on": "2026-08-15",
    "farmer_id": "baf1639a-e6a7-fb00-1de7-5abafff76f50",
    "id": "6e87c01b-0614-727e-b72e-6661d541b26f",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "paid_on": "2026-08-09",
    "reference": "UPI-305405835",
    "status": "paid",
@@ -18772,7 +19301,7 @@
    "due_on": "2026-08-15",
    "farmer_id": "a22c04c4-5b60-7985-8af2-fa48ffbb73de",
    "id": "a9a159c5-884d-4053-6ef6-96440edc8fa7",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "paid_on": "2026-08-09",
    "reference": "UPI-498230142",
    "status": "paid",
@@ -18786,7 +19315,7 @@
    "due_on": "2026-08-15",
    "farmer_id": "6cbdfa80-430c-6b67-5df1-6d43a81f451b",
    "id": "aa1c18f2-bcc9-d035-4e27-94f10afc041c",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "paid_on": "2026-08-09",
    "reference": "UPI-562153571",
    "status": "paid",
@@ -18800,7 +19329,7 @@
    "due_on": "2026-08-15",
    "farmer_id": "630d1891-4046-7bdd-5868-8b9913f29d87",
    "id": "4d40f34f-1dc7-acf6-2102-56ab882f7236",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "paid_on": null,
    "reference": null,
    "status": "approved",
@@ -18814,7 +19343,7 @@
    "due_on": "2026-08-15",
    "farmer_id": "969488d6-6d78-6c18-0fbb-2a080f8bb18d",
    "id": "107dc3d8-8baa-86e6-3760-b6f44cc5096f",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "paid_on": "2026-08-09",
    "reference": "UPI-278715919",
    "status": "paid",
@@ -18828,7 +19357,7 @@
    "due_on": "2026-08-15",
    "farmer_id": "fc56e3d7-5857-1ad1-75e6-58689c36ac15",
    "id": "0034a7de-49ce-b147-d06b-3e1be0728122",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "paid_on": "2026-08-09",
    "reference": "UPI-785505226",
    "status": "paid",
@@ -18842,7 +19371,7 @@
    "due_on": "2026-08-15",
    "farmer_id": "c523e7c8-0500-c687-f338-317fc5e9b05f",
    "id": "1b57ba3e-138c-deaa-7052-f9fda4d273b6",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "paid_on": "2026-08-09",
    "reference": "UPI-740242839",
    "status": "paid",
@@ -18857,7 +19386,7 @@
    "farm_id": "ac9b89a3-85c9-b96c-4bf8-bad377339b05",
    "id": "a09c37da-90ae-5d43-8668-eed5678dea73",
    "notes": "3 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Kuruvai",
@@ -18871,7 +19400,7 @@
    "farm_id": "ac9b89a3-85c9-b96c-4bf8-bad377339b05",
    "id": "4c9b92f2-9ff3-f310-d57a-7fc3678b3b8a",
    "notes": "3 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Samba",
@@ -18885,7 +19414,7 @@
    "farm_id": "ac9b89a3-85c9-b96c-4bf8-bad377339b05",
    "id": "f2ef9619-05d7-93c2-8474-fdbc75031927",
    "notes": "4 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Kuruvai",
@@ -18899,7 +19428,7 @@
    "farm_id": "139cc3e0-9cdd-4082-2d75-16f0fcec8db4",
    "id": "fccd90a6-5fff-3705-a6d4-6af8f943e024",
    "notes": "4 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Kuruvai",
@@ -18913,7 +19442,7 @@
    "farm_id": "139cc3e0-9cdd-4082-2d75-16f0fcec8db4",
    "id": "ce87057a-18a3-fb28-bc92-35bb135de341",
    "notes": "3 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Samba",
@@ -18927,7 +19456,7 @@
    "farm_id": "139cc3e0-9cdd-4082-2d75-16f0fcec8db4",
    "id": "ca0f75d5-f152-f432-d0cb-7c5b693140b2",
    "notes": "3 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Kuruvai",
@@ -18941,7 +19470,7 @@
    "farm_id": "a10d1a3f-25f2-a6d7-60ca-4c992583ef3a",
    "id": "0c8e8278-d435-cfaa-f061-1d9d5fc41dc6",
    "notes": "2 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Kuruvai",
@@ -18955,7 +19484,7 @@
    "farm_id": "a10d1a3f-25f2-a6d7-60ca-4c992583ef3a",
    "id": "60bd0d12-6f41-b707-e02e-1c8aa71ebd2e",
    "notes": "4 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Samba",
@@ -18969,7 +19498,7 @@
    "farm_id": "a10d1a3f-25f2-a6d7-60ca-4c992583ef3a",
    "id": "194e6109-69f4-8e33-d78d-0c8559515824",
    "notes": "3 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Kuruvai",
@@ -18983,7 +19512,7 @@
    "farm_id": "1818dadd-80e5-5e6d-5b17-8ed3f6e59df9",
    "id": "e1baf4d9-fea7-b73a-ae2b-e182001ed046",
    "notes": "3 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Kuruvai",
@@ -18997,7 +19526,7 @@
    "farm_id": "1818dadd-80e5-5e6d-5b17-8ed3f6e59df9",
    "id": "000ef6ce-5fb0-4c24-163e-3bd3196d7022",
    "notes": "2 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Samba",
@@ -19011,7 +19540,7 @@
    "farm_id": "1818dadd-80e5-5e6d-5b17-8ed3f6e59df9",
    "id": "93b30823-69c3-4899-1c0d-df3c4738b76b",
    "notes": "4 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Kuruvai",
@@ -19025,7 +19554,7 @@
    "farm_id": "ead3eb6f-e915-b396-4e97-b5e0efcc7a30",
    "id": "7c4baf55-277d-5ba4-ac55-469539b5449f",
    "notes": "2 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Kuruvai",
@@ -19039,7 +19568,7 @@
    "farm_id": "ead3eb6f-e915-b396-4e97-b5e0efcc7a30",
    "id": "ef969705-963a-fd0b-5f54-3e3cbc13dfbf",
    "notes": "3 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Samba",
@@ -19053,7 +19582,7 @@
    "farm_id": "ead3eb6f-e915-b396-4e97-b5e0efcc7a30",
    "id": "00b8bad4-e5c6-96ae-3c18-5278b5eefbf3",
    "notes": "3 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Kuruvai",
@@ -19067,7 +19596,7 @@
    "farm_id": "568cb4bf-d579-a06a-d553-0a13ff752cba",
    "id": "488c0a38-70ac-8608-a092-6fd403c85919",
    "notes": "2 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Kuruvai",
@@ -19081,7 +19610,7 @@
    "farm_id": "568cb4bf-d579-a06a-d553-0a13ff752cba",
    "id": "0fa5e5df-b100-2c86-2cc6-4a8a81d5af75",
    "notes": "2 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Samba",
@@ -19095,7 +19624,7 @@
    "farm_id": "568cb4bf-d579-a06a-d553-0a13ff752cba",
    "id": "bd842448-b2a1-a51c-733e-3bf4fd3b46e1",
    "notes": "3 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Kuruvai",
@@ -19109,7 +19638,7 @@
    "farm_id": "9d3b3956-e944-4d88-6878-4ce92bd7a6c4",
    "id": "5d076a4c-e406-a9fc-4a2d-f467465f2e7f",
    "notes": "3 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Kuruvai",
@@ -19123,7 +19652,7 @@
    "farm_id": "9d3b3956-e944-4d88-6878-4ce92bd7a6c4",
    "id": "13d74d35-5f99-5e9b-e920-e80f14c75de8",
    "notes": "3 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Samba",
@@ -19137,7 +19666,7 @@
    "farm_id": "9d3b3956-e944-4d88-6878-4ce92bd7a6c4",
    "id": "ed8688ea-535b-edec-d226-143ec94f314e",
    "notes": "4 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Kuruvai",
@@ -19151,7 +19680,7 @@
    "farm_id": "b33ca6ae-2f39-a0e9-43b1-dcfa45d455ce",
    "id": "8135974a-eedc-6f07-c2a6-c78746a1b68b",
    "notes": "3 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Kuruvai",
@@ -19165,7 +19694,7 @@
    "farm_id": "b33ca6ae-2f39-a0e9-43b1-dcfa45d455ce",
    "id": "6ab22a3c-b598-edac-911c-f65637581ca0",
    "notes": "2 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Samba",
@@ -19179,7 +19708,7 @@
    "farm_id": "b33ca6ae-2f39-a0e9-43b1-dcfa45d455ce",
    "id": "e276f232-fe09-bab5-bc2f-d5080479472a",
    "notes": "4 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Kuruvai",
@@ -19193,7 +19722,7 @@
    "farm_id": "ddd2a9ff-557d-dd45-8309-a8e5c3849ebf",
    "id": "b7be16c2-5c18-e89e-19f4-6261e0a65afa",
    "notes": "4 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Kuruvai",
@@ -19207,7 +19736,7 @@
    "farm_id": "ddd2a9ff-557d-dd45-8309-a8e5c3849ebf",
    "id": "e17bde8f-3d42-97c9-e59e-66409b930b09",
    "notes": "4 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Samba",
@@ -19221,7 +19750,7 @@
    "farm_id": "ddd2a9ff-557d-dd45-8309-a8e5c3849ebf",
    "id": "7b8f1f50-6479-a571-40a9-2e5cc06c4315",
    "notes": "4 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Kuruvai",
@@ -19235,7 +19764,7 @@
    "farm_id": "0bff3670-a55a-caac-068c-11b9634f7d91",
    "id": "d3fc7968-bf14-6e80-a450-2e2b237288c3",
    "notes": "2 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Kuruvai",
@@ -19249,7 +19778,7 @@
    "farm_id": "0bff3670-a55a-caac-068c-11b9634f7d91",
    "id": "4aeebac0-544e-833d-acab-0a8b61e0607b",
    "notes": "3 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Samba",
@@ -19263,7 +19792,7 @@
    "farm_id": "0bff3670-a55a-caac-068c-11b9634f7d91",
    "id": "f2914b3b-e34d-4fbe-4ec6-341e42a80d4a",
    "notes": "4 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Kuruvai",
@@ -19277,7 +19806,7 @@
    "farm_id": "2d939df0-837f-9e5b-7e21-1f78d5bcfaed",
    "id": "eb1c3e2e-23c9-4e26-7f21-33ac1d0b43a1",
    "notes": "4 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Kuruvai",
@@ -19291,7 +19820,7 @@
    "farm_id": "2d939df0-837f-9e5b-7e21-1f78d5bcfaed",
    "id": "0000b52b-2c21-713d-5d32-173b1325072e",
    "notes": "4 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Samba",
@@ -19305,7 +19834,7 @@
    "farm_id": "2d939df0-837f-9e5b-7e21-1f78d5bcfaed",
    "id": "89b4d634-79c4-e5ad-7bbb-1925ea491305",
    "notes": "3 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Kuruvai",
@@ -19319,7 +19848,7 @@
    "farm_id": "e453fec4-2262-3a30-dad7-c39dcb34680c",
    "id": "dd210332-9b98-5701-9bd6-5c1b403cedee",
    "notes": "4 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Kuruvai",
@@ -19333,7 +19862,7 @@
    "farm_id": "e453fec4-2262-3a30-dad7-c39dcb34680c",
    "id": "3ff522fa-285b-ca02-5b6b-488d3f14f63b",
    "notes": "3 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Samba",
@@ -19347,7 +19876,7 @@
    "farm_id": "e453fec4-2262-3a30-dad7-c39dcb34680c",
    "id": "c86273e4-a817-98d8-6334-43edd6742b70",
    "notes": "3 dry-downs logged by field tube",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "practice": "awd",
    "recorded_by": "00000000-0000-4000-8000-0000000000a5",
    "season": "Kuruvai",
@@ -19364,7 +19893,7 @@
    "id": "514b078a-b6b6-0685-8fce-b2ed61c74c67",
    "methodology": "VM0051",
    "name": "Cauvery Delta AWD",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "pathway": "rice",
    "region": "Thanjavur, Tamil Nadu",
    "registry": "Verra",
@@ -19379,12 +19908,40 @@
    "id": "76013c7e-d68d-3676-1ae0-c83f422b5404",
    "methodology": "VM0047",
    "name": "Nyeri Shade Coffee Agroforestry",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "pathway": "agroforestry",
    "region": "Nyeri County",
    "registry": "Verra",
    "start_date": "2025-03-20",
    "status": "design"
+  }
+ ],
+ "retirements": [
+  {
+   "beneficiary": "Skyline Airways",
+   "claim": "Retired on behalf of Skyline Airways for use under CORSIA. India authorised these tonnes for CORSIA and has applied a corresponding adjustment.",
+   "id": "f038d29b-6298-86dc-fbea-0d9ba0e71f12",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
+   "purpose": "corsia",
+   "quantity": 3,
+   "retired_at": "2026-08-20T11:00:00+00:00",
+   "retired_by": "00000000-0000-4000-8000-0000000000a2",
+   "serial_end": 3,
+   "serial_start": 1,
+   "vintage_id": "c838c00c-e3ae-c7bc-3ab4-ad5d457edc59"
+  },
+  {
+   "beneficiary": "Acme Foods Ltd",
+   "claim": "Acme Foods Ltd financed these emission reductions. They remain counted by India toward its own climate target and may not be counted against Acme Foods Ltd's own emissions target.",
+   "id": "0b0b20c0-d820-d284-b2f2-c0ce1a72fb58",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
+   "purpose": "contribution",
+   "quantity": 4,
+   "retired_at": "2026-09-14T11:00:00+00:00",
+   "retired_by": "00000000-0000-4000-8000-0000000000a2",
+   "serial_end": 7,
+   "serial_start": 4,
+   "vintage_id": "c838c00c-e3ae-c7bc-3ab4-ad5d457edc59"
   }
  ],
  "soil": [
@@ -19397,7 +19954,7 @@
    "id": "7f469441-11d0-9ddd-bdc9-b46926386543",
    "lab": "KALRO Soil Lab, Kabete",
    "lab_reference": "KAB-25-101",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "recorded_by": "00000000-0000-4000-8000-0000000000a6",
    "sampled_on": "2025-03-12",
    "soc_pct": 3.011
@@ -19411,7 +19968,7 @@
    "id": "976d6627-2754-71a4-95d3-7375deb31631",
    "lab": "KALRO Soil Lab, Kabete",
    "lab_reference": "KAB-25-102",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "recorded_by": "00000000-0000-4000-8000-0000000000a6",
    "sampled_on": "2025-03-12",
    "soc_pct": 1.606
@@ -19425,7 +19982,7 @@
    "id": "3605e6f6-531c-e6f8-fedb-e039470eb4b8",
    "lab": "KALRO Soil Lab, Kabete",
    "lab_reference": "KAB-25-103",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "recorded_by": "00000000-0000-4000-8000-0000000000a6",
    "sampled_on": "2025-03-12",
    "soc_pct": 2.613
@@ -19439,7 +19996,7 @@
    "id": "bb2ee9bc-112c-2285-529c-00f953c3efd8",
    "lab": "KALRO Soil Lab, Kabete",
    "lab_reference": "KAB-25-104",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "recorded_by": "00000000-0000-4000-8000-0000000000a6",
    "sampled_on": "2025-03-12",
    "soc_pct": 1.628
@@ -19453,7 +20010,7 @@
    "id": "466b7484-de63-f908-05e0-09754f5a33ba",
    "lab": "KALRO Soil Lab, Kabete",
    "lab_reference": "KAB-25-105",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "recorded_by": "00000000-0000-4000-8000-0000000000a6",
    "sampled_on": "2025-03-12",
    "soc_pct": 3.059
@@ -19467,7 +20024,7 @@
    "id": "9fd967dd-2c5f-16c8-c623-6ac96bc33229",
    "lab": "KALRO Soil Lab, Kabete",
    "lab_reference": "KAB-25-106",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "recorded_by": "00000000-0000-4000-8000-0000000000a6",
    "sampled_on": "2025-03-12",
    "soc_pct": 1.485
@@ -19481,7 +20038,7 @@
    "id": "ff740053-06b8-118b-2330-64663bdff9d6",
    "lab": "KALRO Soil Lab, Kabete",
    "lab_reference": "KAB-25-107",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "recorded_by": "00000000-0000-4000-8000-0000000000a6",
    "sampled_on": "2025-03-12",
    "soc_pct": 3.115
@@ -19495,7 +20052,7 @@
    "id": "ebbb7350-1bbc-67ae-2229-3294270a6699",
    "lab": "KALRO Soil Lab, Kabete",
    "lab_reference": "KAB-25-108",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "recorded_by": "00000000-0000-4000-8000-0000000000a6",
    "sampled_on": "2025-03-12",
    "soc_pct": 1.59
@@ -19509,7 +20066,7 @@
    "id": "05aba146-e648-5fd6-6ea0-7d02ad9a5448",
    "lab": "KALRO Soil Lab, Kabete",
    "lab_reference": "KAB-25-109",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "recorded_by": "00000000-0000-4000-8000-0000000000a6",
    "sampled_on": "2025-03-12",
    "soc_pct": 2.649
@@ -19523,7 +20080,7 @@
    "id": "36eed4b0-0a6b-5542-faf5-eb7e920d172d",
    "lab": "KALRO Soil Lab, Kabete",
    "lab_reference": "KAB-25-110",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "recorded_by": "00000000-0000-4000-8000-0000000000a6",
    "sampled_on": "2025-03-12",
    "soc_pct": 1.756
@@ -19537,7 +20094,7 @@
    "id": "93295914-24ee-4f42-f2fc-cbcbb43f0e9a",
    "lab": "KALRO Soil Lab, Kabete",
    "lab_reference": "KAB-25-111",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "recorded_by": "00000000-0000-4000-8000-0000000000a6",
    "sampled_on": "2025-03-12",
    "soc_pct": 3.179
@@ -19551,7 +20108,7 @@
    "id": "0800ccbf-3476-7c7e-2164-4bd3a13eb2ae",
    "lab": "KALRO Soil Lab, Kabete",
    "lab_reference": "KAB-25-112",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "recorded_by": "00000000-0000-4000-8000-0000000000a6",
    "sampled_on": "2025-03-12",
    "soc_pct": 1.494
@@ -19565,7 +20122,7 @@
    "from_status": "draft",
    "id": 1,
    "note": null,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "to_status": "submitted",
    "vintage_id": "c838c00c-e3ae-c7bc-3ab4-ad5d457edc59"
   },
@@ -19575,7 +20132,7 @@
    "from_status": "submitted",
    "id": 2,
    "note": "two farms missing tenure documents",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "to_status": "on_hold",
    "vintage_id": "c838c00c-e3ae-c7bc-3ab4-ad5d457edc59"
   },
@@ -19585,7 +20142,7 @@
    "from_status": "on_hold",
    "id": 3,
    "note": "documents attached for TNJ-0004",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "to_status": "submitted",
    "vintage_id": "c838c00c-e3ae-c7bc-3ab4-ad5d457edc59"
   },
@@ -19595,7 +20152,7 @@
    "from_status": "submitted",
    "id": 4,
    "note": "checked against field tube logs",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "to_status": "approved",
    "vintage_id": "c838c00c-e3ae-c7bc-3ab4-ad5d457edc59"
   },
@@ -19605,7 +20162,7 @@
    "from_status": "approved",
    "id": 5,
    "note": null,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "to_status": "issued",
    "vintage_id": "c838c00c-e3ae-c7bc-3ab4-ad5d457edc59"
   },
@@ -19615,7 +20172,7 @@
    "from_status": "draft",
    "id": 6,
    "note": null,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "to_status": "submitted",
    "vintage_id": "c87cdc65-c82f-4d41-b7c3-0177081e3897"
   },
@@ -19625,7 +20182,7 @@
    "from_status": "draft",
    "id": 7,
    "note": null,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "to_status": "submitted",
    "vintage_id": "b30b5977-9284-2e52-b996-c88c6778279b"
   },
@@ -19635,7 +20192,7 @@
    "from_status": "submitted",
    "id": 8,
    "note": "boundaries and tenure checked",
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "to_status": "approved",
    "vintage_id": "b30b5977-9284-2e52-b996-c88c6778279b"
   }
@@ -19749,7 +20306,7 @@
    "id": "c838c00c-e3ae-c7bc-3ab4-ad5d457edc59",
    "issuable": 9,
    "net_t": 9.385,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "project_id": "514b078a-b6b6-0685-8fce-b2ed61c74c67",
    "serial_end": 9,
    "serial_start": 1,
@@ -19866,7 +20423,7 @@
    "id": "c87cdc65-c82f-4d41-b7c3-0177081e3897",
    "issuable": 9,
    "net_t": 9.0083,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "project_id": "514b078a-b6b6-0685-8fce-b2ed61c74c67",
    "serial_end": null,
    "serial_start": null,
@@ -19935,7 +20492,7 @@
    "id": "b30b5977-9284-2e52-b996-c88c6778279b",
    "issuable": 52,
    "net_t": 52.2025,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "project_id": "76013c7e-d68d-3676-1ae0-c83f422b5404",
    "serial_end": null,
    "serial_start": null,
@@ -20004,7 +20561,7 @@
    "id": "01a6d60f-7ff1-ba46-7e51-8230fee47df5",
    "issuable": 52,
    "net_t": 52.006,
-   "org_id": "00000000-0000-4000-8000-000000000001",
+   "org_id": "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71",
    "project_id": "76013c7e-d68d-3676-1ae0-c83f422b5404",
    "serial_end": null,
    "serial_start": null,

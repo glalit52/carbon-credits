@@ -231,5 +231,116 @@ do $$ begin
   end if;
 end $$;
 
+-- ---------------------------------------------------------------------------
+-- Claims and retirement (migration 0003). The 2025 vintage is issued with
+-- serials 1-10.
+-- ---------------------------------------------------------------------------
+
+-- Only owners and admins retire, and never more than was issued.
+select test.login('00000000-0000-0000-0000-00000000000c');
+select test.expect_error($q$
+  select public.retire_credits((select v from test.ids where k = 'vintage'), 1, 'Acme Foods', 'contribution')$q$,
+  'only owners and admins');
+
+select test.login('00000000-0000-0000-0000-00000000000a');
+-- No authorisation yet, so nothing may be retired as an offset.
+select test.expect_error($q$
+  select public.retire_credits((select v from test.ids where k = 'vintage'), 1, 'Acme Foods', 'offset')$q$,
+  'only 0 credits of this vintage have a corresponding adjustment');
+select test.expect_count($q$
+  select * from public.retire_credits((select v from test.ids where k = 'vintage'), 4, 'Acme Foods', 'contribution')
+  where serial_start = 1 and serial_end = 4 and claim ilike '%may not be counted against%'$q$, 1);
+
+-- A letter that commits to an adjustment is still not an adjustment.
+with a as (
+  insert into public.authorisations (org_id, project_id, authority, reference, issued_on, authorised_use,
+                                     authorised_volume_t, adjustment_committed, first_vintage, last_vintage)
+  values ((select v from test.ids where k = 'acme'), (select v from test.ids where k = 'project'),
+          'MoEFCC', 'LoA/2026/001', '2026-01-10', 'corsia', 100, true, 2025, 2026)
+  returning id)
+insert into test.ids select 'auth', id from a;
+select test.expect_error($q$
+  select public.retire_credits((select v from test.ids where k = 'vintage'), 1, 'Air Co', 'corsia')$q$,
+  'only 0 credits');
+
+-- 3.5 t adjusted: three whole credits may be offsets, no more.
+insert into public.adjustments (org_id, authorisation_id, vintage_year, volume_t, reported_on, reference)
+values ((select v from test.ids where k = 'acme'), (select v from test.ids where k = 'auth'), 2025, 3.5,
+        '2026-03-01', 'BTR/2026/IN/7');
+select test.expect_error($q$
+  select public.retire_credits((select v from test.ids where k = 'vintage'), 4, 'Air Co', 'offset')$q$,
+  'only 3 credits of this vintage have a corresponding adjustment');
+select test.expect_count($q$
+  select * from public.retire_credits((select v from test.ids where k = 'vintage'), 3, 'Air Co', 'corsia')
+  where serial_start = 5 and serial_end = 7$q$, 1);
+select test.expect_error($q$
+  select public.retire_credits((select v from test.ids where k = 'vintage'), 1, 'Air Co', 'offset')$q$,
+  'only 0 credits');
+select test.expect_error($q$
+  select public.retire_credits((select v from test.ids where k = 'vintage'), 4, 'Acme Foods', 'contribution')$q$,
+  'only 3 credits of this vintage are left');
+select public.retire_credits((select v from test.ids where k = 'vintage'), 3, 'Acme Foods', 'contribution');
+select test.expect_error($q$
+  select public.retire_credits((select v from test.ids where k = 'vintage'), 1, 'Acme Foods', 'contribution')$q$,
+  'only 0 credits');
+-- Draft vintages cannot be retired.
+select test.expect_error($q$
+  select public.retire_credits((select v from test.ids where k = 'vintage2'), 1, 'X Co', 'contribution')$q$,
+  'only issued credits');
+
+-- Retirements cannot be written, edited or deleted directly.
+select test.expect_error($q$
+  insert into public.retirements (org_id, vintage_id, serial_start, serial_end, beneficiary, purpose, claim)
+  values ((select v from test.ids where k = 'acme'), (select v from test.ids where k = 'vintage'), 50, 60,
+          'Forged', 'offset', 'x')$q$, 'row-level security');
+delete from public.retirements;
+select test.expect_count('select * from public.retirements', 3);
+
+select test.expect_count($q$select * from public.vintage_claims((select v from test.ids where k = 'acme'))
+  where (basis->>'offsettable_credits')::int = 3 and (basis->>'offset_remaining')::int = 0$q$, 1);
+
+-- Bilal is a viewer at Acme: he can read retirements, not make them or authorise.
+select test.login('00000000-0000-0000-0000-00000000000b');
+select test.expect_count('select * from public.retirements', 3);
+select test.expect_error($q$
+  select public.retire_credits((select v from test.ids where k = 'vintage'), 1, 'B', 'contribution')$q$,
+  'only owners and admins');
+select test.expect_error($q$
+  insert into public.adjustments (org_id, authorisation_id, vintage_year, volume_t, reported_on, reference)
+  values ((select v from test.ids where k = 'acme'), (select v from test.ids where k = 'auth'), 2025, 50,
+          '2026-03-02', 'fake')$q$, 'row-level security');
+
+-- Anyone can verify a credit, signed in or not, and sees registry facts only.
+select test.login(null);
+select test.expect_error('select * from public.retirements', 'permission denied');
+create temp table verified as
+select public.verify_credit(public_code) as j from (
+  select upper(substr(replace((select v from test.ids where k = 'acme')::text, '-', ''), 1, 8))
+         || '-2025-6' as public_code) c;
+do $$
+declare j jsonb := (select j from verified);
+begin
+  if not (j->>'found')::boolean then raise exception 'credit 6 not found: %', j; end if;
+  if j->'retirement'->>'purpose' <> 'corsia' or j->'retirement'->>'beneficiary' <> 'Air Co' then
+    raise exception 'credit 6 should be retired for CORSIA by Air Co: %', j;
+  end if;
+  if j::text ~* 'murugan|lakshmi|payout|phone' then
+    raise exception 'public verification leaked farmer data: %', j;
+  end if;
+  if (j->'vintage'->'claim_basis'->>'offsettable_credits')::int <> 3 then
+    raise exception 'expected 3 offsettable credits: %', j;
+  end if;
+end $$;
+select test.expect_count($q$select 1 where (public.verify_credit('00000000-2025-6')->>'found')::boolean$q$, 0);
+select test.expect_count($q$select 1 where (public.verify_credit('nonsense')->>'found')::boolean$q$, 0);
+select test.expect_count($q$select 1 where (public.retirement_certificate(gen_random_uuid())->>'found')::boolean$q$, 0);
+do $$
+declare c jsonb := public.retirement_certificate(((select j from verified)->'retirement'->>'id')::uuid);
+begin
+  if not (c->>'found')::boolean or (c->>'quantity')::int <> 3 or c->'vintage'->>'vintage_year' <> '2025' then
+    raise exception 'certificate lookup failed: %', c;
+  end if;
+end $$;
+
 reset role;
 \echo 'rls tests passed'

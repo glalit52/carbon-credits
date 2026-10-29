@@ -1,7 +1,10 @@
 import "server-only";
 
 import type {
+  Adjustment,
   AuditEvent,
+  Authorisation,
+  ClaimBasis,
   Estimate,
   Farm,
   Farmer,
@@ -11,6 +14,7 @@ import type {
   Payment,
   PracticeRecord,
   Project,
+  Retirement,
   Role,
   SoilSample,
   Vintage,
@@ -37,6 +41,11 @@ export type DemoData = {
   integrations: Integration[];
   audit: AuditEvent[];
   invitations: Invitation[];
+  authorisations: Authorisation[];
+  adjustments: Adjustment[];
+  retirements: Retirement[];
+  claims: Record<string, ClaimBasis>;
+  forecasts: Record<string, { projections: unknown[]; units: number; result: unknown }>;
 };
 
 export const demo = raw as unknown as DemoData;

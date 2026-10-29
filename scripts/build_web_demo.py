@@ -26,11 +26,12 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from carbonstack.estimate import estimate                    # noqa: E402
+from carbonstack.forecast_api import forecast_request         # noqa: E402
 from carbonstack.sites import NYERI, THANJAVUR, _plot         # noqa: E402
 
 OUT = ROOT / "web" / "src" / "lib" / "demo-data.json"
 TODAY = date(2026, 10, 29)
-ORG = "00000000-0000-4000-8000-000000000001"
+ORG = "7c3e9a51-4b2d-4f6a-9e1c-2d8b5f0a3c71"
 
 
 def uid(*parts: object) -> str:
@@ -262,6 +263,92 @@ def main() -> int:
         for p, on in [("open-meteo", True), ("nasa-power", True),
                       ("field-sensors", False), ("verra-registry", False)]]
 
+    # Article 6 and retirement, mirroring supabase/migrations/*_claims.sql:
+    # one authorisation for the rice project with an adjustment behind 5 t of
+    # 2025, and two retirements out of the issued vintage.
+    rice_2025 = next(v for v in vintages if v["project_id"] == rice_project["id"] and v["year"] == 2025)
+    authorisations = [{
+        "id": uid("auth", 1), "org_id": ORG, "project_id": rice_project["id"],
+        "authority": "MoEFCC, Government of India", "reference": "LoA/IN/2026/0042",
+        "issued_on": "2026-04-02", "authorised_use": "corsia", "authorised_volume_t": 50.0,
+        "adjustment_committed": True, "first_vintage": 2025, "last_vintage": 2027,
+        "valid_until": None, "revoked_on": None, "created_by": ADMIN, "created_at": at(date(2026, 4, 3))}]
+    adjustments = [{
+        "id": uid("adj", 1), "org_id": ORG, "authorisation_id": authorisations[0]["id"],
+        "vintage_year": 2025, "volume_t": 5.0, "reported_on": "2026-06-30",
+        "reference": "India BTR 2026, Table 4.1", "created_by": ADMIN, "created_at": at(date(2026, 7, 1))}]
+
+    def claim_text(purpose: str, who: str, host: str) -> str:
+        return {
+            "contribution": (f"{who} financed these emission reductions. They remain counted by {host} toward "
+                             f"its own climate target and may not be counted against {who}'s own emissions target."),
+            "offset": (f"Retired on behalf of {who} against its own emissions target. {host} has applied a "
+                       f"corresponding adjustment, so these tonnes are not also counted by the host country."),
+            "corsia": (f"Retired on behalf of {who} for use under CORSIA. {host} authorised these tonnes for "
+                       f"CORSIA and has applied a corresponding adjustment."),
+        }[purpose]
+
+    retirements = []
+    next_serial = rice_2025["serial_start"]
+    for k, (n, who, purpose, day) in enumerate([(3, "Skyline Airways", "corsia", date(2026, 8, 20)),
+                                                 (4, "Acme Foods Ltd", "contribution", date(2026, 9, 14))]):
+        retirements.append({
+            "id": uid("ret", k), "org_id": ORG, "vintage_id": rice_2025["id"],
+            "serial_start": next_serial, "serial_end": next_serial + n - 1, "quantity": n,
+            "beneficiary": who, "purpose": purpose, "claim": claim_text(purpose, who, "India"),
+            "retired_by": ADMIN, "retired_at": at(day, 11)})
+        next_serial += n
+
+    claims = {}
+    for v in vintages:
+        project = next(p for p in projects if p["id"] == v["project_id"])
+        auth = next((a for a in authorisations if a["project_id"] == v["project_id"]
+                     and a["first_vintage"] <= v["year"] <= a["last_vintage"]), None)
+        adjusted = sum(a["volume_t"] for a in adjustments
+                       if auth and a["authorisation_id"] == auth["id"] and a["vintage_year"] == v["year"])
+        offsettable = min(int(math.floor(adjusted)), v["issuable"])
+        used = sum(r["quantity"] for r in retirements if r["vintage_id"] == v["id"] and r["purpose"] != "contribution")
+        claims[v["id"]] = {
+            "basis": "authorised_itmo" if auth and auth["adjustment_committed"] else "unadjusted_voluntary",
+            "authorisation": {k: auth[k] for k in ("reference", "authority", "authorised_use", "adjustment_committed")}
+            if auth else None,
+            "adjusted_t": adjusted, "offsettable_credits": offsettable,
+            "offset_remaining": max(offsettable - used, 0),
+            "corsia_eligible": bool(auth and auth["authorised_use"] == "corsia" and offsettable > 0),
+            "reasons": ([] if auth else ["no host-country authorisation on record"])
+            + (["authorised, but no corresponding adjustment has been applied for this vintage yet"]
+               if auth and adjusted == 0 else []),
+            "_country": project["country"],
+        }
+    for c in claims.values():
+        c.pop("_country")
+
+    # Default forecasts, built the way web/src/lib/forecast.ts builds them:
+    # creditable tonnes per year, settled once approved or issued, the last
+    # complete year carried flat to four years ahead.
+    forecasts = {}
+    for project in projects:
+        own = {f["id"] for f in farms if f["project_id"] == project["id"]}
+        years = sorted({e["year"] for e in estimates if e["farm_id"] in own})
+        rows = []
+        for y in years:
+            es = [e for e in estimates if e["farm_id"] in own and e["year"] == y]
+            net = math.fsum(e["net_t"] for e in es)
+            unc = (math.fsum(e["net_t"] * e["result"]["vintages"][0]["relative_uncertainty"] for e in es) / net
+                   if net > 0 else 0.0)
+            settled = any(v["year"] == y and v["project_id"] == project["id"] and v["status"] in ("approved", "issued")
+                          for v in vintages)
+            rows.append({"year": y, "net_t": round(net, 4), "relative_uncertainty": round(unc, 4),
+                         "settled": settled, "carried": False})
+        template = [r for r in rows if r["year"] < TODAY.year][-1]
+        for y in range(rows[-1]["year"] + 1, TODAY.year + 5):
+            rows.append({**template, "year": y, "settled": False, "carried": True})
+        units = len({f["farmer_id"] for f in farms if f["project_id"] == project["id"]})
+        result = forecast_request({
+            "project_id": project["id"], "track": project["pathway"], "enrolled_units": units,
+            "projections": rows})
+        forecasts[project["id"]] = {"projections": rows, "units": units, "result": result}
+
     audit = []
     for f in farms:
         audit.append({"actor": f["created_by"], "action": "insert", "entity": "farms",
@@ -269,6 +356,9 @@ def main() -> int:
     for e in events:
         audit.append({"actor": e["actor"], "action": "update", "entity": "vintages",
                       "entity_id": e["vintage_id"], "detail": {"status": e["to_status"]}, "at": e["at"]})
+    for r in retirements:
+        audit.append({"actor": ADMIN, "action": "insert", "entity": "retirements", "entity_id": r["id"],
+                      "detail": {"beneficiary": r["beneficiary"], "quantity": r["quantity"]}, "at": r["retired_at"]})
     for p in payments:
         if p["paid_on"]:
             audit.append({"actor": ADMIN, "action": "update", "entity": "payments",
@@ -288,6 +378,8 @@ def main() -> int:
         "projects": projects, "farmers": farmers, "farms": farms, "estimates": estimates,
         "practices": practices, "soil": soil, "vintages": vintages, "vintage_events": events,
         "payments": payments, "integrations": integrations, "audit": audit,
+        "authorisations": authorisations, "adjustments": adjustments, "retirements": retirements,
+        "claims": claims, "forecasts": forecasts,
         "invitations": [{"id": uid("invite", 1), "org_id": ORG, "email": "verifier@example.org",
                          "role": "viewer", "token": "demo", "invited_by": OWNER, "accepted_at": None,
                          "expires_at": at(TODAY + timedelta(days=10)), "created_at": at(TODAY - timedelta(days=4))}],

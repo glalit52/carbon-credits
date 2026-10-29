@@ -90,3 +90,75 @@ export async function runEstimate(request: ReturnType<typeof estimateRequest>): 
   if (!res.ok) throw new EngineError(body.error ?? `engine returned HTTP ${res.status}`);
   return body as EngineResult;
 }
+
+// ---------------------------------------------------------------------------
+// POST /api/forecast (src/carbonstack/forecast_api.py)
+// ---------------------------------------------------------------------------
+
+export type YearForecast = {
+  year: number;
+  projected_t: number;
+  p10: number;
+  p50: number;
+  p90: number;
+  mean: number;
+  safe_t: number;
+  confidence: number;
+  haircut: number;
+  zero_rate: number;
+};
+
+export type ForecastResult = {
+  forecast: {
+    trials: number;
+    confidence: number;
+    projected_total_t: number;
+    p50_total_t: number;
+    safe_total_t: number;
+    portfolio_haircut: number;
+    years: YearForecast[];
+    sensitivity: Record<string, number>;
+    dominant_risk: { risk: string; safe_volume_cost_t: number } | null;
+    warnings: string[];
+    risk_source: string;
+  };
+  risk: {
+    dropout_per_year: number;
+    practice_lapse_per_year: number;
+    planting_failure_per_year: number;
+    verification_slip_per_year: number;
+    enrolled_units: number;
+    source: string;
+  };
+  aggregation: { units: number; safe_t: number; p50_t: number; haircut: number }[];
+  offtake: {
+    committed_t: number;
+    delivery_probability: number;
+    expected_shortfall_t: number;
+    worst_case_shortfall_t: number;
+    replacement_price: number;
+    expected_cover_cost: number;
+    verdict: string;
+  } | null;
+};
+
+export async function runForecast(body: Record<string, unknown>): Promise<ForecastResult> {
+  const cfg = engineConfig();
+  if (!cfg) {
+    throw new EngineError(
+      "The engine is not connected. Set CARBONSTACK_ENGINE_URL and CARBONSTACK_ENGINE_TOKEN (see web/README.md).",
+    );
+  }
+  const res = await fetch(`${cfg.url}/api/forecast`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${cfg.token}` },
+    body: JSON.stringify(body),
+    cache: "no-store",
+    signal: AbortSignal.timeout(60_000),
+  }).catch((e: Error) => {
+    throw new EngineError(`Could not reach the engine at ${cfg.url}: ${e.message}`);
+  });
+  const json = (await res.json().catch(() => ({}))) as { error?: string } & Partial<ForecastResult>;
+  if (!res.ok) throw new EngineError(json.error ?? `engine returned HTTP ${res.status}`);
+  return json as ForecastResult;
+}

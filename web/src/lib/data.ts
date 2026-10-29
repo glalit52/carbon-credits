@@ -6,7 +6,11 @@ import { connection } from "next/server";
 import { cache } from "react";
 
 import type {
+  Adjustment,
   AuditEvent,
+  Authorisation,
+  CertificateResult,
+  ClaimBasis,
   Estimate,
   Farm,
   Farmer,
@@ -17,9 +21,12 @@ import type {
   Payment,
   PracticeRecord,
   Project,
+  PublicVintage,
+  Retirement,
   Role,
   SoilSample,
   Vintage,
+  VerifyResult,
   VintageEvent,
 } from "@/lib/database.types";
 import { demo } from "@/lib/demo";
@@ -280,3 +287,117 @@ export async function memberNames(orgId: string): Promise<Map<string, string>> {
 }
 
 export const DEMO_AS_OF = demo.as_of;
+
+// ---------------------------------------------------------------------------
+// Claims, retirement and public verification
+// ---------------------------------------------------------------------------
+
+export async function listAuthorisations(orgId: string): Promise<Authorisation[]> {
+  if (DEMO) return demo.authorisations;
+  return q((s) => s.from("authorisations").select("*").eq("org_id", orgId).order("issued_on", { ascending: false }));
+}
+
+export async function listAdjustments(orgId: string): Promise<Adjustment[]> {
+  if (DEMO) return demo.adjustments;
+  return q((s) => s.from("adjustments").select("*").eq("org_id", orgId).order("reported_on", { ascending: false }));
+}
+
+export async function listRetirements(orgId: string): Promise<Retirement[]> {
+  if (DEMO) return demo.retirements;
+  return q((s) => s.from("retirements").select("*").eq("org_id", orgId).order("retired_at", { ascending: false }));
+}
+
+/** public.claim_basis() for every vintage, keyed by vintage id. */
+export async function vintageClaims(orgId: string): Promise<Map<string, ClaimBasis>> {
+  if (DEMO) return new Map(Object.entries(demo.claims));
+  const rows = await q<{ vintage_id: string; basis: ClaimBasis }[]>((s) => s.rpc("vintage_claims", { org: orgId }));
+  return new Map(rows.map((r) => [r.vintage_id, r.basis]));
+}
+
+/** The prefix of every credit code: as public.org_code() computes it. */
+export function orgCode(orgId: string): string {
+  return orgId.replace(/-/g, "").slice(0, 8).toUpperCase();
+}
+
+export function creditCode(orgId: string, year: number, serial: number): string {
+  return `${orgCode(orgId)}-${year}-${serial}`;
+}
+
+function demoPublicVintage(vintageId: string): PublicVintage | null {
+  const v = demo.vintages.find((x) => x.id === vintageId);
+  const p = v && demo.projects.find((x) => x.id === v.project_id);
+  if (!v || !p || v.serial_start == null || v.serial_end == null) return null;
+  return {
+    organisation: demo.organization.name,
+    org_code: orgCode(demo.organization.id),
+    project: p.name,
+    methodology: p.methodology,
+    registry: p.registry,
+    country: p.country,
+    region: p.region,
+    vintage_year: v.year,
+    net_t: v.net_t,
+    serial_start: v.serial_start,
+    serial_end: v.serial_end,
+    issued_at: demo.vintage_events.find((e) => e.vintage_id === v.id && e.to_status === "issued")?.at ?? null,
+    claim_basis: demo.claims[v.id],
+  };
+}
+
+/** Anyone, signed in or not, may look a credit up by its code. */
+export async function verifyCredit(code: string): Promise<VerifyResult> {
+  if (!DEMO) {
+    const supabase = await supabaseServer();
+    const { data, error } = await supabase.rpc("verify_credit", { code });
+    if (error) throw new Error(error.message);
+    return data;
+  }
+  const m = code.trim().toUpperCase().match(/^([0-9A-F]{8})-(\d{4})-0*(\d{1,12})$/);
+  if (!m) return { found: false, reason: "codes look like ABCD1234-2025-17" };
+  const serial = Number(m[3]);
+  const v = demo.vintages.find(
+    (x) =>
+      orgCode(x.org_id) === m[1] &&
+      x.year === Number(m[2]) &&
+      x.status === "issued" &&
+      x.serial_start != null &&
+      serial >= x.serial_start &&
+      serial <= (x.serial_end ?? -1),
+  );
+  const vintage = v && demoPublicVintage(v.id);
+  if (!v || !vintage) return { found: false, reason: "no issued credit has that code" };
+  const r = demo.retirements.find((x) => x.vintage_id === v.id && serial >= x.serial_start && serial <= x.serial_end);
+  return {
+    found: true,
+    serial,
+    code: `${m[1]}-${m[2]}-${serial}`,
+    vintage,
+    retirement: r
+      ? { id: r.id, beneficiary: r.beneficiary, purpose: r.purpose, claim: r.claim, retired_at: r.retired_at,
+          serial_start: r.serial_start, serial_end: r.serial_end, quantity: r.quantity }
+      : null,
+  };
+}
+
+export async function retirementCertificate(id: string): Promise<CertificateResult> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return { found: false };
+  if (!DEMO) {
+    const supabase = await supabaseServer();
+    const { data, error } = await supabase.rpc("retirement_certificate", { retirement: id });
+    if (error) throw new Error(error.message);
+    return data;
+  }
+  const r = demo.retirements.find((x) => x.id === id);
+  const vintage = r && demoPublicVintage(r.vintage_id);
+  if (!r || !vintage) return { found: false };
+  return {
+    found: true,
+    vintage,
+    id: r.id, beneficiary: r.beneficiary, purpose: r.purpose, claim: r.claim, retired_at: r.retired_at,
+    serial_start: r.serial_start, serial_end: r.serial_end, quantity: r.quantity,
+  };
+}
+
+export function demoForecast(projectId: string) {
+  return DEMO ? (demo.forecasts[projectId] ?? null) : null;
+}

@@ -5,6 +5,8 @@ import {
   BarChart,
   CartesianGrid,
   Legend,
+  Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -66,6 +68,29 @@ export function RainBars({ rain }: { rain: number[] }) {
           <Tooltip contentStyle={tooltipStyle} formatter={(v) => `${Number(v).toFixed(0)} mm`} cursor={{ fill: "var(--surface-2)" }} />
           <Bar dataKey="mm" name="Rain" fill="var(--info)" radius={[3, 3, 0, 0]} />
         </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+/** Safe forward volume against portfolio size, on a log axis of farmers. */
+export function AggregationLine({ data, current }: { data: { units: number; safe_t: number; p50_t: number }[]; current: number }) {
+  return (
+    <div style={{ height: 240 }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: -12 }}>
+          <CartesianGrid stroke="var(--border)" vertical={false} />
+          <XAxis dataKey="units" scale="log" domain={["dataMin", "dataMax"]} type="number" tick={AXIS} axisLine={false} tickLine={false} />
+          <YAxis tick={AXIS} axisLine={false} tickLine={false} />
+          <Tooltip
+            contentStyle={tooltipStyle}
+            labelFormatter={(u) => `${u} farmers${Number(u) === current ? " (this project)" : ""}`}
+            formatter={(v) => `${Number(v).toFixed(1)} t`}
+          />
+          <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
+          <Line dataKey="p50_t" name="Median delivery" stroke="var(--info)" dot={false} strokeWidth={2} />
+          <Line dataKey="safe_t" name="Safe to sell" stroke="var(--brand)" strokeWidth={2} />
+        </LineChart>
       </ResponsiveContainer>
     </div>
   );
