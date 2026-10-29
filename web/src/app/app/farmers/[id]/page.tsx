@@ -3,9 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { FarmMap } from "@/components/map/farm-map";
-import { Badge, Card, CardHeader, EmptyState, PageHeader, Table, Td, Th } from "@/components/ui";
+import { Badge, ButtonLink, Card, CardHeader, EmptyState, PageHeader, Table, Td, Th } from "@/components/ui";
 import { getFarmer, getOrgContext, listFarms, listPayments, listVintages } from "@/lib/data";
 import { fmt, PAYMENT_TONE } from "@/lib/format";
+import { can } from "@/lib/roles";
 
 export const metadata: Metadata = { title: "Farmer" };
 
@@ -28,6 +29,13 @@ export default async function FarmerPage({ params }: { params: Promise<{ id: str
         crumbs={[{ href: "/app/farmers", label: "Farmers" }]}
         title={farmer.name}
         description={[farmer.external_ref, farmer.village, farmer.district, farmer.country].filter(Boolean).join(" · ")}
+        actions={
+          can.enrol(ctx.role) && (
+            <ButtonLink href={`/app/farmers/${farmer.id}/edit`} variant="secondary">
+              Edit
+            </ButtonLink>
+          )
+        }
       />
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="flex flex-col gap-6 lg:col-span-2">

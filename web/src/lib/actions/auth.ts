@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -95,7 +96,7 @@ export async function requestPasswordReset(_: ActionResult, form: FormData): Pro
   if (!email) return { error: "Enter your email." };
   const supabase = await supabaseServer();
   await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${siteUrl()}/auth/callback?next=/app/account`,
+    redirectTo: `${siteUrl()}/auth/callback?next=${encodeURIComponent("/app/settings?reset=1")}`,
   });
   return { message: `If ${email} has an account, a reset link is on its way.` };
 }
@@ -108,4 +109,21 @@ export async function updatePassword(_: ActionResult, form: FormData): Promise<A
   const supabase = await supabaseServer();
   const { error } = await supabase.auth.updateUser({ password });
   return error ? { error: error.message } : { message: "Password updated." };
+}
+
+export async function updateProfile(_: ActionResult, form: FormData): Promise<ActionResult> {
+  const refused = refuseInDemo();
+  if (refused) return refused;
+  const full_name = str(form, "full_name");
+  if (!full_name) return { error: "Your name is required." };
+  const phone = str(form, "phone");
+  const supabase = await supabaseServer();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return { error: "Sign in again." };
+  // The profile is what teammates see; the auth metadata is what the header shows.
+  const { error } = await supabase.from("profiles").update({ full_name, phone }).eq("id", auth.user.id);
+  if (error) return { error: error.message };
+  await supabase.auth.updateUser({ data: { full_name } });
+  revalidatePath("/app", "layout");
+  return { message: "Profile saved." };
 }

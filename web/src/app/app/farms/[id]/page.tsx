@@ -9,6 +9,7 @@ import { FarmMap } from "@/components/map/farm-map";
 import {
   Badge,
   Button,
+  ButtonLink,
   Card,
   CardHeader,
   EmptyState,
@@ -46,9 +47,9 @@ export default async function FarmPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ created?: string }>;
+  searchParams: Promise<{ created?: string; saved?: string }>;
 }) {
-  const [{ id }, { created }] = await Promise.all([params, searchParams]);
+  const [{ id }, { created, saved }] = await Promise.all([params, searchParams]);
   const ctx = await getOrgContext();
   const farm = await getFarm(ctx.org.id, id);
   if (!farm) notFound();
@@ -93,11 +94,21 @@ export default async function FarmPage({
           <div className="flex items-center gap-2">
             <Badge tone={farm.status === "enrolled" ? "brand" : farm.status === "draft" ? "accent" : "danger"}>{farm.status}</Badge>
             {can.enrol(ctx.role) && (
-              <ActionForm action={estimateFarm} submit="Run estimate" hidden={{ farm_id: farm.id }} className="flex-row" />
+              <>
+                <ButtonLink href={`/app/farms/${farm.id}/edit`} variant="secondary">
+                  Edit
+                </ButtonLink>
+                <ActionForm action={estimateFarm} submit="Run estimate" hidden={{ farm_id: farm.id }} className="flex-row" />
+              </>
             )}
           </div>
         }
       />
+      {saved && (
+        <div className="mb-6">
+          <Notice tone="brand">Changes saved. Run the estimate again if the boundary, calendar or eligibility changed.</Notice>
+        </div>
+      )}
       {created && (
         <div className="mb-6">
           <Notice tone="brand" title="Farm saved">
@@ -264,9 +275,14 @@ export default async function FarmPage({
                       <Td className="text-xs">
                         {p.notes}
                         {p.evidence_path && (
-                          <span className="ml-1 inline-flex items-center gap-0.5 text-muted">
+                          <a
+                            href={`/app/evidence?path=${encodeURIComponent(p.evidence_path)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="ml-1 inline-flex items-center gap-0.5 text-brand hover:underline"
+                          >
                             <Paperclip className="h-3 w-3" /> evidence
-                          </span>
+                          </a>
                         )}
                       </Td>
                     </tr>
@@ -387,6 +403,14 @@ export default async function FarmPage({
                   <div>
                     <div className={c.ok ? "" : "font-medium"}>{c.label}</div>
                     {!c.ok && <div className="text-xs text-muted">{c.fix}</div>}
+                    {!c.ok && can.enrol(ctx.role) && (c.on === "farm" || farmer) && (
+                      <Link
+                        href={c.on === "farm" ? `/app/farms/${farm.id}/edit` : `/app/farmers/${farmer!.id}/edit`}
+                        className="text-xs font-medium text-brand"
+                      >
+                        Fix it →
+                      </Link>
+                    )}
                   </div>
                 </li>
               ))}

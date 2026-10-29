@@ -200,3 +200,12 @@ export function Notice({ tone = "info", title, children }: { tone?: Tone; title?
     </div>
   );
 }
+
+/** A file download. Plain <a>, so the browser saves it instead of routing. */
+export function DownloadLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <a href={href} className={clsx(buttonBase, buttonVariant.secondary)}>
+      {children}
+    </a>
+  );
+}

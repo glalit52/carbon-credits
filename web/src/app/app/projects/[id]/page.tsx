@@ -1,11 +1,13 @@
-import { Plus } from "lucide-react";
+import { Download, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { ActionForm } from "@/components/action-form";
 import { YearBars } from "@/components/charts";
 import { FarmMap } from "@/components/map/farm-map";
-import { Badge, ButtonLink, Card, CardHeader, EmptyState, PageHeader, Stat, Table, Td, Th } from "@/components/ui";
+import { Badge, ButtonLink, Card, DownloadLink, CardHeader, EmptyState, PageHeader, Stat, Table, Td, Th } from "@/components/ui";
+import { estimateProject } from "@/lib/actions/farms";
 import { getOrgContext, getProject, listEstimates, listFarmers, listFarms, listVintages } from "@/lib/data";
 import type { EngineResult } from "@/lib/engine";
 import { fmt, PATHWAY_LABEL, VINTAGE_LABEL, VINTAGE_TONE } from "@/lib/format";
@@ -48,11 +50,21 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         title={project.name}
         description={`${PATHWAY_LABEL[project.pathway]} · ${project.methodology}${project.registry ? ` · ${project.registry}` : ""} · ${[project.region, project.country].filter(Boolean).join(", ")}`}
         actions={
-          can.enrol(ctx.role) && (
-            <ButtonLink href="/app/farms/new">
-              <Plus className="h-4 w-4" /> Add farm
-            </ButtonLink>
-          )
+          <>
+            <DownloadLink href={`/app/export/estimates.csv?project=${project.id}`}>
+              <Download className="h-4 w-4" /> Estimates CSV
+            </DownloadLink>
+            {can.manage(ctx.role) && (
+              <ButtonLink href={`/app/projects/${project.id}/edit`} variant="secondary">
+                Edit
+              </ButtonLink>
+            )}
+            {can.enrol(ctx.role) && (
+              <ButtonLink href="/app/farms/new">
+                <Plus className="h-4 w-4" /> Add farm
+              </ButtonLink>
+            )}
+          </>
         }
       />
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -75,7 +87,21 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
             />
           )}
           <Card>
-            <CardHeader title="Estimated credits by year" description="Sum of each farm's latest estimate." />
+            <CardHeader
+              title="Estimated credits by year"
+              description="Sum of each farm's latest estimate."
+              action={
+                can.manage(ctx.role) && (
+                  <ActionForm
+                    action={estimateProject}
+                    submit="Estimate all farms"
+                    variant="secondary"
+                    hidden={{ project_id: project.id }}
+                    className="items-end"
+                  />
+                )
+              }
+            />
             {chart.length ? (
               <div className="p-5">
                 <YearBars

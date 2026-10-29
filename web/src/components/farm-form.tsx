@@ -3,8 +3,8 @@
 import { Plus, X } from "lucide-react";
 import { useActionState, useMemo, useState } from "react";
 
-import type { Farmer, Project } from "@/lib/database.types";
-import { createFarm } from "@/lib/actions/farms";
+import type { Farm, Farmer, Project, Season } from "@/lib/database.types";
+import { createFarm, updateFarm } from "@/lib/actions/farms";
 import { TENURE_LABEL } from "@/lib/format";
 
 import { BoundaryEditor } from "./map/boundary-editor";
@@ -21,19 +21,25 @@ function serialise(rows: SeasonRow[]): string {
     .join(";");
 }
 
-export function FarmForm({ projects, farmers }: { projects: Project[]; farmers: Farmer[] }) {
-  const [state, action, pending] = useActionState(createFarm, {});
-  const [projectId, setProjectId] = useState(projects[0]?.id ?? "");
-  const [farmerId, setFarmerId] = useState(farmers.length ? "" : "new");
-  const [seasons, setSeasons] = useState<SeasonRow[]>(RICE_DEFAULT);
+const mmdd = (m: number, d: number) => `${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+const toRows = (s: Season[]): SeasonRow[] =>
+  s.map((x) => ({ name: x.name, start: mmdd(x.start_month, x.start_day), end: mmdd(x.end_month, x.end_day) }));
+
+/** Adds a farm, or edits one when `farm` is given. */
+export function FarmForm({ projects, farmers, farm }: { projects: Project[]; farmers: Farmer[]; farm?: Farm }) {
+  const [state, action, pending] = useActionState(farm ? updateFarm : createFarm, {});
+  const [projectId, setProjectId] = useState(farm ? (farm.project_id ?? "") : (projects[0]?.id ?? ""));
+  const [farmerId, setFarmerId] = useState(farm ? (farm.farmer_id ?? "") : farmers.length ? "" : "new");
+  const [seasons, setSeasons] = useState<SeasonRow[]>(farm?.seasons?.length ? toRows(farm.seasons) : RICE_DEFAULT);
   const pathway = useMemo(() => projects.find((p) => p.id === projectId)?.pathway, [projects, projectId]);
 
   return (
     <form action={action} className="grid gap-6 lg:grid-cols-5">
+      {farm && <input type="hidden" name="id" value={farm.id} />}
       <Card className="lg:col-span-3">
         <CardHeader title="Boundary" description="Draw it on imagery, walk it with a phone, paste corner points, or upload a file." />
         <div className="p-5">
-          <BoundaryEditor />
+          <BoundaryEditor initial={farm?.boundary} />
         </div>
       </Card>
 
@@ -42,13 +48,13 @@ export function FarmForm({ projects, farmers }: { projects: Project[]; farmers: 
           <CardHeader title="Farm" />
           <div className="grid gap-4 p-5 sm:grid-cols-2">
             <Field label="Name" className="sm:col-span-2">
-              <Input name="name" required placeholder="e.g. Murugan — north field" />
+              <Input name="name" required placeholder="e.g. Murugan — north field" defaultValue={farm?.name} />
             </Field>
             <Field label="Your reference" hint="Optional; must be unique.">
-              <Input name="external_ref" placeholder="TNJ-0042" />
+              <Input name="external_ref" placeholder="TNJ-0042" defaultValue={farm?.external_ref ?? ""} />
             </Field>
             <Field label="Enrolled on">
-              <Input name="enrolled_on" type="date" defaultValue={new Date().toISOString().slice(0, 10)} />
+              <Input name="enrolled_on" type="date" defaultValue={farm ? (farm.enrolled_on ?? "") : new Date().toISOString().slice(0, 10)} />
             </Field>
             <Field label="Project" className="sm:col-span-2" hint={pathway ? `Pathway: ${pathway}` : undefined}>
               <Select name="project_id" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
@@ -61,10 +67,10 @@ export function FarmForm({ projects, farmers }: { projects: Project[]; farmers: 
               </Select>
             </Field>
             <Field label="Crop">
-              <Input name="crop" placeholder={pathway === "rice" ? "Paddy rice" : "Coffee under shade"} />
+              <Input name="crop" placeholder={pathway === "rice" ? "Paddy rice" : "Coffee under shade"} defaultValue={farm?.crop ?? ""} />
             </Field>
             <Field label="Practice">
-              <Input name="practice" defaultValue={pathway === "rice" ? "awd" : pathway === "agroforestry" ? "shade_trees" : ""} />
+              <Input name="practice" defaultValue={farm ? (farm.practice ?? "") : pathway === "rice" ? "awd" : pathway === "agroforestry" ? "shade_trees" : ""} />
             </Field>
           </div>
         </Card>
@@ -108,7 +114,7 @@ export function FarmForm({ projects, farmers }: { projects: Project[]; farmers: 
           <CardHeader title="Land and eligibility" />
           <div className="grid gap-4 p-5 sm:grid-cols-2">
             <Field label="Tenure basis">
-              <Select name="tenure" defaultValue="">
+              <Select name="tenure" defaultValue={farm?.tenure ?? ""}>
                 <option value="">Not recorded</option>
                 {Object.entries(TENURE_LABEL).map(([v, l]) => (
                   <option key={v} value={v}>
@@ -118,13 +124,13 @@ export function FarmForm({ projects, farmers }: { projects: Project[]; farmers: 
               </Select>
             </Field>
             <Field label="Land document reference">
-              <Input name="tenure_reference" placeholder="Patta / title / lease no." />
+              <Input name="tenure_reference" placeholder="Patta / title / lease no." defaultValue={farm?.tenure_reference ?? ""} />
             </Field>
 
             {pathway === "rice" && (
               <>
                 <Field label="Rice ecosystem" hint="VM0051 credits irrigated lowland only.">
-                  <Select name="rice_ecosystem" defaultValue="irrigated_lowland">
+                  <Select name="rice_ecosystem" defaultValue={farm?.rice_ecosystem ?? "irrigated_lowland"}>
                     <option value="irrigated_lowland">Irrigated lowland</option>
                     <option value="rainfed">Rainfed</option>
                     <option value="upland">Upland</option>
@@ -133,7 +139,7 @@ export function FarmForm({ projects, farmers }: { projects: Project[]; farmers: 
                   </Select>
                 </Field>
                 <Field label="Water control" hint="AWD needs control of drainage.">
-                  <Select name="water_control" defaultValue="full">
+                  <Select name="water_control" defaultValue={farm?.water_control ?? "full"}>
                     <option value="full">Irrigation and drainage</option>
                     <option value="irrigation_only">Irrigation only</option>
                     <option value="none">None</option>
@@ -189,10 +195,10 @@ export function FarmForm({ projects, farmers }: { projects: Project[]; farmers: 
             {pathway === "agroforestry" && (
               <>
                 <Field label="Species" hint="Comma separated." className="sm:col-span-2">
-                  <Input name="species" placeholder="Grevillea robusta, Cordia africana" />
+                  <Input name="species" placeholder="Grevillea robusta, Cordia africana" defaultValue={farm?.species?.join(", ") ?? ""} />
                 </Field>
                 <Field label="Stems planted">
-                  <Input name="stems_planted" type="number" min={0} />
+                  <Input name="stems_planted" type="number" min={0} defaultValue={farm?.stems_planted ?? ""} />
                 </Field>
               </>
             )}
@@ -201,7 +207,7 @@ export function FarmForm({ projects, farmers }: { projects: Project[]; farmers: 
 
         {state.error && <Notice tone="danger">{state.error}</Notice>}
         <Button type="submit" disabled={pending} className="py-2.5">
-          {pending ? "Saving…" : "Save farm"}
+          {pending ? "Saving…" : farm ? "Save changes" : "Save farm"}
         </Button>
       </div>
     </form>

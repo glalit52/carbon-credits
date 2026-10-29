@@ -50,6 +50,24 @@ export async function createProject(_: ActionResult, form: FormData): Promise<Ac
   redirect(`/app/projects/${data.id}`);
 }
 
+function farmerFields(form: FormData, name: string) {
+  return {
+    name,
+    phone: str(form, "phone"),
+    village: str(form, "village"),
+    district: str(form, "district"),
+    state: str(form, "state"),
+    country: str(form, "country"),
+    external_ref: str(form, "external_ref"),
+    consent_on: str(form, "consent_on"),
+    consent_reference: str(form, "consent_reference"),
+    carbon_rights_ref: str(form, "carbon_rights_ref"),
+    carbon_rights_signed_on: str(form, "carbon_rights_signed_on"),
+    payout_method: str(form, "payout_method") as "bank" | "upi" | "mobile_money" | "cash" | "other" | null,
+    payout_reference: str(form, "payout_reference"),
+  };
+}
+
 export async function createFarmer(_: ActionResult, form: FormData): Promise<ActionResult> {
   const refused = refuseInDemo();
   if (refused) return refused;
@@ -60,26 +78,62 @@ export async function createFarmer(_: ActionResult, form: FormData): Promise<Act
   const supabase = await supabaseServer();
   const { data, error } = await supabase
     .from("farmers")
-    .insert({
-      org_id: ctx.org.id,
-      name,
-      phone: str(form, "phone"),
-      village: str(form, "village"),
-      district: str(form, "district"),
-      state: str(form, "state"),
-      country: str(form, "country"),
-      external_ref: str(form, "external_ref"),
-      consent_on: str(form, "consent_on"),
-      consent_reference: str(form, "consent_reference"),
-      carbon_rights_ref: str(form, "carbon_rights_ref"),
-      carbon_rights_signed_on: str(form, "carbon_rights_signed_on"),
-      payout_method: str(form, "payout_method") as "bank" | "upi" | "mobile_money" | "cash" | "other" | null,
-      payout_reference: str(form, "payout_reference"),
-      created_by: ctx.user.id,
-    })
+    .insert({ ...farmerFields(form, name), org_id: ctx.org.id, created_by: ctx.user.id })
     .select("id")
     .single();
   if (error) return { error: explain(error.message) };
   revalidatePath("/app/farmers");
   redirect(`/app/farmers/${data.id}`);
+}
+
+export async function updateFarmer(_: ActionResult, form: FormData): Promise<ActionResult> {
+  const refused = refuseInDemo();
+  if (refused) return refused;
+  const ctx = await getOrgContext();
+  if (!can.enrol(ctx.role)) return { error: "Your role cannot edit farmers." };
+  const id = str(form, "id");
+  const name = str(form, "name");
+  if (!id || !name) return { error: "Name is required." };
+  const supabase = await supabaseServer();
+  const { error } = await supabase
+    .from("farmers")
+    .update(farmerFields(form, name))
+    .eq("id", id)
+    .eq("org_id", ctx.org.id);
+  if (error) return { error: explain(error.message) };
+  revalidatePath(`/app/farmers/${id}`);
+  redirect(`/app/farmers/${id}`);
+}
+
+const STATUSES = ["design", "listed", "registered", "closed"] as const;
+
+export async function updateProject(_: ActionResult, form: FormData): Promise<ActionResult> {
+  const refused = refuseInDemo();
+  if (refused) return refused;
+  const ctx = await getOrgContext();
+  if (!can.manage(ctx.role)) return { error: "Your role cannot edit projects." };
+  const id = str(form, "id");
+  const name = str(form, "name");
+  if (!id || !name) return { error: "Name is required." };
+  const status = str(form, "status") as (typeof STATUSES)[number] | null;
+  if (status && !STATUSES.includes(status)) return { error: "Unknown status." };
+  // Pathway and methodology stay as created: estimates already made under
+  // them would silently stop matching the project they belong to.
+  const supabase = await supabaseServer();
+  const { error } = await supabase
+    .from("projects")
+    .update({
+      name,
+      registry: str(form, "registry"),
+      country: str(form, "country"),
+      region: str(form, "region"),
+      start_date: str(form, "start_date"),
+      crediting_period_yrs: num(form, "crediting_period_yrs"),
+      ...(status ? { status } : {}),
+    })
+    .eq("id", id)
+    .eq("org_id", ctx.org.id);
+  if (error) return { error: explain(error.message) };
+  revalidatePath(`/app/projects/${id}`);
+  redirect(`/app/projects/${id}`);
 }

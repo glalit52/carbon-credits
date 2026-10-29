@@ -1,9 +1,9 @@
-import { Plus, Upload } from "lucide-react";
+import { Download, Plus, Upload } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
 import { FarmMap } from "@/components/map/farm-map";
-import { Badge, ButtonLink, Card, EmptyState, Input, PageHeader, Select, Table, Td, Th } from "@/components/ui";
+import { Badge, ButtonLink, Card, DownloadLink, EmptyState, Input, PageHeader, Select, Table, Td, Th } from "@/components/ui";
 import { getOrgContext, listEstimates, listFarmers, listFarms, listProjects } from "@/lib/data";
 import { fmt, TENURE_LABEL } from "@/lib/format";
 import { readiness, readyCount } from "@/lib/readiness";
@@ -48,7 +48,14 @@ export default async function FarmsPage({
         title="Farms"
         description={`${shown.length} farms · ${fmt.ha(totalHa)}`}
         actions={
-          can.enrol(ctx.role) && (
+          <>
+            <DownloadLink href={`/app/export/farms.csv${project ? `?project=${project}` : ""}`}>
+              <Download className="h-4 w-4" /> CSV
+            </DownloadLink>
+            <DownloadLink href={`/app/export/farms.geojson${project ? `?project=${project}` : ""}`}>
+              <Download className="h-4 w-4" /> GeoJSON
+            </DownloadLink>
+            {can.enrol(ctx.role) && (
             <>
               <ButtonLink href="/app/import" variant="secondary">
                 <Upload className="h-4 w-4" /> Import
@@ -57,7 +64,8 @@ export default async function FarmsPage({
                 <Plus className="h-4 w-4" /> Add farm
               </ButtonLink>
             </>
-          )
+            )}
+          </>
         }
       />
 

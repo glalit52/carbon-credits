@@ -1,8 +1,8 @@
-import { Plus } from "lucide-react";
+import { Download, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { Badge, ButtonLink, Card, EmptyState, PageHeader, Table, Td, Th } from "@/components/ui";
+import { Badge, ButtonLink, Card, DownloadLink, EmptyState, PageHeader, Table, Td, Th } from "@/components/ui";
 import { getOrgContext, listFarmers, listFarms, listPayments } from "@/lib/data";
 import { fmt } from "@/lib/format";
 import { can } from "@/lib/roles";
@@ -22,11 +22,16 @@ export default async function FarmersPage() {
         title="Farmers"
         description="The people behind each farm: consent, carbon rights and what they have been paid."
         actions={
-          can.enrol(ctx.role) && (
-            <ButtonLink href="/app/farmers/new">
-              <Plus className="h-4 w-4" /> Add farmer
-            </ButtonLink>
-          )
+          <>
+            <DownloadLink href="/app/export/farmers.csv">
+              <Download className="h-4 w-4" /> CSV
+            </DownloadLink>
+            {can.enrol(ctx.role) && (
+              <ButtonLink href="/app/farmers/new">
+                <Plus className="h-4 w-4" /> Add farmer
+              </ButtonLink>
+            )}
+          </>
         }
       />
       <Card>

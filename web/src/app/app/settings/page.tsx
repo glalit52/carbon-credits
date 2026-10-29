@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 
 import { ActionForm } from "@/components/action-form";
 import { MemberRole } from "@/components/member-role";
-import { Badge, Card, CardHeader, Field, Input, PageHeader, Select, Table, Td, Th } from "@/components/ui";
-import { updatePassword } from "@/lib/actions/auth";
+import { Badge, Card, CardHeader, Field, Input, Notice, PageHeader, Select, Table, Td, Th } from "@/components/ui";
+import { updatePassword, updateProfile } from "@/lib/actions/auth";
 import { inviteMember, removeMember, revokeInvitation, updateOrganization } from "@/lib/actions/org";
 import { getOrgContext, listInvitations, listMembers } from "@/lib/data";
 import { fmt } from "@/lib/format";
@@ -11,7 +11,8 @@ import { can, INVITABLE, ROLE_HELP, ROLE_LABEL } from "@/lib/roles";
 
 export const metadata: Metadata = { title: "Settings" };
 
-export default async function SettingsPage() {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ reset?: string }> }) {
+  const { reset } = await searchParams;
   const ctx = await getOrgContext();
   const admin = can.administer(ctx.role);
   const [members, invitations] = await Promise.all([
@@ -22,6 +23,13 @@ export default async function SettingsPage() {
   return (
     <>
       <PageHeader title="Settings" description="Your organisation, the people in it and what each of them can do." />
+      {reset && (
+        <div className="mb-6">
+          <Notice tone="info" title="Choose a new password">
+            You signed in from a reset link. Set a new password under “Your account” below.
+          </Notice>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
@@ -142,7 +150,15 @@ export default async function SettingsPage() {
           )}
           <Card>
             <CardHeader title="Your account" description={ctx.user.email ?? undefined} />
-            <div className="p-5">
+            <div className="flex flex-col gap-6 p-5">
+              <ActionForm action={updateProfile} submit="Save profile" variant="secondary">
+                <Field label="Your name">
+                  <Input name="full_name" defaultValue={ctx.user.name ?? ""} autoComplete="name" required />
+                </Field>
+                <Field label="Phone" hint="Shown to your teammates.">
+                  <Input name="phone" type="tel" autoComplete="tel" />
+                </Field>
+              </ActionForm>
               <ActionForm action={updatePassword} submit="Change password" variant="secondary">
                 <Field label="New password" hint="At least 10 characters.">
                   <Input name="password" type="password" autoComplete="new-password" minLength={10} />

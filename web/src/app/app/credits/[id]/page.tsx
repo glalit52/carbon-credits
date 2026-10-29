@@ -3,7 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ActionForm } from "@/components/action-form";
-import { Badge, Card, CardHeader, EmptyState, Field, Input, Notice, PageHeader, Stat, Table, Td, Th } from "@/components/ui";
+import { Download } from "lucide-react";
+
+import { Badge, Card, CardHeader, DownloadLink, EmptyState, Field, Input, Notice, PageHeader, Stat, Table, Td, Th } from "@/components/ui";
 import { buildVintage, raisePayments, transitionVintage } from "@/lib/actions/credits";
 import { getOrgContext, getProject, getVintage, listFarmers, listFarms, listPayments, memberNames } from "@/lib/data";
 import type { VintageStatus } from "@/lib/database.types";
@@ -50,7 +52,14 @@ export default async function VintagePage({ params }: { params: Promise<{ id: st
         crumbs={[{ href: "/app/credits", label: "Credits" }]}
         title={`${project?.name ?? "Project"} · ${v.year}`}
         description={`${project?.methodology ?? ""} · last change ${fmt.datetime(v.updated_at)}`}
-        actions={<Badge tone={VINTAGE_TONE[v.status]}>{VINTAGE_LABEL[v.status]}</Badge>}
+        actions={
+          <div className="flex items-center gap-2">
+            <Badge tone={VINTAGE_TONE[v.status]}>{VINTAGE_LABEL[v.status]}</Badge>
+            <DownloadLink href={`/app/export/vintage.csv?id=${v.id}`}>
+              <Download className="h-4 w-4" /> Breakdown CSV
+            </DownloadLink>
+          </div>
+        }
       />
 
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">

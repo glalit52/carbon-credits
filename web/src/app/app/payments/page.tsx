@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { Badge, Card, EmptyState, PageHeader, Stat, Table, Td, Th } from "@/components/ui";
+import { Download } from "lucide-react";
+
+import { Badge, Card, DownloadLink, EmptyState, PageHeader, Stat, Table, Td, Th } from "@/components/ui";
 import { setPaymentStatus } from "@/lib/actions/credits";
 import { getOrgContext, listFarmers, listPayments, listProjects, listVintages } from "@/lib/data";
 import { fmt, PAYMENT_TONE } from "@/lib/format";
@@ -27,7 +29,15 @@ export default async function PaymentsPage() {
 
   return (
     <>
-      <PageHeader title="Payments" description="What each farmer is owed from issued credits, and what has reached them." />
+      <PageHeader
+        title="Payments"
+        description="What each farmer is owed from issued credits, and what has reached them."
+        actions={
+          <DownloadLink href="/app/export/payments.csv">
+            <Download className="h-4 w-4" /> CSV
+          </DownloadLink>
+        }
+      />
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="Paid" value={fmt.money(sum("paid"), currency)} tone="brand" />
         <Stat label="Approved, not paid" value={fmt.money(sum("approved"), currency)} />
