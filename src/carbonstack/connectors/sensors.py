@@ -248,7 +248,7 @@ def clean(readings: list[Reading]) -> list[LoggerRecord]:
             if len(vals) < MIN_READINGS_PER_DAY:
                 rec.gap_days.append(d)
             else:
-                mean = sum(vals) / len(vals)
+                mean = math.fsum(vals) / len(vals)
                 rec.days.append(DayState(d, mean, min(vals), len(vals),
                                          classify_level(mean)))
             d += timedelta(days=1)

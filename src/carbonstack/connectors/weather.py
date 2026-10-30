@@ -80,15 +80,15 @@ class ClimateSeries:
             ms = by_month[i]
             out.append(MonthlyWeather(
                 0, i,
-                sum(m.temp_c for m in ms) / len(ms),
-                sum(m.rain_mm for m in ms) / len(ms),
-                sum(m.pet_mm for m in ms) / len(ms),
+                math.fsum(m.temp_c for m in ms) / len(ms),
+                math.fsum(m.rain_mm for m in ms) / len(ms),
+                math.fsum(m.pet_mm for m in ms) / len(ms),
                 ms[0].pet_method))
         return out
 
     def annual_rain_mm(self) -> float:
         years = {m.year for m in self.months}
-        return sum(m.rain_mm for m in self.months) / max(1, len(years))
+        return math.fsum(m.rain_mm for m in self.months) / max(1, len(years))
 
     def to_dict(self) -> dict:
         return {
@@ -118,7 +118,7 @@ def thornthwaite_pet(monthly_temp_c: list[float], lat: float) -> list[float]:
     """
     if len(monthly_temp_c) != 12:
         raise ValueError("Thornthwaite needs twelve monthly temperatures")
-    heat = sum((max(t, 0.0) / 5.0) ** 1.514 for t in monthly_temp_c)
+    heat = math.fsum((max(t, 0.0) / 5.0) ** 1.514 for t in monthly_temp_c)
     if heat <= 0:
         return [0.0] * 12
     a = (6.75e-7 * heat ** 3 - 7.71e-5 * heat ** 2 + 1.792e-2 * heat + 0.49239)
@@ -190,9 +190,9 @@ def parse_open_meteo(snap: Snapshot, lat: float, lon: float) -> ClimateSeries:
             continue
         months.append(MonthlyWeather(
             y, m,
-            sum(r[0] for r in rows) / len(rows),
-            sum(r[1] for r in rows),
-            sum(r[2] for r in rows),
+            math.fsum(r[0] for r in rows) / len(rows),
+            math.fsum(r[1] for r in rows),
+            math.fsum(r[2] for r in rows),
             "fao56"))
     if not months:
         raise ConnectorUnavailable("open-meteo", "no complete month in the response")

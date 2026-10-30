@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import csv
 import io
+import math
 import re
 from dataclasses import dataclass, field
 from datetime import date
@@ -235,7 +236,7 @@ def reconcile(ours: list[Issuance], export: RegistryExport) -> Reconciliation:
         missing.append(iss)
 
     def total(word: str) -> float:
-        return sum(r.quantity for r in rows if word in r.status.lower())
+        return math.fsum(r.quantity for r in rows if word in r.status.lower())
 
     return Reconciliation(
         registry=export.registry, matches=matches,

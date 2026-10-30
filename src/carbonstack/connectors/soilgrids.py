@@ -19,6 +19,7 @@ the number visibly instead of silently by a factor of ten.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 
 from ..soil import SoilCore, SoilLayer
@@ -57,8 +58,8 @@ class SoilPrior:
         return max(l.bottom_cm for l in self.layers)
 
     def _weighted(self, attr: str) -> float:
-        total = sum(l.bottom_cm - l.top_cm for l in self.layers)
-        return sum(getattr(l, attr) * (l.bottom_cm - l.top_cm) for l in self.layers) / total
+        total = math.fsum(l.bottom_cm - l.top_cm for l in self.layers)
+        return math.fsum(getattr(l, attr) * (l.bottom_cm - l.top_cm) for l in self.layers) / total
 
     @property
     def clay_pct(self) -> float:

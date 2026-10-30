@@ -783,11 +783,11 @@
         "citations": [
          "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
          "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-         "awd: baseline 97.23561626384733 -> project 79.17613553534613 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 40 revisits across 2 season(s)",
+         "awd: baseline 97.23561626384732 -> project 79.17613553534613 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 40 revisits across 2 season(s)",
          "water regime detected from feed: 26 of 37 passes separable, 2 AWD event(s)"
         ],
         "name": "VM0051 abatement, vintage 2025",
-        "result": 0.49332793380539036,
+        "result": 0.49332793380539,
         "terms": [
          {
           "detail": "",
@@ -817,7 +817,7 @@
           "detail": "",
           "label": "gross abatement",
           "unit": "tCO2e",
-          "value": 0.7589660520082928
+          "value": 0.7589660520082923
          },
          {
           "detail": "abatement-weighted across emission factor tiers",
@@ -906,11 +906,11 @@
          "citations": [
           "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
           "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-          "awd: baseline 97.23561626384733 -> project 79.17613553534613 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 40 revisits across 2 season(s)",
+          "awd: baseline 97.23561626384732 -> project 79.17613553534613 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 40 revisits across 2 season(s)",
           "water regime detected from feed: 26 of 37 passes separable, 2 AWD event(s)"
          ],
          "name": "VM0051 abatement, vintage 2025",
-         "result": 0.49332793380539036,
+         "result": 0.49332793380539,
          "terms": [
           {
            "detail": "",
@@ -940,7 +940,7 @@
            "detail": "",
            "label": "gross abatement",
            "unit": "tCO2e",
-           "value": 0.7589660520082928
+           "value": 0.7589660520082923
           },
           {
            "detail": "abatement-weighted across emission factor tiers",
@@ -3733,11 +3733,11 @@
         "citations": [
          "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
          "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-         "awd: baseline 94.78753765487672 -> project 76.33116652812569 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 41 revisits across 2 season(s)",
+         "awd: baseline 94.78753765487672 -> project 76.33116652812568 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 41 revisits across 2 season(s)",
          "water regime detected from feed: 30 of 37 passes separable, 3 AWD event(s)"
         ],
         "name": "VM0051 abatement, vintage 2025",
-        "result": 1.351448200032328,
+        "result": 1.351448200032329,
         "terms": [
          {
           "detail": "",
@@ -3767,7 +3767,7 @@
           "detail": "",
           "label": "gross abatement",
           "unit": "tCO2e",
-          "value": 2.079151076972812
+          "value": 2.079151076972814
          },
          {
           "detail": "abatement-weighted across emission factor tiers",
@@ -3856,11 +3856,11 @@
          "citations": [
           "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
           "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-          "awd: baseline 94.78753765487672 -> project 76.33116652812569 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 41 revisits across 2 season(s)",
+          "awd: baseline 94.78753765487672 -> project 76.33116652812568 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 41 revisits across 2 season(s)",
           "water regime detected from feed: 30 of 37 passes separable, 3 AWD event(s)"
          ],
          "name": "VM0051 abatement, vintage 2025",
-         "result": 1.351448200032328,
+         "result": 1.351448200032329,
          "terms": [
           {
            "detail": "",
@@ -3890,7 +3890,7 @@
            "detail": "",
            "label": "gross abatement",
            "unit": "tCO2e",
-           "value": 2.079151076972812
+           "value": 2.079151076972814
           },
           {
            "detail": "abatement-weighted across emission factor tiers",
@@ -6218,11 +6218,11 @@
         "citations": [
          "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
          "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-         "awd: baseline 95.84425323132248 -> project 74.0659911750592 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
+         "awd: baseline 95.84425323132247 -> project 74.0659911750592 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
          "water regime detected from feed: 21 of 35 passes separable, 3 AWD event(s)"
         ],
         "name": "VM0051 abatement, vintage 2026",
-        "result": 1.4234173134102908,
+        "result": 1.4234173134102899,
         "terms": [
          {
           "detail": "",
@@ -6252,7 +6252,7 @@
           "detail": "",
           "label": "gross abatement",
           "unit": "tCO2e",
-          "value": 2.189872789861986
+          "value": 2.1898727898619845
          },
          {
           "detail": "abatement-weighted across emission factor tiers",
@@ -6341,11 +6341,11 @@
          "citations": [
           "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
           "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-          "awd: baseline 95.84425323132248 -> project 74.0659911750592 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
+          "awd: baseline 95.84425323132247 -> project 74.0659911750592 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
           "water regime detected from feed: 21 of 35 passes separable, 3 AWD event(s)"
          ],
          "name": "VM0051 abatement, vintage 2026",
-         "result": 1.4234173134102908,
+         "result": 1.4234173134102899,
          "terms": [
           {
            "detail": "",
@@ -6375,7 +6375,7 @@
            "detail": "",
            "label": "gross abatement",
            "unit": "tCO2e",
-           "value": 2.189872789861986
+           "value": 2.1898727898619845
           },
           {
            "detail": "abatement-weighted across emission factor tiers",
@@ -6700,11 +6700,11 @@
         "citations": [
          "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
          "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-         "awd: baseline 87.15957557933851 -> project 67.19181731290726 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 40 revisits across 2 season(s)",
+         "awd: baseline 87.1595755793385 -> project 67.19181731290726 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 40 revisits across 2 season(s)",
          "water regime detected from feed: 22 of 37 passes separable, 2 AWD event(s)"
         ],
         "name": "VM0051 abatement, vintage 2025",
-        "result": 0.7734118296240533,
+        "result": 0.7734118296240529,
         "terms": [
          {
           "detail": "",
@@ -6734,7 +6734,7 @@
           "detail": "",
           "label": "gross abatement",
           "unit": "tCO2e",
-          "value": 1.1898643532677744
+          "value": 1.1898643532677735
          },
          {
           "detail": "abatement-weighted across emission factor tiers",
@@ -6823,11 +6823,11 @@
          "citations": [
           "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
           "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-          "awd: baseline 87.15957557933851 -> project 67.19181731290726 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 40 revisits across 2 season(s)",
+          "awd: baseline 87.1595755793385 -> project 67.19181731290726 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 40 revisits across 2 season(s)",
           "water regime detected from feed: 22 of 37 passes separable, 2 AWD event(s)"
          ],
          "name": "VM0051 abatement, vintage 2025",
-         "result": 0.7734118296240533,
+         "result": 0.7734118296240529,
          "terms": [
           {
            "detail": "",
@@ -6857,7 +6857,7 @@
            "detail": "",
            "label": "gross abatement",
            "unit": "tCO2e",
-           "value": 1.1898643532677744
+           "value": 1.1898643532677735
           },
           {
            "detail": "abatement-weighted across emission factor tiers",
@@ -9151,11 +9151,11 @@
         "citations": [
          "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
          "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-         "awd: baseline 88.37578051761638 -> project 69.89091975074396 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
+         "awd: baseline 88.37578051761639 -> project 69.89091975074396 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
          "water regime detected from feed: 22 of 34 passes separable, 4 AWD event(s)"
         ],
         "name": "VM0051 abatement, vintage 2026",
-        "result": 0.9660992462774154,
+        "result": 0.9660992462774161,
         "terms": [
          {
           "detail": "",
@@ -9185,7 +9185,7 @@
           "detail": "",
           "label": "gross abatement",
           "unit": "tCO2e",
-          "value": 1.486306532734485
+          "value": 1.4863065327344862
          },
          {
           "detail": "abatement-weighted across emission factor tiers",
@@ -9274,11 +9274,11 @@
          "citations": [
           "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
           "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-          "awd: baseline 88.37578051761638 -> project 69.89091975074396 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
+          "awd: baseline 88.37578051761639 -> project 69.89091975074396 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
           "water regime detected from feed: 22 of 34 passes separable, 4 AWD event(s)"
          ],
          "name": "VM0051 abatement, vintage 2026",
-         "result": 0.9660992462774154,
+         "result": 0.9660992462774161,
          "terms": [
           {
            "detail": "",
@@ -9308,7 +9308,7 @@
            "detail": "",
            "label": "gross abatement",
            "unit": "tCO2e",
-           "value": 1.486306532734485
+           "value": 1.4863065327344862
           },
           {
            "detail": "abatement-weighted across emission factor tiers",
@@ -9634,7 +9634,7 @@
         "citations": [
          "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
          "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-         "awd: baseline 93.18639434570416 -> project 74.6618033655462 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 41 revisits across 2 season(s)",
+         "awd: baseline 93.18639434570417 -> project 74.66180336554619 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 41 revisits across 2 season(s)",
          "water regime detected from feed: 27 of 37 passes separable, 2 AWD event(s)"
         ],
         "name": "VM0051 abatement, vintage 2025",
@@ -9761,7 +9761,7 @@
          "citations": [
           "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
           "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-          "awd: baseline 93.18639434570416 -> project 74.6618033655462 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 41 revisits across 2 season(s)",
+          "awd: baseline 93.18639434570417 -> project 74.66180336554619 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 41 revisits across 2 season(s)",
           "water regime detected from feed: 27 of 37 passes separable, 2 AWD event(s)"
          ],
          "name": "VM0051 abatement, vintage 2025",
@@ -15539,11 +15539,11 @@
         "citations": [
          "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
          "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-         "awd: baseline 88.82356544722964 -> project 71.13268925533694 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 41 revisits across 2 season(s)",
+         "awd: baseline 88.82356544722961 -> project 71.13268925533694 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 41 revisits across 2 season(s)",
          "water regime detected from feed: 28 of 38 passes separable, 4 AWD event(s)"
         ],
         "name": "VM0051 abatement, vintage 2025",
-        "result": 0.6251410382056408,
+        "result": 0.6251410382056398,
         "terms": [
          {
           "detail": "",
@@ -15573,7 +15573,7 @@
           "detail": "",
           "label": "gross abatement",
           "unit": "tCO2e",
-          "value": 0.9617554433932937
+          "value": 0.961755443393292
          },
          {
           "detail": "abatement-weighted across emission factor tiers",
@@ -15662,11 +15662,11 @@
          "citations": [
           "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
           "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-          "awd: baseline 88.82356544722964 -> project 71.13268925533694 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 41 revisits across 2 season(s)",
+          "awd: baseline 88.82356544722961 -> project 71.13268925533694 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 41 revisits across 2 season(s)",
           "water regime detected from feed: 28 of 38 passes separable, 4 AWD event(s)"
          ],
          "name": "VM0051 abatement, vintage 2025",
-         "result": 0.6251410382056408,
+         "result": 0.6251410382056398,
          "terms": [
           {
            "detail": "",
@@ -15696,7 +15696,7 @@
            "detail": "",
            "label": "gross abatement",
            "unit": "tCO2e",
-           "value": 0.9617554433932937
+           "value": 0.961755443393292
           },
           {
            "detail": "abatement-weighted across emission factor tiers",
@@ -18036,7 +18036,7 @@
         "citations": [
          "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
          "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-         "awd: baseline 88.13447090606462 -> project 73.38897581470671 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
+         "awd: baseline 88.1344709060646 -> project 73.3889758147067 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
          "water regime detected from feed: 25 of 34 passes separable, 4 AWD event(s)"
         ],
         "name": "VM0051 abatement, vintage 2026",
@@ -18159,7 +18159,7 @@
          "citations": [
           "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
           "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-          "awd: baseline 88.13447090606462 -> project 73.38897581470671 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
+          "awd: baseline 88.1344709060646 -> project 73.3889758147067 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
           "water regime detected from feed: 25 of 34 passes separable, 4 AWD event(s)"
          ],
          "name": "VM0051 abatement, vintage 2026",
@@ -18515,11 +18515,11 @@
         "citations": [
          "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
          "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-         "awd: baseline 83.76981048110156 -> project 68.377632125493 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 41 revisits across 2 season(s)",
+         "awd: baseline 83.76981048110157 -> project 68.377632125493 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 41 revisits across 2 season(s)",
          "water regime detected from feed: 21 of 37 passes separable, 4 AWD event(s)"
         ],
         "name": "VM0051 abatement, vintage 2025",
-        "result": 0.9315188582542103,
+        "result": 0.9315188582542113,
         "terms": [
          {
           "detail": "",
@@ -18549,7 +18549,7 @@
           "detail": "",
           "label": "gross abatement",
           "unit": "tCO2e",
-          "value": 1.433105935775708
+          "value": 1.4331059357757097
          },
          {
           "detail": "abatement-weighted across emission factor tiers",
@@ -18638,11 +18638,11 @@
          "citations": [
           "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
           "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-          "awd: baseline 83.76981048110156 -> project 68.377632125493 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 41 revisits across 2 season(s)",
+          "awd: baseline 83.76981048110157 -> project 68.377632125493 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 41 revisits across 2 season(s)",
           "water regime detected from feed: 21 of 37 passes separable, 4 AWD event(s)"
          ],
          "name": "VM0051 abatement, vintage 2025",
-         "result": 0.9315188582542103,
+         "result": 0.9315188582542113,
          "terms": [
           {
            "detail": "",
@@ -18672,7 +18672,7 @@
            "detail": "",
            "label": "gross abatement",
            "unit": "tCO2e",
-           "value": 1.433105935775708
+           "value": 1.4331059357757097
           },
           {
            "detail": "abatement-weighted across emission factor tiers",
@@ -20979,11 +20979,11 @@
         "citations": [
          "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
          "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-         "awd: baseline 83.16424389190144 -> project 69.1549640327054 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
+         "awd: baseline 83.16424389190144 -> project 69.15496403270538 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
          "water regime detected from feed: 25 of 34 passes separable, 4 AWD event(s)"
         ],
         "name": "VM0051 abatement, vintage 2026",
-        "result": 0.9141756561139258,
+        "result": 0.9141756561139267,
         "terms": [
          {
           "detail": "",
@@ -21013,7 +21013,7 @@
           "detail": "",
           "label": "gross abatement",
           "unit": "tCO2e",
-          "value": 1.4064240863291166
+          "value": 1.406424086329118
          },
          {
           "detail": "abatement-weighted across emission factor tiers",
@@ -21102,11 +21102,11 @@
          "citations": [
           "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
           "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-          "awd: baseline 83.16424389190144 -> project 69.1549640327054 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
+          "awd: baseline 83.16424389190144 -> project 69.15496403270538 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
           "water regime detected from feed: 25 of 34 passes separable, 4 AWD event(s)"
          ],
          "name": "VM0051 abatement, vintage 2026",
-         "result": 0.9141756561139258,
+         "result": 0.9141756561139267,
          "terms": [
           {
            "detail": "",
@@ -21136,7 +21136,7 @@
            "detail": "",
            "label": "gross abatement",
            "unit": "tCO2e",
-           "value": 1.4064240863291166
+           "value": 1.406424086329118
           },
           {
            "detail": "abatement-weighted across emission factor tiers",
@@ -23952,7 +23952,7 @@
         "citations": [
          "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
          "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-         "awd: baseline 91.32173873188482 -> project 73.81370050082356 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
+         "awd: baseline 91.3217387318848 -> project 73.81370050082356 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
          "water regime detected from feed: 22 of 34 passes separable, 4 AWD event(s)"
         ],
         "name": "VM0051 abatement, vintage 2026",
@@ -24079,7 +24079,7 @@
          "citations": [
           "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
           "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-          "awd: baseline 91.32173873188482 -> project 73.81370050082356 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
+          "awd: baseline 91.3217387318848 -> project 73.81370050082356 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
           "water regime detected from feed: 22 of 34 passes separable, 4 AWD event(s)"
          ],
          "name": "VM0051 abatement, vintage 2026",
@@ -27362,7 +27362,7 @@
         "citations": [
          "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
          "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-         "awd: baseline 83.55887566274166 -> project 67.15080958871434 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 39 revisits across 2 season(s)",
+         "awd: baseline 83.55887566274164 -> project 67.15080958871434 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 39 revisits across 2 season(s)",
          "water regime detected from feed: 24 of 36 passes separable, 4 AWD event(s)"
         ],
         "name": "VM0051 abatement, vintage 2025",
@@ -27489,11 +27489,11 @@
          "citations": [
           "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
           "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-          "awd: baseline 83.55887566274166 -> project 67.15080958871434 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 39 revisits across 2 season(s)",
+          "awd: baseline 83.55887566274164 -> project 67.15080958871434 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 39 revisits across 2 season(s)",
           "water regime detected from feed: 24 of 36 passes separable, 4 AWD event(s)"
          ],
          "name": "VM0051 abatement, vintage 2025",
-         "result": 0.8249800497915266,
+         "result": 0.8249800497915258,
          "terms": [
           {
            "detail": "",
@@ -27523,7 +27523,7 @@
            "detail": "",
            "label": "gross abatement",
            "unit": "tCO2e",
-           "value": 1.2692000766023486
+           "value": 1.2692000766023475
           },
           {
            "detail": "abatement-weighted across emission factor tiers",
@@ -29805,7 +29805,7 @@
         "citations": [
          "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
          "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-         "awd: baseline 85.69043516623971 -> project 69.77091638309818 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
+         "awd: baseline 85.69043516623972 -> project 69.77091638309821 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
          "water regime detected from feed: 26 of 34 passes separable, 3 AWD event(s)"
         ],
         "name": "VM0051 abatement, vintage 2026",
@@ -29932,11 +29932,11 @@
          "citations": [
           "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
           "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-          "awd: baseline 85.69043516623971 -> project 69.77091638309818 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
+          "awd: baseline 85.69043516623972 -> project 69.77091638309821 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
           "water regime detected from feed: 26 of 34 passes separable, 3 AWD event(s)"
          ],
          "name": "VM0051 abatement, vintage 2026",
-         "result": 0.7390556124292338,
+         "result": 0.7390556124292331,
          "terms": [
           {
            "detail": "",
@@ -29966,7 +29966,7 @@
            "detail": "",
            "label": "gross abatement",
            "unit": "tCO2e",
-           "value": 1.1370086345065136
+           "value": 1.1370086345065125
           },
           {
            "detail": "abatement-weighted across emission factor tiers",
@@ -30288,11 +30288,11 @@
         "citations": [
          "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
          "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-         "awd: baseline 75.11761406651574 -> project 57.92343148654521 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 40 revisits across 2 season(s)",
+         "awd: baseline 75.11761406651576 -> project 57.92343148654522 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 40 revisits across 2 season(s)",
          "water regime detected from feed: 29 of 37 passes separable, 5 AWD event(s)"
         ],
         "name": "VM0051 abatement, vintage 2025",
-        "result": 1.2689701100496162,
+        "result": 1.2689701100496167,
         "terms": [
          {
           "detail": "",
@@ -30322,7 +30322,7 @@
           "detail": "",
           "label": "gross abatement",
           "unit": "tCO2e",
-          "value": 1.9522617077686404
+          "value": 1.952261707768641
          },
          {
           "detail": "abatement-weighted across emission factor tiers",
@@ -30411,11 +30411,11 @@
          "citations": [
           "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
           "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-          "awd: baseline 75.11761406651574 -> project 57.92343148654521 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 40 revisits across 2 season(s)",
+          "awd: baseline 75.11761406651576 -> project 57.92343148654522 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 40 revisits across 2 season(s)",
           "water regime detected from feed: 29 of 37 passes separable, 5 AWD event(s)"
          ],
          "name": "VM0051 abatement, vintage 2025",
-         "result": 1.2689701100496162,
+         "result": 1.2689701100496167,
          "terms": [
           {
            "detail": "",
@@ -30445,7 +30445,7 @@
            "detail": "",
            "label": "gross abatement",
            "unit": "tCO2e",
-           "value": 1.9522617077686404
+           "value": 1.952261707768641
           },
           {
            "detail": "abatement-weighted across emission factor tiers",
@@ -32767,11 +32767,11 @@
         "citations": [
          "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
          "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-         "awd: baseline 77.41049837760637 -> project 62.17488030890263 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
+         "awd: baseline 77.41049837760636 -> project 62.17488030890263 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
          "water regime detected from feed: 22 of 35 passes separable, 2 AWD event(s)"
         ],
         "name": "VM0051 abatement, vintage 2026",
-        "result": 0.7282413930779873,
+        "result": 0.7282413930779867,
         "terms": [
          {
           "detail": "",
@@ -32801,7 +32801,7 @@
           "detail": "",
           "label": "gross abatement",
           "unit": "tCO2e",
-          "value": 1.1203713739661343
+          "value": 1.1203713739661334
          },
          {
           "detail": "abatement-weighted across emission factor tiers",
@@ -32890,11 +32890,11 @@
          "citations": [
           "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
           "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-          "awd: baseline 77.41049837760637 -> project 62.17488030890263 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
+          "awd: baseline 77.41049837760636 -> project 62.17488030890263 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
           "water regime detected from feed: 22 of 35 passes separable, 2 AWD event(s)"
          ],
          "name": "VM0051 abatement, vintage 2026",
-         "result": 0.7282413930779873,
+         "result": 0.7282413930779867,
          "terms": [
           {
            "detail": "",
@@ -32924,7 +32924,7 @@
            "detail": "",
            "label": "gross abatement",
            "unit": "tCO2e",
-           "value": 1.1203713739661343
+           "value": 1.1203713739661334
           },
           {
            "detail": "abatement-weighted across emission factor tiers",
@@ -33250,11 +33250,11 @@
         "citations": [
          "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
          "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-         "awd: baseline 74.71343252111048 -> project 57.72635092487065 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 38 revisits across 2 season(s)",
+         "awd: baseline 74.71343252111046 -> project 57.72635092487066 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 38 revisits across 2 season(s)",
          "water regime detected from feed: 24 of 35 passes separable, 4 AWD event(s)"
         ],
         "name": "VM0051 abatement, vintage 2025",
-        "result": 1.1998241913905208,
+        "result": 1.199824191390519,
         "terms": [
          {
           "detail": "",
@@ -33284,7 +33284,7 @@
           "detail": "",
           "label": "gross abatement",
           "unit": "tCO2e",
-          "value": 1.8458833713700318
+          "value": 1.8458833713700293
          },
          {
           "detail": "abatement-weighted across emission factor tiers",
@@ -33373,11 +33373,11 @@
          "citations": [
           "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
           "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-          "awd: baseline 74.71343252111048 -> project 57.72635092487065 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 38 revisits across 2 season(s)",
+          "awd: baseline 74.71343252111046 -> project 57.72635092487066 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 38 revisits across 2 season(s)",
           "water regime detected from feed: 24 of 35 passes separable, 4 AWD event(s)"
          ],
          "name": "VM0051 abatement, vintage 2025",
-         "result": 1.1998241913905208,
+         "result": 1.199824191390519,
          "terms": [
           {
            "detail": "",
@@ -33407,7 +33407,7 @@
            "detail": "",
            "label": "gross abatement",
            "unit": "tCO2e",
-           "value": 1.8458833713700318
+           "value": 1.8458833713700293
           },
           {
            "detail": "abatement-weighted across emission factor tiers",
@@ -35674,11 +35674,11 @@
         "citations": [
          "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
          "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-         "awd: baseline 78.18367694146873 -> project 60.96836628557698 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
+         "awd: baseline 78.18367694146873 -> project 60.96836628557696 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
          "water regime detected from feed: 24 of 34 passes separable, 4 AWD event(s)"
         ],
         "name": "VM0051 abatement, vintage 2026",
-        "result": 1.2159517771570798,
+        "result": 1.215951777157081,
         "terms": [
          {
           "detail": "",
@@ -35708,7 +35708,7 @@
           "detail": "",
           "label": "gross abatement",
           "unit": "tCO2e",
-          "value": 1.8706950417801227
+          "value": 1.8706950417801242
          },
          {
           "detail": "abatement-weighted across emission factor tiers",
@@ -35797,11 +35797,11 @@
          "citations": [
           "Verra VM0051 v1.1, Improved Management in Rice Production Systems (replaces CDM AMS-III.AU)",
           "Additionality assessed through VT0001; common practice placeholder -- replace with a cited state-level survey",
-          "awd: baseline 78.18367694146873 -> project 60.96836628557698 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
+          "awd: baseline 78.18367694146873 -> project 60.96836628557696 kg CH4/ha/season over 2 season(s), Tier 1 -- measured from 45 revisits across 2 season(s)",
           "water regime detected from feed: 24 of 34 passes separable, 4 AWD event(s)"
          ],
          "name": "VM0051 abatement, vintage 2026",
-         "result": 1.2159517771570798,
+         "result": 1.215951777157081,
          "terms": [
           {
            "detail": "",
@@ -35831,7 +35831,7 @@
            "detail": "",
            "label": "gross abatement",
            "unit": "tCO2e",
-           "value": 1.8706950417801227
+           "value": 1.8706950417801242
           },
           {
            "detail": "abatement-weighted across emission factor tiers",
@@ -49102,7 +49102,7 @@
      "p50_total_t": 236.568,
      "portfolio_haircut": 0.483,
      "project_id": "76013c7e-d68d-3676-1ae0-c83f422b5404",
-     "projected_total_t": 313.018,
+     "projected_total_t": 313.019,
      "risk_source": "placeholder rates -- replace with the portfolio's own attrition, lapse and verification history",
      "safe_total_t": 161.835,
      "sensitivity": {
@@ -50686,7 +50686,7 @@
      {
       "day": "2026-09-14",
       "device_id": "WL-0042",
-      "mean_cm": -15.3,
+      "mean_cm": -15.2,
       "min_cm": -15.4,
       "state": "drained"
      },
