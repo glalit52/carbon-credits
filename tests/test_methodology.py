@@ -37,6 +37,18 @@ def test_uncertainty_deduction_takes_only_the_excess():
     assert uncertainty_deduction(0.40).fraction == pytest.approx(0.25)
 
 
+def test_uncertainty_deduction_never_exceeds_gross():
+    """Past 115% relative uncertainty nothing is credited -- the deduction is
+    capped at the whole gross, so the buffer after it is zero, not negative."""
+    assert uncertainty_deduction(1.89).fraction == 1.0
+    net, applied = apply_deductions(2.0866, [
+        uncertainty_deduction(1.89),
+        Deduction("buffer pool", 0.20, ""),
+    ])
+    assert net == 0.0
+    assert [a for _, a in applied] == [pytest.approx(2.0866), 0.0]
+
+
 def test_combined_uncertainty_sits_between_independent_and_correlated():
     sigmas = [10.0] * 9
     rel = combine_uncertainty(sigmas, 300.0)
