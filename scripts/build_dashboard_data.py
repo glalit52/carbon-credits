@@ -11,6 +11,7 @@ readings that were not visible this week.
 from __future__ import annotations
 
 import json
+import math
 import os
 import sys
 from datetime import date
@@ -156,7 +157,7 @@ def rice_block() -> dict:
     results = []
     for year, ss in sorted(by_year.items()):
         complete = [s for s in ss if s.end <= TODAY]
-        abatement_per_ha = sum(s.abatement_tco2e_ha for s in ss)
+        abatement_per_ha = math.fsum(s.abatement_tco2e_ha for s in ss)
         confidence = year_confidence(ss)
 
         # Quantify through the engine under VM0051, the purpose-built rice
@@ -164,8 +165,8 @@ def rice_block() -> dict:
         # reviews flagged that as wrong. The practical difference is the
         # buffer: avoided methane is not a stock and cannot reverse, so none
         # is withheld.
-        baseline = sum(s.baseline_ch4_kg_ha for s in ss) / max(len(ss), 1)
-        project_ch4 = sum(s.project_ch4_kg_ha for s in ss) / max(len(ss), 1)
+        baseline = math.fsum(s.baseline_ch4_kg_ha for s in ss) / max(len(ss), 1)
+        project_ch4 = math.fsum(s.project_ch4_kg_ha for s in ss) / max(len(ss), 1)
         factor = RiceEmissionFactor(
             baseline_ch4_kg_ha_season=baseline,
             project_ch4_kg_ha_season=project_ch4,
@@ -379,9 +380,9 @@ def census_block(site, project, area_vintages: list[dict]) -> dict:
         rows.append({
             "year": year,
             "measured_on": inventory.measured_on.isoformat(),
-            "mean_dbh_cm": round(sum(m.dbh_cm for m in inventory.sample)
+            "mean_dbh_cm": round(math.fsum(m.dbh_cm for m in inventory.sample)
                                  / len(inventory.sample), 2),
-            "mean_height_m": round(sum(m.height_m for m in inventory.sample)
+            "mean_height_m": round(math.fsum(m.height_m for m in inventory.sample)
                                    / len(inventory.sample), 2),
             "survival_rate": round(survey.survival_rate, 4),
             "survival_lower_bound": round(survey.survival_lower_bound(), 4),
@@ -416,8 +417,8 @@ def census_block(site, project, area_vintages: list[dict]) -> dict:
     # the committed economics -- which run off the area-based path -- are
     # optimistic by roughly this ratio.
     settled = [c for c in comparison if c["census_net_t"]]
-    ratio = (sum(c["area_based_net_t"] for c in settled)
-             / sum(c["census_net_t"] for c in settled)) if settled else None
+    ratio = (math.fsum(c["area_based_net_t"] for c in settled)
+             / math.fsum(c["census_net_t"] for c in settled)) if settled else None
 
     return {
         "approach": "VM0047 v1.1, census-based",
@@ -503,7 +504,7 @@ def economics(blocks: list[dict]) -> dict:
         vintages = block["vintages"]
 
         settled = [v for v in vintages if v["complete"]]
-        current = (sum(v["net_t"] for v in settled) / len(settled)) if settled else 0.0
+        current = (math.fsum(v["net_t"] for v in settled) / len(settled)) if settled else 0.0
         mature = max((v["net_t"] for v in vintages), default=0.0)
 
         price = PRICE[track]

@@ -26,6 +26,7 @@ discovering them at verification.
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -163,7 +164,7 @@ def check_plot(claims: list[PillarClaim], plot_area_ha: float | None = None
             found += conflicts_between(a, b)
 
     if plot_area_ha is not None and len(claims) > 1:
-        claimed = sum(c.area_ha for c in claims)
+        claimed = math.fsum(c.area_ha for c in claims)
         if claimed > plot_area_ha * 1.001:      # tolerate float noise
             found.append(Conflict(
                 plot_id=claims[0].plot_id, kind="area_overclaim",
@@ -322,7 +323,7 @@ def audit(store: Store, project_id: str) -> dict:
         found += check_plot(plot_claims, area)
 
     stacked = {p: cs for p, cs in by_plot.items() if len(cs) > 1}
-    stacked_ha = sum(project.plots[p].area_ha for p in stacked
+    stacked_ha = math.fsum(project.plots[p].area_ha for p in stacked
                      if p in project.plots)
 
     return {

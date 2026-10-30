@@ -354,7 +354,7 @@ class SamplingDesign:
 
     @property
     def total_area_ha(self) -> float:
-        return sum(s.area_ha for s in self.strata)
+        return math.fsum(s.area_ha for s in self.strata)
 
     def required_samples(self) -> dict[str, int]:
         """Neyman allocation across the strata, at least 3 cores each.
@@ -366,7 +366,7 @@ class SamplingDesign:
         total = self.total_area_ha
         weighted = [(s, (s.area_ha / total) * s.soc_std_dev_t_ha)
                     for s in self.strata]
-        sum_ws = sum(w for _, w in weighted)
+        sum_ws = math.fsum(w for _, w in weighted)
         if sum_ws <= 0 or self.target_margin_t_ha <= 0:
             return {s.name: 3 for s in self.strata}
 
@@ -447,7 +447,7 @@ class ModelValidation:
 
     @property
     def mean_measured(self) -> float:
-        return sum(m for m, _ in self.pairs) / self.n if self.n else 0.0
+        return math.fsum(m for m, _ in self.pairs) / self.n if self.n else 0.0
 
     @property
     def bias_t_ha(self) -> float:
@@ -455,21 +455,21 @@ class ModelValidation:
         that is noisy, because the error does not average out over a portfolio."""
         if not self.n:
             return 0.0
-        return sum(p - m for m, p in self.pairs) / self.n
+        return math.fsum(p - m for m, p in self.pairs) / self.n
 
     @property
     def rmse_t_ha(self) -> float:
         if not self.n:
             return 0.0
-        return math.sqrt(sum((p - m) ** 2 for m, p in self.pairs) / self.n)
+        return math.sqrt(math.fsum((p - m) ** 2 for m, p in self.pairs) / self.n)
 
     @property
     def r_squared(self) -> float:
         if self.n < 2:
             return 0.0
         mean = self.mean_measured
-        ss_tot = sum((m - mean) ** 2 for m, _ in self.pairs)
-        ss_res = sum((m - p) ** 2 for m, p in self.pairs)
+        ss_tot = math.fsum((m - mean) ** 2 for m, _ in self.pairs)
+        ss_res = math.fsum((m - p) ** 2 for m, p in self.pairs)
         return 1 - ss_res / ss_tot if ss_tot > 0 else 0.0
 
     @property

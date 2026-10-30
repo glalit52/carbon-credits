@@ -15,6 +15,7 @@ under that actor's name.
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import traceback
@@ -222,7 +223,7 @@ def api_trees(store: Store, project_id: str, query: dict, **_) -> dict:
         "plots": plots,
         "stems_planted": sum(p["stems_planted"] for p in plots),
         "stems_credited": sum(p["stems_credited"] for p in plots),
-        "standing_stock_tco2e": round(sum(p["stock_tco2e"] for p in plots), 4),
+        "standing_stock_tco2e": round(math.fsum(p["stock_tco2e"] for p in plots), 4),
         "plots_below_survival_floor": sum(
             1 for p in plots if p["needs_replanting"]),
         "benchmark_vetted": benchmark.is_vetted,

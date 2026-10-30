@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-22T18:26:45+00:00",
+  "generated_at": "2026-10-30T08:35:24+00:00",
   "project": {
     "id": "IN-TNJ-01",
     "name": "Vallam paddy block, Thanjavur district, Tamil Nadu",
@@ -24,17 +24,17 @@
     "farmers_total": 1
   },
   "claims": {
-    "issued_t": 0,
-    "offsettable_t": 0,
-    "unadjusted_t": 0,
-    "corsia_eligible_t": 0,
+    "issued_t": 0.0,
+    "offsettable_t": 0.0,
+    "unadjusted_t": 0.0,
+    "corsia_eligible_t": 0.0,
     "authorisations": 0,
     "clean": true
   },
   "stacking": {
     "claims": 0,
     "stacked_plots": 0,
-    "stacked_ha": 0,
+    "stacked_ha": 0.0,
     "clean": true,
     "conflicts": 0
   },
@@ -50,7 +50,7 @@
     "plots_inventoried": 0,
     "stems_planted": 0,
     "stems_credited": 0,
-    "standing_stock_tco2e": 0,
+    "standing_stock_tco2e": 0.0,
     "plots_below_survival_floor": 0,
     "plots_on_generic_allometry": 0
   },
@@ -88,10 +88,10 @@
   "payments": {
     "payments": 0,
     "farmers": 0,
-    "paid_total": 0,
-    "outstanding_total": 0,
+    "paid_total": 0.0,
+    "outstanding_total": 0.0,
     "overdue_count": 0,
-    "overdue_total": 0,
+    "overdue_total": 0.0,
     "failed_count": 0,
     "currency": ""
   },
@@ -99,7 +99,7 @@
     "event_count": 9,
     "chain_intact": true,
     "first_bad_event": null,
-    "head_hash": "ee12ae28f0c1878fc14d0f44283ab4c44ea708c2416ecf6efcd50b412fd48e33"
+    "head_hash": "33168233ad542031e86fe9b4f0fb757e46ff7dd78629ea082561a37f209ef5b5"
   },
   "files": [
     "SUMMARY.md",

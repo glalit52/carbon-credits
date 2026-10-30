@@ -438,8 +438,8 @@ def summarise_seasons(readings: list[Reading]) -> list[SeasonSummary]:
     for (year, season), rs in sorted(buckets.items()):
         if len(rs) < 4:
             continue
-        base = sum(r.ch4_baseline_kg_ha_day for r in rs) * REVISIT_DAYS
-        proj = sum(r.ch4_project_kg_ha_day for r in rs) * REVISIT_DAYS
+        base = math.fsum(r.ch4_baseline_kg_ha_day for r in rs) * REVISIT_DAYS
+        proj = math.fsum(r.ch4_project_kg_ha_day for r in rs) * REVISIT_DAYS
         dry = sum(1 for r in rs if r.dry_down)
 
         # Confidence is evidence-driven: how many dry-downs were seen, and how
@@ -614,10 +614,10 @@ def year_confidence(seasons: list[SeasonSummary]) -> float:
     """
     if not seasons:
         return 0.0
-    weight = sum(s.baseline_ch4_kg_ha for s in seasons)
+    weight = math.fsum(s.baseline_ch4_kg_ha for s in seasons)
     if weight <= 0:
         return min(s.adoption_confidence for s in seasons)
-    return sum(s.adoption_confidence * s.baseline_ch4_kg_ha for s in seasons) / weight
+    return math.fsum(s.adoption_confidence * s.baseline_ch4_kg_ha for s in seasons) / weight
 
 
 def season_warnings(seasons: list[SeasonSummary]) -> list[str]:
