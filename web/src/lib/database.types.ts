@@ -25,6 +25,7 @@ export type RiceEcosystem = "irrigated_lowland" | "rainfed" | "upland" | "deepwa
 export type WaterControl = "full" | "irrigation_only" | "none" | "unknown";
 export type FarmSource = "drawn" | "uploaded" | "imported" | "gps" | "api";
 export type FarmStatus = "draft" | "enrolled" | "blocked" | "withdrawn";
+export type Language = "en" | "hi" | "ta" | "sw";
 
 export type Season = {
   name: string;
@@ -105,6 +106,7 @@ export type Farmer = {
   carbon_rights_signed_on: string | null;
   payout_method: "bank" | "upi" | "mobile_money" | "cash" | "other" | null;
   payout_reference: string | null;
+  language: Language;
   created_by: string | null;
   created_at: string;
 };
@@ -210,6 +212,8 @@ export type Vintage = {
   approved_by: string | null;
   serial_start: number | null;
   serial_end: number | null;
+  registry_ref: string | null;
+  registry_ref_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -348,6 +352,78 @@ export type VerifyResult =
 
 export type CertificateResult = { found: false } | ({ found: true; vintage: PublicVintage } & PublicRetirement);
 
+// 20261030000004_field.sql
+
+export type SensorUpload = {
+  id: string;
+  org_id: string;
+  farm_id: string;
+  file_name: string;
+  file_path: string | null;
+  readings: number;
+  first_day: string | null;
+  last_day: string | null;
+  summary: Json;
+  uploaded_by: string | null;
+  created_at: string;
+};
+
+export type StatementLink = {
+  id: string;
+  org_id: string;
+  farmer_id: string;
+  token: string;
+  language: Language;
+  expires_at: string;
+  revoked_at: string | null;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type FarmerStatement =
+  | { found: false }
+  | {
+      found: true;
+      language: Language;
+      expires_at: string;
+      generated_at: string;
+      organisation: string;
+      farmer: {
+        name: string;
+        village: string | null;
+        district: string | null;
+        state: string | null;
+        country: string | null;
+        external_ref: string | null;
+        consent: boolean;
+        carbon_rights: boolean;
+        payout_method: Farmer["payout_method"];
+      };
+      farms: {
+        name: string;
+        area_ha: number;
+        pathway: Pathway | null;
+        crop: string | null;
+        status: FarmStatus;
+        practice: string | null;
+        tenure_document: boolean;
+        project: string | null;
+        latest_year: number | null;
+        latest_net_t: number | null;
+      }[];
+      payments: {
+        vintage_year: number;
+        project: string;
+        credits: number;
+        amount: number;
+        currency: string;
+        status: PaymentStatus;
+        due_on: string | null;
+        paid_on: string | null;
+        reference_tail: string | null;
+      }[];
+    };
+
 export type Database = {
   public: {
     Tables: {
@@ -399,6 +475,8 @@ export type Database = {
       >;
       adjustments: Table<Adjustment, "org_id" | "authorisation_id" | "vintage_year" | "volume_t" | "reported_on" | "reference">;
       retirements: Table<Retirement, "org_id" | "vintage_id" | "serial_start" | "serial_end" | "beneficiary" | "purpose" | "claim">;
+      sensor_uploads: Table<SensorUpload, "org_id" | "farm_id" | "file_name" | "readings" | "summary">;
+      statement_links: Table<StatementLink, "org_id" | "farmer_id">;
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -414,6 +492,8 @@ export type Database = {
       vintage_claims: { Args: { org: string }; Returns: { vintage_id: string; basis: ClaimBasis }[] };
       verify_credit: { Args: { code: string }; Returns: VerifyResult };
       retirement_certificate: { Args: { retirement: string }; Returns: CertificateResult };
+      set_registry_reference: { Args: { vintage: string; ref: string }; Returns: undefined };
+      farmer_statement: { Args: { link_token: string }; Returns: FarmerStatement };
       transition_vintage: {
         Args: { vintage: string; to_state: VintageStatus; review_note?: string | null };
         Returns: Vintage;

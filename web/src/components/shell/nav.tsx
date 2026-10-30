@@ -9,6 +9,7 @@ import {
   Menu,
   Plug,
   Settings,
+  Smartphone,
   Sprout,
   Upload,
   Users,
@@ -32,6 +33,7 @@ const ITEMS = [
   { href: "/app/payments", label: "Payments", icon: Wallet },
   { href: "/app/integrations", label: "Integrations", icon: Plug },
   { href: "/app/activity", label: "Activity", icon: Activity },
+  { href: "/field", label: "Field app", icon: Smartphone },
   { href: "/app/settings", label: "Settings", icon: Settings },
 ];
 

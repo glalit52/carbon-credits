@@ -14,10 +14,13 @@ then this deployment is a public read surface over a committed demo database:
 projects, plots, eligibility, vintages, derivations, issuances, payments and
 the event chain, all queryable.
 
-Two POSTs are served, both computing without storing: /api/estimate (a
-farm's credit estimate) and /api/forecast (a project's forward delivery).
-They need CARBONSTACK_ENGINE_TOKEN set here and sent as a bearer token: the
-estimate fetches weather on the caller's behalf, and both cost real CPU.
+A few POSTs are served, all computing without storing: /api/estimate (a
+farm's credit estimate), /api/forecast (a project's forward delivery),
+/api/sensors (a water-logger file, scored against the radar), /api/scenes
+(the Sentinel catalogue over a farm) and /api/reconcile (issued vintages
+against a registry export). They need CARBONSTACK_ENGINE_TOKEN set here and
+sent as a bearer token: some fetch on the caller's behalf, and all cost real
+CPU.
 """
 
 from __future__ import annotations
@@ -55,8 +58,9 @@ WRITE_REFUSED = {
 }
 
 #: POST routes that compute without writing, so this deployment can serve them.
-STATELESS_POSTS = {"/api/estimate", "/api/forecast"}
-MAX_BODY = 1_000_000
+STATELESS_POSTS = {"/api/estimate", "/api/forecast", "/api/sensors", "/api/scenes",
+                   "/api/reconcile"}
+MAX_BODY = 4_000_000
 
 _store: Store | None = None
 

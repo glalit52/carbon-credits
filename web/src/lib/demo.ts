@@ -16,7 +16,9 @@ import type {
   Project,
   Retirement,
   Role,
+  SensorUpload,
   SoilSample,
+  StatementLink,
   Vintage,
   VintageEvent,
 } from "@/lib/database.types";
@@ -46,6 +48,8 @@ export type DemoData = {
   retirements: Retirement[];
   claims: Record<string, ClaimBasis>;
   forecasts: Record<string, { projections: unknown[]; units: number; result: unknown }>;
+  sensor_uploads: SensorUpload[];
+  statement_links: StatementLink[];
 };
 
 export const demo = raw as unknown as DemoData;

@@ -285,9 +285,11 @@ async function estimateOne(
   try {
     const request = estimateRequest(farm, farmer, project.pathway);
     const result = await runEstimate(request);
-    const rows = result.vintages
-      .filter((v) => v.net_t !== undefined)
-      .map((v) => ({
+    const kept = result.vintages.filter((v) => v.net_t !== undefined);
+    // The monitoring series covers the farm, not one year: keep it once, on
+    // the latest year's row, rather than copying it onto every row.
+    const { monitoring, ...rest } = result;
+    const rows = kept.map((v, i) => ({
         org_id: orgId,
         farm_id: farm.id,
         year: v.year,
@@ -296,7 +298,7 @@ async function estimateOne(
         net_t: v.net_t ?? 0,
         data_quality: result.data_quality,
         input: request as unknown as Json,
-        result: { ...result, vintages: [v] } as unknown as Json,
+        result: { ...rest, vintages: [v], ...(i === kept.length - 1 ? { monitoring } : {}) } as unknown as Json,
         engine_version: "carbonstack@estimate-v1",
         requested_by: userId,
       }));

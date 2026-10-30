@@ -489,6 +489,35 @@ def api_forecast(store: Store, body: dict, **_) -> dict:
         raise ApiError(422, str(exc)) from exc
 
 
+def _monitoring(fn, body: dict) -> dict:
+    from .monitoring_api import MonitoringError
+    try:
+        return fn(body)
+    except MonitoringError as exc:
+        raise ApiError(422, str(exc)) from exc
+
+
+@route("POST", "/api/sensors")
+def api_sensors(store: Store, body: dict, **_) -> dict:
+    """Clean a water-logger file; score the radar against it. Stateless."""
+    from .monitoring_api import sensors_request
+    return _monitoring(sensors_request, body)
+
+
+@route("POST", "/api/scenes")
+def api_scenes(store: Store, body: dict, **_) -> dict:
+    """Sentinel scenes over a farm and the longest gap between them. Stateless."""
+    from .monitoring_api import scenes_request
+    return _monitoring(scenes_request, body)
+
+
+@route("POST", "/api/reconcile")
+def api_reconcile(store: Store, body: dict, **_) -> dict:
+    """Issued vintages against a registry CSV export. Stateless."""
+    from .monitoring_api import reconcile_request
+    return _monitoring(reconcile_request, body)
+
+
 @route("GET", "/api/sites/{site_id}/soc")
 def api_site_soc(store: Store, site_id: str, query: dict, **_) -> dict:
     """RothC projection on the site's published normals. Ex-ante only."""

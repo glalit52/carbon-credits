@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import type { Pathway } from "@/lib/database.types";
 import { getOrgContext } from "@/lib/data";
+import { isLanguage } from "@/lib/i18n";
 import { can } from "@/lib/roles";
 import { supabaseServer } from "@/lib/supabase/server";
 
@@ -65,6 +66,10 @@ function farmerFields(form: FormData, name: string) {
     carbon_rights_signed_on: str(form, "carbon_rights_signed_on"),
     payout_method: str(form, "payout_method") as "bank" | "upi" | "mobile_money" | "cash" | "other" | null,
     payout_reference: str(form, "payout_reference"),
+    language: (() => {
+      const l = str(form, "language");
+      return isLanguage(l) ? l : "en";
+    })(),
   };
 }
 

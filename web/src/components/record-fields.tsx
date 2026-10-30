@@ -1,5 +1,7 @@
 import type { Farmer, Project } from "@/lib/database.types";
 
+import { LANGUAGES } from "@/lib/i18n";
+
 import { Field, Input, Select } from "./ui";
 
 /** Farmer fields, blank for a new farmer or filled for an edit. */
@@ -27,6 +29,15 @@ export function FarmerFields({ farmer }: { farmer?: Farmer }) {
         </Field>
         <Field label="Country">
           <Input name="country" defaultValue={farmer?.country ?? ""} />
+        </Field>
+        <Field label="Language" hint="For their statement">
+          <Select name="language" defaultValue={farmer?.language ?? "en"}>
+            {LANGUAGES.map((l) => (
+              <option key={l.code} value={l.code}>
+                {l.native} ({l.label})
+              </option>
+            ))}
+          </Select>
         </Field>
       </div>
       <h2 className="mt-2 text-sm font-semibold">Consent and rights</h2>

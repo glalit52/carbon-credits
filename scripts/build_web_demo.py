@@ -25,8 +25,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from carbonstack.estimate import estimate                    # noqa: E402
+from carbonstack.estimate import build_site, estimate        # noqa: E402
+from carbonstack.feed import _rice_reading                   # noqa: E402
 from carbonstack.forecast_api import forecast_request         # noqa: E402
+from carbonstack.monitoring_api import sensors_request        # noqa: E402
 from carbonstack.sites import NYERI, THANJAVUR, _plot         # noqa: E402
 
 OUT = ROOT / "web" / "src" / "lib" / "demo-data.json"
@@ -115,6 +117,7 @@ def main() -> int:
             "carbon_rights_signed_on": enrolled.isoformat() if documented else None,
             "payout_method": "upi" if pathway == "rice" else "mobile_money",
             "payout_reference": "****" + f"{int(jitter('u', pathway, i) * 1e4):04d}",
+            "language": "ta" if pathway == "rice" else "sw",
             "created_by": agent, "created_at": at(enrolled, 9),
         })
         farm_id = uid("farm", pathway, i)
@@ -155,15 +158,18 @@ def main() -> int:
         farm["centroid_lat"] = result["site"]["centroid"]["lat"]
         farm["centroid_lon"] = result["site"]["centroid"]["lon"]
         farms.append(farm)
-        for v in result["vintages"]:
-            if "net_t" not in v:
-                continue
+        kept = [v for v in result["vintages"] if "net_t" in v]
+        # As the web app stores them: the farm's monitoring series once, on
+        # the latest year's row.
+        monitoring = result.pop("monitoring")
+        for v in kept:
             estimates.append({
                 "id": uid("estimate", farm_id, v["year"]), "org_id": ORG, "farm_id": farm_id,
                 "year": v["year"], "methodology": result["methodology"],
                 "gross_t": v["gross_t"],
                 "net_t": v["net_t"], "data_quality": result["data_quality"],
-                "input": request, "result": {**result, "vintages": [v]},
+                "input": request, "result": {**result, "vintages": [v],
+                                             **({"monitoring": monitoring} if v is kept[-1] else {})},
                 "engine_version": "carbonstack@estimate-v1", "requested_by": ANALYST,
                 "created_at": at(TODAY - timedelta(days=3), 8),
             })
@@ -368,6 +374,20 @@ def main() -> int:
     for k, a in enumerate(audit):
         a.update({"id": len(audit) - k, "org_id": ORG})
 
+    sensor_uploads = [_logger_upload(farms[0], estimates)]
+    statement_links = [{
+        "id": uid("link", 1), "org_id": ORG, "farmer_id": farms[0]["farmer_id"],
+        "token": hashlib.sha256(b"demo statement link").hexdigest(), "language": "ta",
+        "expires_at": at(TODAY + timedelta(days=60)), "revoked_at": None,
+        "created_by": AGENT_TN, "created_at": at(TODAY - timedelta(days=30))}]
+    for v in vintages:
+        v["registry_ref"] = None
+        v["registry_ref_at"] = None
+    # The issued vintage carries the reference Verra gave it, so the registry
+    # reconciliation has something firmer than vintage and quantity to match.
+    rice_2025["registry_ref"] = "VCS-DEMO-2025-0001"
+    rice_2025["registry_ref_at"] = at(date(2026, 3, 12))
+
     payload = {
         "generated_by": "scripts/build_web_demo.py",
         "as_of": TODAY.isoformat(),
@@ -380,6 +400,7 @@ def main() -> int:
         "payments": payments, "integrations": integrations, "audit": audit,
         "authorisations": authorisations, "adjustments": adjustments, "retirements": retirements,
         "claims": claims, "forecasts": forecasts,
+        "sensor_uploads": sensor_uploads, "statement_links": statement_links,
         "invitations": [{"id": uid("invite", 1), "org_id": ORG, "email": "verifier@example.org",
                          "role": "viewer", "token": "demo", "invited_by": OWNER, "accepted_at": None,
                          "expires_at": at(TODAY + timedelta(days=10)), "created_at": at(TODAY - timedelta(days=4))}],
@@ -388,6 +409,37 @@ def main() -> int:
     print(f"wrote {OUT.relative_to(ROOT)}: {len(farms)} farms, {len(estimates)} estimates, "
           f"{len(vintages)} vintages, {len(payments)} payments")
     return 0
+
+
+def _logger_upload(farm: dict, estimates: list[dict]) -> dict:
+    """One season of a field water-level logger on the first rice farm.
+
+    There is no real logger in the demo, so the readings are rendered from the
+    same hidden water state the simulated radar is drawn from, and the upload
+    says so in its file name. What the demo shows is the engine's cleaning and
+    its scoring of the radar against a logger -- not a validation result.
+    """
+    request = next(e["input"] for e in estimates if e["farm_id"] == farm["id"])
+    site, _ = build_site(request, today=TODAY)
+    start, end = date(2026, 6, 12), date(2026, 9, 24)
+    lines = ["device_id,plot_id,timestamp,water_level_cm"]
+    d = start
+    while d <= end:
+        water = _rice_reading(site, d, 1, awd_active=True).surface_water_frac or 0.0
+        level = 2 + 9 * water if water >= 0.5 else -4 - 45 * (0.5 - water)
+        for h in range(0, 24, 3):
+            wobble = 0.4 * (jitter("wl", d.isoformat(), h) - 0.5)
+            stamp = datetime(d.year, d.month, d.day, h, tzinfo=timezone.utc).isoformat()
+            lines.append(f"WL-0042,{farm['external_ref']},{stamp},{level + wobble:.2f}")
+        d += timedelta(days=1)
+    latest = max((e for e in estimates if e["farm_id"] == farm["id"]), key=lambda e: e["year"])
+    radar = latest["result"]["monitoring"]["radar"]
+    summary = sensors_request({"csv": "\n".join(lines), "radar": radar})
+    return {"id": uid("sensor", farm["id"], 1), "org_id": ORG, "farm_id": farm["id"],
+            "file_name": "WL-0042_kuruvai-2026_SIMULATED.csv", "file_path": None,
+            "readings": summary["readings"], "first_day": start.isoformat(),
+            "last_day": end.isoformat(), "summary": summary, "uploaded_by": AGENT_TN,
+            "created_at": at(date(2026, 9, 30), 16)}
 
 
 if __name__ == "__main__":

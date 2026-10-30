@@ -93,6 +93,9 @@ export default async function FarmPage({
         actions={
           <div className="flex items-center gap-2">
             <Badge tone={farm.status === "enrolled" ? "brand" : farm.status === "draft" ? "accent" : "danger"}>{farm.status}</Badge>
+            <ButtonLink href={`/app/farms/${farm.id}/monitoring`} variant="secondary">
+              Monitoring
+            </ButtonLink>
             {can.enrol(ctx.role) && (
               <>
                 <ButtonLink href={`/app/farms/${farm.id}/edit`} variant="secondary">

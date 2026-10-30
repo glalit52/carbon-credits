@@ -342,5 +342,91 @@ begin
   end if;
 end $$;
 
+
+-- ===========================================================================
+-- 0004: logger uploads, registry references, statement links
+-- ===========================================================================
+
+-- Dev (field agent) uploads a logger file for Acme's farm and shares Murugan's statement.
+select test.login('00000000-0000-0000-0000-00000000000d');
+insert into public.sensor_uploads (org_id, farm_id, file_name, readings, summary, uploaded_by)
+values ((select v from test.ids where k = 'acme'), (select v from test.ids where k = 'farm'),
+        'WL-1.csv', 288, '{"records": []}', '00000000-0000-0000-0000-00000000000d');
+select test.expect_error($q$
+  insert into public.sensor_uploads (org_id, farm_id, file_name, readings, summary, uploaded_by)
+  values ((select v from test.ids where k = 'acme'), (select v from test.ids where k = 'farm'),
+          'x.csv', 1, '{}', '00000000-0000-0000-0000-00000000000a')$q$, 'row-level security');
+with r as (
+  insert into public.statement_links (org_id, farmer_id, language, created_by)
+  values ((select v from test.ids where k = 'acme'), (select v from test.ids where k = 'farmer'), 'ta',
+          '00000000-0000-0000-0000-00000000000d')
+  returning id)
+insert into test.ids select 'link', id from r;
+-- A link cannot run for more than a year, nor be edited, only revoked.
+select test.expect_error($q$
+  insert into public.statement_links (org_id, farmer_id, created_by, expires_at)
+  values ((select v from test.ids where k = 'acme'), (select v from test.ids where k = 'farmer'),
+          '00000000-0000-0000-0000-00000000000d', now() + interval '2 years')$q$, 'check constraint');
+select test.expect_error($q$
+  update public.statement_links set expires_at = now() + interval '200 days'
+  where id = (select v from test.ids where k = 'link')$q$, 'row-level security|only be revoked');
+-- Field agents cannot record registry references.
+select test.expect_error($q$
+  select public.set_registry_reference((select v from test.ids where k = 'vintage'), 'VCS-1')$q$,
+  'only owners and admins');
+
+-- Bilal is a viewer at Acme: he reads uploads, cannot add them or share statements.
+select test.login('00000000-0000-0000-0000-00000000000b');
+select test.expect_count('select * from public.sensor_uploads', 1);
+select test.expect_error($q$
+  insert into public.statement_links (org_id, farmer_id, created_by)
+  values ((select v from test.ids where k = 'acme'), (select v from test.ids where k = 'farmer'),
+          '00000000-0000-0000-0000-00000000000b')$q$, 'row-level security');
+-- Other Co's link cannot point at Acme's farmer.
+select test.expect_error($q$
+  insert into public.statement_links (org_id, farmer_id, created_by)
+  values ((select v from test.ids where k = 'other'), (select v from test.ids where k = 'farmer'),
+          '00000000-0000-0000-0000-00000000000b')$q$, 'another organisation');
+
+-- Asha records the registry's id for the issued vintage; not for a draft.
+select test.login('00000000-0000-0000-0000-00000000000a');
+select public.set_registry_reference((select v from test.ids where k = 'vintage'), ' VCS-5123-2025 ');
+select test.expect_count($q$select * from public.vintages where registry_ref = 'VCS-5123-2025'$q$, 1);
+select test.expect_error($q$
+  select public.set_registry_reference((select v from test.ids where k = 'vintage2'), 'VCS-9')$q$,
+  'only an issued vintage');
+create temp table link_token as
+  select token from public.statement_links where id = (select v from test.ids where k = 'link');
+grant select on link_token to anon, authenticated;
+
+-- The farmer opens the statement without an account and sees only their own record.
+select test.login(null);
+select test.expect_error('select * from public.statement_links', 'permission denied');
+select test.expect_error('select * from public.sensor_uploads', 'permission denied');
+do $$
+declare j jsonb := public.farmer_statement((select token from link_token));
+begin
+  if not (j->>'found')::boolean or j->'farmer'->>'name' <> 'Murugan' or j->>'language' <> 'ta' then
+    raise exception 'statement lookup failed: %', j;
+  end if;
+  if jsonb_array_length(j->'farms') <> 1 then
+    raise exception 'expected Murugan''s one farm: %', j;
+  end if;
+  if j::text ~* 'boundary|centroid|payout_reference|"phone"|consent_reference' then
+    raise exception 'statement leaked more than the farmer''s own summary: %', j;
+  end if;
+end $$;
+select test.expect_count($q$select 1 where (public.farmer_statement('nonsense')->>'found')::boolean$q$, 0);
+select test.expect_count($q$select 1 where (public.farmer_statement(repeat('a', 64))->>'found')::boolean$q$, 0);
+
+-- Revoked, it is gone.
+select test.login('00000000-0000-0000-0000-00000000000d');
+update public.statement_links set revoked_at = now() where id = (select v from test.ids where k = 'link');
+select test.expect_error($q$
+  update public.statement_links set revoked_at = null where id = (select v from test.ids where k = 'link')$q$,
+  'row-level security|only be revoked');
+select test.login(null);
+select test.expect_count($q$select 1 where (public.farmer_statement((select token from link_token))->>'found')::boolean$q$, 0);
+
 reset role;
 \echo 'rls tests passed'

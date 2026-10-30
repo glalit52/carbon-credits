@@ -22,6 +22,7 @@
     "@turf/kinks": "^7.4.0",
     "@xmldom/xmldom": "^0.9.12",
     "clsx": "^2.1.1",
+    "fflate": "^0.8.2",
     "lucide-react": "^1.63.0",
     "maplibre-gl": "^6.16.0",
     "next": "16.4.3",

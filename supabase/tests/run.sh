@@ -17,4 +17,5 @@ trap 'psql -q -d postgres -c "drop database if exists $db"' EXIT
 psql -q -v ON_ERROR_STOP=1 -d "$db" -f "$here/auth_stub.sql"
 psql -q -v ON_ERROR_STOP=1 -d "$db" -f "$here/../migrations/20261029000001_core.sql"
 psql -q -v ON_ERROR_STOP=1 -d "$db" -f "$here/../migrations/20261029000003_claims.sql"
+psql -q -v ON_ERROR_STOP=1 -d "$db" -f "$here/../migrations/20261030000004_field.sql"
 psql -q -o /dev/null -v ON_ERROR_STOP=1 -d "$db" -f "$here/rls_test.sql"

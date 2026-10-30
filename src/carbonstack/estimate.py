@@ -30,7 +30,7 @@ from .connectors import ConnectorUnavailable, default_transport, weather
 from .domain import RiceEcosystem, TenureBasis, TrackKind, WaterControl
 from .feed import FeedProvider, sar_seasons, sar_series, series, summarise_seasons
 from .geo import area_ha, centroid, validate_ring
-from .sar import SarProvider
+from .sar import SarProvider, WaterRegimeDetector
 from .sites import Climate, Season, Site, as_project
 
 #: IPCC 2019 Refinement, Vol. 4 Ch. 5, Table 5.11: baseline emission factor
@@ -45,6 +45,11 @@ DEFAULT_YEARS_TO_HALF = 4.5
 DEFAULT_STEMS_PER_HA = 120
 
 CLIMATE_YEARS = 10
+
+#: How many of the most recent estimated years carry their monitoring series.
+#: The series is what a reviewer looks at, pass by pass; ten years of it would
+#: multiply every stored estimate for screens that show one season at a time.
+MONITORING_YEARS = 3
 
 PATHWAYS = {"rice": TrackKind.RICE, "agroforestry": TrackKind.AGROFORESTRY}
 METHODOLOGY = {"rice": "VM0051", "agroforestry": "VM0047"}
@@ -286,11 +291,13 @@ def estimate(request: dict, *, transport=None, today: date | None = None) -> dic
 
     end = date(max(years), 12, 31)
     readings = series(site, site.enrolled_on, end)
+    adoption = None
     if pathway == "rice":
         passes = sar_series(site, site.enrolled_on, end)
-        provider = FeedProvider(readings, sar_passes=passes,
-                                adoption=SarProvider.from_passes(sar_seasons(site, passes)))
+        adoption = SarProvider.from_passes(sar_seasons(site, passes))
+        provider = FeedProvider(readings, sar_passes=passes, adoption=adoption)
     else:
+        passes = []
         provider = FeedProvider(readings)
 
     # Imported here: cli pulls in the whole command surface.
@@ -330,6 +337,9 @@ def estimate(request: dict, *, transport=None, today: date | None = None) -> dic
     seasons = [s.to_dict() for s in summarise_seasons(readings)
                if s.year in years] if pathway == "rice" else []
 
+    monitoring = _monitoring(site, readings, passes, adoption,
+                             [y for y in years if y <= today.year][-MONITORING_YEARS:])
+
     quality = ("simulated monitoring on measured climate" if record["climate"]["quality"] == "measured"
                else "simulated monitoring on supplied climate")
     return {
@@ -341,6 +351,7 @@ def estimate(request: dict, *, transport=None, today: date | None = None) -> dic
         "site": record,
         "vintages": vintages,
         "seasons": seasons,
+        "monitoring": monitoring,
         "totals": {
             "creditable_net_t": round(math.fsum(v.get("net_t", 0.0) for v in vintages), 4),
             "potential_gross_t": round(math.fsum(
@@ -357,4 +368,50 @@ def estimate(request: dict, *, transport=None, today: date | None = None) -> dic
             "need a stem census instead, which on the Gatugi pilot credited about a "
             "fifth of this figure.",
         ] if pathway == "agroforestry" else []),
+    }
+
+
+def _monitoring(site: Site, readings, passes, adoption: SarProvider | None,
+                years: list[int]) -> dict:
+    """The observation series behind the estimate, for a reviewer to look at.
+
+    Radar calls are classified season by season, exactly as `SarProvider`
+    classifies them for quantification, so what the farm page plots is what
+    the estimate was built from and not a re-run that might disagree with it.
+    """
+    wanted = set(years)
+    optical = []
+    for r in readings:
+        if r.day.year not in wanted:
+            continue
+        row = {"day": r.day.isoformat(), "ndvi": round(r.ndvi, 3) if r.ndvi is not None else None,
+               "rain_mm": round(r.rain_mm, 1), "season": r.season}
+        if r.surface_water_frac is not None:
+            row["water"] = round(r.surface_water_frac, 3)
+        if r.canopy_height_m is not None:
+            row["canopy_m"] = round(r.canopy_height_m, 2)
+            row["canopy_sd_m"] = round(r.canopy_uncertainty_m or 0.0, 2)
+        optical.append(row)
+
+    radar = []
+    regimes = []
+    if passes:
+        detector = WaterRegimeDetector()
+        for (year, season), group in sorted(sar_seasons(site, passes).items()):
+            if year not in wanted:
+                continue
+            by_day = {p.day: p for p in group}
+            for call in detector.classify(group):
+                radar.append({**call.to_dict(), "season": season,
+                              "vh_db": round(by_day[call.day].vh_normalised_db, 2)})
+        for year in years:
+            for regime in (adoption.seasons(year) if adoption else []):
+                regimes.append(regime.to_dict())
+
+    return {
+        "simulated": True,
+        "years": years,
+        "optical": optical,
+        "radar": sorted(radar, key=lambda c: c["day"]),
+        "regimes": regimes,
     }

@@ -14,9 +14,11 @@ import type {
   Estimate,
   Farm,
   Farmer,
+  FarmerStatement,
   ImportRun,
   Integration,
   Invitation,
+  Language,
   Organization,
   Payment,
   PracticeRecord,
@@ -24,7 +26,9 @@ import type {
   PublicVintage,
   Retirement,
   Role,
+  SensorUpload,
   SoilSample,
+  StatementLink,
   Vintage,
   VerifyResult,
   VintageEvent,
@@ -400,4 +404,133 @@ export async function retirementCertificate(id: string): Promise<CertificateResu
 
 export function demoForecast(projectId: string) {
   return DEMO ? (demo.forecasts[projectId] ?? null) : null;
+}
+
+// ---------------------------------------------------------------------------
+// Monitoring uploads and farmer statements
+// ---------------------------------------------------------------------------
+
+export async function listSensorUploads(orgId: string, farmId?: string): Promise<SensorUpload[]> {
+  if (DEMO) return demo.sensor_uploads.filter((u) => !farmId || u.farm_id === farmId);
+  return q((s) => {
+    let query = s.from("sensor_uploads").select("*").eq("org_id", orgId);
+    if (farmId) query = query.eq("farm_id", farmId);
+    return query.order("created_at", { ascending: false });
+  });
+}
+
+export async function listStatementLinks(orgId: string, farmerId: string): Promise<StatementLink[]> {
+  if (DEMO) return demo.statement_links.filter((l) => l.farmer_id === farmerId);
+  return q((s) =>
+    s.from("statement_links").select("*").eq("org_id", orgId).eq("farmer_id", farmerId)
+      .order("created_at", { ascending: false }),
+  );
+}
+
+/** A farmer's statement by link token, as public.farmer_statement() returns it. */
+export async function farmerStatement(token: string): Promise<FarmerStatement> {
+  if (!/^[0-9a-f]{64}$/.test(token)) return { found: false };
+  if (!DEMO) {
+    const supabase = await supabaseServer();
+    const { data, error } = await supabase.rpc("farmer_statement", { link_token: token });
+    if (error) throw new Error(error.message);
+    return data;
+  }
+  const link = demo.statement_links.find((l) => l.token === token && !l.revoked_at);
+  if (!link || link.expires_at < new Date().toISOString()) return { found: false };
+  return statementFor(link.farmer_id, link.language, link.expires_at);
+}
+
+/**
+ * The same statement, built for a signed-in member from the farmer's id.
+ * Mirrors public.farmer_statement() field for field, so the printable page a
+ * field agent opens and the one the farmer opens from a link are the same page.
+ */
+export async function memberStatement(orgId: string, farmerId: string, language: Language): Promise<FarmerStatement> {
+  if (DEMO) return statementFor(farmerId, language, null);
+  const [org, farmer, farms, projects, estimates, payments, vintages] = await Promise.all([
+    getOrgContext(),
+    getFarmer(orgId, farmerId),
+    listFarms(orgId),
+    listProjects(orgId),
+    listEstimates(orgId),
+    listPayments(orgId),
+    listVintages(orgId),
+  ]);
+  if (!farmer) return { found: false };
+  return assembleStatement(org.org.name, farmer, farms, projects, estimates, payments, vintages, language, null);
+}
+
+function statementFor(farmerId: string, language: Language, expires: string | null): FarmerStatement {
+  const farmer = demo.farmers.find((f) => f.id === farmerId);
+  if (!farmer) return { found: false };
+  return assembleStatement(demo.organization.name, farmer, demo.farms, demo.projects, demo.estimates,
+    demo.payments, demo.vintages, language, expires);
+}
+
+function assembleStatement(
+  organisation: string,
+  farmer: Farmer,
+  farms: Farm[],
+  projects: Project[],
+  estimates: Estimate[],
+  payments: Payment[],
+  vintages: Vintage[],
+  language: Language,
+  expires: string | null,
+): FarmerStatement {
+  const project = new Map(projects.map((p) => [p.id, p]));
+  const vintage = new Map(vintages.map((v) => [v.id, v]));
+  const latest = (farmId: string) =>
+    estimates.filter((e) => e.farm_id === farmId).sort((a, b) => b.created_at.localeCompare(a.created_at) || b.year - a.year)[0];
+  return {
+    found: true,
+    language,
+    expires_at: expires ?? "",
+    generated_at: new Date().toISOString(),
+    organisation,
+    farmer: {
+      name: farmer.name, village: farmer.village, district: farmer.district, state: farmer.state,
+      country: farmer.country, external_ref: farmer.external_ref,
+      consent: !!farmer.consent_on, carbon_rights: !!farmer.carbon_rights_ref, payout_method: farmer.payout_method,
+    },
+    farms: farms
+      .filter((f) => f.farmer_id === farmer.id && f.status !== "withdrawn")
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((f) => ({
+        name: f.name, area_ha: Number(f.area_ha), pathway: project.get(f.project_id ?? "")?.pathway ?? null,
+        crop: f.crop, status: f.status, practice: f.practice, tenure_document: !!f.tenure_reference,
+        project: project.get(f.project_id ?? "")?.name ?? null,
+        latest_year: latest(f.id)?.year ?? null,
+        latest_net_t: latest(f.id)?.net_t ?? null,
+      })),
+    payments: payments
+      .filter((p) => p.farmer_id === farmer.id)
+      .map((p) => {
+        const v = vintage.get(p.vintage_id);
+        return {
+          vintage_year: v?.year ?? 0, project: project.get(v?.project_id ?? "")?.name ?? "",
+          credits: Number(p.credits), amount: Number(p.amount), currency: p.currency, status: p.status,
+          due_on: p.due_on, paid_on: p.paid_on, reference_tail: p.reference ? p.reference.slice(-4) : null,
+        };
+      })
+      .sort((a, b) => b.vintage_year - a.vintage_year || a.project.localeCompare(b.project)),
+  };
+}
+
+/** Every stored estimate row for these farms, not only the latest: a vintage
+ *  points at the exact rows it was built from. */
+export async function listEstimateRows(orgId: string, farmIds: string[]): Promise<Estimate[]> {
+  if (!farmIds.length) return [];
+  if (DEMO) return demo.estimates.filter((e) => farmIds.includes(e.farm_id));
+  return q((s) => s.from("estimates").select("*").eq("org_id", orgId).in("farm_id", farmIds).limit(10000));
+}
+
+/** Audit events about specific records. */
+export async function listAuditFor(orgId: string, entityIds: string[]): Promise<AuditEvent[]> {
+  if (!entityIds.length) return [];
+  if (DEMO) return demo.audit.filter((a) => a.entity_id && entityIds.includes(a.entity_id));
+  return q((s) =>
+    s.from("audit_events").select("*").eq("org_id", orgId).in("entity_id", entityIds).order("at").limit(5000),
+  );
 }

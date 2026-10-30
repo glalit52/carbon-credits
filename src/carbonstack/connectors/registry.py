@@ -218,9 +218,12 @@ def reconcile(ours: list[Issuance], export: RegistryExport) -> Reconciliation:
         return False
 
     for iss in ours:
-        if claim(lambda r: len(r.serial) >= 8 and (iss.serial_start in r.serial
-                                                    or r.serial in iss.serial_start),
-                 "serial", iss):
+        # An empty serial is "in" every string, so a ledger row without one
+        # would claim the first registry row it met.
+        if iss.serial_start and claim(
+                lambda r: len(r.serial) >= 8 and (iss.serial_start in r.serial
+                                                  or r.serial in iss.serial_start),
+                "serial", iss):
             continue
         if iss.registry_ref and claim(
                 lambda r: iss.registry_ref in (r.reference, r.serial), "reference", iss):

@@ -9,3 +9,12 @@ export function PrintButton() {
     </Button>
   );
 }
+
+/** The same, with its label in the reader's language, and hidden on paper. */
+export function PrintLabel({ label }: { label: string }) {
+  return (
+    <Button type="button" variant="secondary" className="print:hidden" onClick={() => window.print()}>
+      {label}
+    </Button>
+  );
+}

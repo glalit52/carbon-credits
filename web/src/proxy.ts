@@ -28,7 +28,8 @@ export async function proxy(request: NextRequest) {
   const signedIn = Boolean(data?.claims?.sub);
   const path = request.nextUrl.pathname;
 
-  if (!signedIn && (path.startsWith("/app") || path.startsWith("/onboarding"))) {
+  const guarded = ["/app", "/field", "/onboarding"].some((p) => path === p || path.startsWith(`${p}/`));
+  if (!signedIn && guarded) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = `?next=${encodeURIComponent(path + request.nextUrl.search)}`;

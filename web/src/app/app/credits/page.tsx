@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ActionForm } from "@/components/action-form";
-import { Badge, Card, CardHeader, EmptyState, Field, Input, PageHeader, Select, Stat, Table, Td, Th } from "@/components/ui";
+import { Badge, ButtonLink, Card, CardHeader, EmptyState, Field, Input, PageHeader, Select, Stat, Table, Td, Th } from "@/components/ui";
 import { buildVintage } from "@/lib/actions/credits";
 import { getOrgContext, listProjects, listVintages } from "@/lib/data";
 import type { VintageStatus } from "@/lib/database.types";
@@ -24,6 +24,11 @@ export default async function CreditsPage() {
       <PageHeader
         title="Credits"
         description="Vintages move from draft to review to approval to issuance. A second person approves every one, and every step is logged."
+        actions={
+          <ButtonLink href="/app/credits/registry" variant="secondary">
+            Reconcile with registry
+          </ButtonLink>
+        }
       />
 
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-5">

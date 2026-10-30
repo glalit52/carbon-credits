@@ -7,6 +7,7 @@ import { Download } from "lucide-react";
 
 import { Badge, Card, CardHeader, DownloadLink, EmptyState, Field, Input, Notice, PageHeader, Stat, Table, Td, Th } from "@/components/ui";
 import { buildVintage, raisePayments, transitionVintage } from "@/lib/actions/credits";
+import { setRegistryReference } from "@/lib/actions/registry";
 import { getOrgContext, getProject, getVintage, listFarmers, listFarms, listPayments, memberNames } from "@/lib/data";
 import type { VintageStatus } from "@/lib/database.types";
 import { fmt, PAYMENT_TONE, VINTAGE_LABEL, VINTAGE_TONE } from "@/lib/format";
@@ -57,6 +58,9 @@ export default async function VintagePage({ params }: { params: Promise<{ id: st
             <Badge tone={VINTAGE_TONE[v.status]}>{VINTAGE_LABEL[v.status]}</Badge>
             <DownloadLink href={`/app/export/vintage.csv?id=${v.id}`}>
               <Download className="h-4 w-4" /> Breakdown CSV
+            </DownloadLink>
+            <DownloadLink href={`/app/credits/${v.id}/pack`}>
+              <Download className="h-4 w-4" /> Evidence pack
             </DownloadLink>
           </div>
         }
@@ -199,6 +203,33 @@ export default async function VintagePage({ params }: { params: Promise<{ id: st
                     hidden={{ project_id: v.project_id, year: String(v.year) }}
                   />
                 )}
+              </div>
+            </Card>
+          )}
+          {v.status === "issued" && (
+            <Card>
+              <CardHeader
+                title="At the registry"
+                description="The id the registry gave this issuance. Reconciliation matches on it."
+              />
+              <div className="p-5">
+                {v.registry_ref ? (
+                  <p className="text-sm">
+                    <span className="font-medium">{v.registry_ref}</span>
+                    <span className="text-muted"> · recorded {fmt.date(v.registry_ref_at)}</span>
+                  </p>
+                ) : can.administer(ctx.role) ? (
+                  <ActionForm action={setRegistryReference} submit="Record" hidden={{ vintage_id: v.id }}>
+                    <Field label="Registry reference">
+                      <Input name="registry_ref" placeholder="e.g. VCS-5123-2025-0001" required maxLength={200} />
+                    </Field>
+                  </ActionForm>
+                ) : (
+                  <p className="text-sm text-muted">Not recorded yet; an owner or admin records it.</p>
+                )}
+                <Link href="/app/credits/registry" className="mt-3 inline-block text-sm text-brand underline">
+                  Reconcile with the registry
+                </Link>
               </div>
             </Card>
           )}
