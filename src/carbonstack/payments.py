@@ -14,6 +14,7 @@ discover it.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from datetime import date, timedelta
 from enum import Enum
@@ -103,7 +104,7 @@ def allocate(store: Store, vintage: Vintage) -> tuple[dict[str, float], dict[str
         excluded.setdefault(farmer_id, []).extend(
             f"{plot_id}: {p}" for p in problems)
 
-    total = sum(area_by_farmer.values())
+    total = math.fsum(area_by_farmer.values())
     if total <= 0:
         return {}, excluded
 
@@ -139,7 +140,7 @@ def raise_payments(store: Store, vintage_id: str, terms: PaymentTerms, *,
     credits_by_farmer, excluded = allocate(store, v)
     due = due_on or (date.today() + timedelta(days=terms.payment_days))
     pool = v.issuable_whole * terms.price_per_credit * terms.farmer_share
-    total_credits = sum(credits_by_farmer.values()) or 1.0
+    total_credits = math.fsum(credits_by_farmer.values()) or 1.0
 
     made: list[Payment] = []
     with store.tx() as conn:
@@ -261,11 +262,11 @@ def summary(store: Store, project_id: str | None = None) -> dict:
     return {
         "payments": len(rows),
         "farmers": len({p.farmer_id for p in rows}),
-        "paid_total": round(sum(p.amount for p in rows
+        "paid_total": round(math.fsum(p.amount for p in rows
                                 if p.status is PaymentStatus.PAID), 2),
-        "outstanding_total": round(sum(p.amount for p in outstanding), 2),
+        "outstanding_total": round(math.fsum(p.amount for p in outstanding), 2),
         "overdue_count": len(overdue),
-        "overdue_total": round(sum(p.amount for p in overdue), 2),
+        "overdue_total": round(math.fsum(p.amount for p in overdue), 2),
         "failed_count": sum(1 for p in rows if p.status is PaymentStatus.FAILED),
         "currency": rows[0].currency if rows else "",
     }

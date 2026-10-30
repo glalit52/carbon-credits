@@ -21,12 +21,15 @@ import json
 import sqlite3
 import uuid
 from contextlib import contextmanager
+from dataclasses import asdict
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
 from ..domain import (
-    Enrollment, Farmer, Observation, Plot, Project, TenureBasis, TrackKind,
+    CarbonRights, Enrollment, Farmer, Observation, Plot, Project,
+    RiceEcosystem, StakeholderConsultation, TenureBasis, TrackKind,
+    WaterControl,
 )
 from .schema import migrate
 
@@ -155,21 +158,42 @@ class Store:
         with self.tx() as conn:
             existing = conn.execute(
                 "SELECT id FROM projects WHERE id = ?", (project.id,)).fetchone()
+            consultation = None
+            if project.consultation is not None:
+                c = project.consultation
+                consultation = _canonical({
+                    "held_on": _s(c.held_on),
+                    "record_reference": c.record_reference,
+                    "participants": c.participants,
+                    "grievance_channel": c.grievance_channel,
+                })
             conn.execute(
                 "INSERT OR REPLACE INTO projects (id, name, track, country,"
                 " start_date, crediting_period_yrs, methodology_id, registry,"
-                " registry_ref, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                " registry_ref, created_at, methodology_version, consultation_json)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
                 (project.id, project.name, project.track.value, project.country,
                  _s(project.start_date), project.crediting_period_yrs,
-                 methodology_id, registry, registry_ref, _now()),
+                 methodology_id, registry, registry_ref, _now(),
+                 project.methodology_version, consultation),
             )
             for f in project.farmers.values():
+                rights = None
+                if f.carbon_rights is not None:
+                    r = f.carbon_rights
+                    rights = _canonical({
+                        "agreement_reference": r.agreement_reference,
+                        "signed_on": _s(r.signed_on),
+                        "holder": r.holder,
+                        "reversal_clause_ack": r.reversal_clause_ack,
+                        "expires_on": _s(r.expires_on),
+                    })
                 conn.execute(
                     "INSERT OR REPLACE INTO farmers (id, project_id, name, village,"
-                    " district, state, consent_on, consent_reference, created_at)"
-                    " VALUES (?,?,?,?,?,?,?,?,?)",
+                    " district, state, consent_on, consent_reference, created_at,"
+                    " carbon_rights_json) VALUES (?,?,?,?,?,?,?,?,?,?)",
                     (f.id, project.id, f.name, f.village, f.district, f.state,
-                     _s(f.consent_on), f.consent_reference, _now()),
+                     _s(f.consent_on), f.consent_reference, _now(), rights),
                 )
             for p in project.plots.values():
                 conn.execute(
@@ -182,11 +206,15 @@ class Store:
                 )
             for e in project.enrollments:
                 conn.execute(
-                    "INSERT OR IGNORE INTO enrollments (project_id, plot_id,"
-                    " enrolled_on, practice, species_json, stems_planted, created_at)"
-                    " VALUES (?,?,?,?,?,?,?)",
+                    "INSERT OR REPLACE INTO enrollments (project_id, plot_id,"
+                    " enrolled_on, practice, species_json, stems_planted, created_at,"
+                    " baseline_captured_on, practice_started_on, ecosystem,"
+                    " water_control) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
                     (project.id, e.plot_id, _s(e.enrolled_on), e.practice,
-                     _canonical(e.species), e.stems_planted, _now()),
+                     _canonical(e.species), e.stems_planted, _now(),
+                     _s(e.baseline_captured_on), _s(e.practice_started_on),
+                     e.ecosystem.value if e.ecosystem else None,
+                     e.water_control.value if e.water_control else None),
                 )
             self.record("project.saved" if existing is None else "project.updated",
                         "project", project.id,
@@ -201,18 +229,37 @@ class Store:
         if row is None:
             raise StoreError(f"no project {project_id!r}")
 
+        consultation = None
+        if row["consultation_json"]:
+            c = json.loads(row["consultation_json"])
+            consultation = StakeholderConsultation(
+                held_on=_d(c["held_on"]), record_reference=c["record_reference"],
+                participants=c["participants"],
+                grievance_channel=c["grievance_channel"])
+
         project = Project(
             id=row["id"], name=row["name"], track=TrackKind(row["track"]),
             country=row["country"], start_date=_d(row["start_date"]),
             crediting_period_yrs=row["crediting_period_yrs"],
+            methodology_version=row["methodology_version"] or "",
+            consultation=consultation,
         )
         for r in self.conn.execute(
                 "SELECT * FROM farmers WHERE project_id = ? ORDER BY id", (project_id,)):
+            rights = None
+            if r["carbon_rights_json"]:
+                cr = json.loads(r["carbon_rights_json"])
+                rights = CarbonRights(
+                    agreement_reference=cr["agreement_reference"],
+                    signed_on=_d(cr["signed_on"]), holder=cr["holder"],
+                    reversal_clause_ack=cr["reversal_clause_ack"],
+                    expires_on=_d(cr.get("expires_on")))
             project.add_farmer(Farmer(
                 id=r["id"], name=r["name"], village=r["village"],
                 district=r["district"], state=r["state"],
                 consent_on=_d(r["consent_on"]),
-                consent_reference=r["consent_reference"]))
+                consent_reference=r["consent_reference"],
+                carbon_rights=rights))
         for r in self.conn.execute(
                 "SELECT * FROM plots WHERE project_id = ? ORDER BY id", (project_id,)):
             project.add_plot(Plot(
@@ -227,7 +274,12 @@ class Store:
                 plot_id=r["plot_id"], project_id=project_id,
                 enrolled_on=_d(r["enrolled_on"]), practice=r["practice"],
                 species=json.loads(r["species_json"]),
-                stems_planted=r["stems_planted"]))
+                stems_planted=r["stems_planted"],
+                baseline_captured_on=_d(r["baseline_captured_on"]),
+                practice_started_on=_d(r["practice_started_on"]),
+                ecosystem=RiceEcosystem(r["ecosystem"]) if r["ecosystem"] else None,
+                water_control=WaterControl(r["water_control"])
+                if r["water_control"] else None))
         for r in self.conn.execute(
                 "SELECT o.* FROM observations o JOIN plots p ON p.id = o.plot_id"
                 " WHERE p.project_id = ? ORDER BY o.observed_on", (project_id,)):
@@ -297,6 +349,209 @@ class Store:
             " JOIN plots p ON p.id = o.plot_id WHERE p.project_id = ?",
             (project_id,)).fetchone()
         return _d(row["d"]) if row and row["d"] else None
+
+
+    # -- soil ---------------------------------------------------------------
+
+    def add_soil_core(self, project_id: str, core, *, role: str,
+                      actor: str | None = None) -> str:
+        """Store a core. Re-ingesting the same sampling is a no-op.
+
+        Refuses a core the lab cannot be traced to, because an unattributable
+        result is not evidence and storing it invites it into a claim later.
+        """
+        from ..soil import SoilCore  # local import: soil is an optional pathway
+
+        if role not in ("baseline", "monitoring"):
+            raise StoreError(f"core role must be baseline or monitoring, not {role!r}")
+        if not isinstance(core, SoilCore):
+            raise StoreError("expected a SoilCore")
+        blocking = [p for p in core.issues if "lab reference" in p]
+        if blocking:
+            raise StoreError(f"core {core.plot_id}: {blocking[0]}")
+
+        core_id = new_id("core")
+        layers = [{"top_cm": l.top_cm, "bottom_cm": l.bottom_cm,
+                   "soc_pct": l.soc_pct,
+                   "bulk_density_g_cm3": l.bulk_density_g_cm3,
+                   "coarse_fragment_frac": l.coarse_fragment_frac}
+                  for l in core.layers]
+        with self.tx() as conn:
+            conn.execute(
+                "INSERT OR IGNORE INTO soil_cores (id, project_id, plot_id,"
+                " sampled_on, lab_reference, stratum, role, layers_json,"
+                " created_at) VALUES (?,?,?,?,?,?,?,?,?)",
+                (core_id, project_id, core.plot_id, _s(core.sampled_on),
+                 core.lab_reference, core.stratum, role, _canonical(layers),
+                 _now()))
+            self.record("soil.core_stored", "project", project_id, {
+                "plot_id": core.plot_id, "role": role,
+                "sampled_on": _s(core.sampled_on),
+                "lab_reference": core.lab_reference,
+                "layers": len(layers),
+                "max_depth_cm": core.max_depth_cm,
+                "soc_t_ha_30cm": round(core.soc_t_ha(30.0), 4),
+            }, actor=actor)
+        return core_id
+
+    def soil_cores(self, project_id: str, role: str | None = None) -> dict:
+        """Cores by plot id, ready for the soil pathway."""
+        from ..soil import SoilCore, SoilLayer
+
+        sql = "SELECT * FROM soil_cores WHERE project_id = ?"
+        args: list[Any] = [project_id]
+        if role:
+            sql += " AND role = ?"
+            args.append(role)
+        sql += " ORDER BY plot_id, sampled_on"
+
+        out: dict[str, SoilCore] = {}
+        for r in self.conn.execute(sql, args):
+            out[r["plot_id"]] = SoilCore(
+                plot_id=r["plot_id"], sampled_on=_d(r["sampled_on"]),
+                lab_reference=r["lab_reference"], stratum=r["stratum"],
+                layers=[SoilLayer(**layer) for layer in json.loads(r["layers_json"])])
+        return out
+
+    def add_model_validation(self, project_id: str, validation, *,
+                             actor: str | None = None) -> str:
+        """Store a VMD0053 validation, accepted or not.
+
+        A rejected validation is kept rather than discarded: a verifier asking
+        why the punitive uncertainty was applied deserves the evidence, and a
+        model that was tried and failed is part of the project's history.
+        """
+        vid = new_id("val")
+        problems = validation.issues()
+        with self.tx() as conn:
+            conn.execute(
+                "INSERT INTO model_validations (id, project_id, model_name,"
+                " model_version, held_out, pairs_json, rmse_t_ha, bias_t_ha,"
+                " r_squared, relative_uncertainty, accepted, created_at)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                (vid, project_id, validation.model_name, validation.model_version,
+                 int(validation.held_out), _canonical(validation.pairs),
+                 validation.rmse_t_ha, validation.bias_t_ha,
+                 validation.r_squared, validation.relative_uncertainty,
+                 int(not problems), _now()))
+            self.record("soil.model_validated", "project", project_id, {
+                "model": f"{validation.model_name} {validation.model_version}",
+                "pairs": validation.n, "held_out": validation.held_out,
+                "rmse_t_ha": round(validation.rmse_t_ha, 4),
+                "bias_t_ha": round(validation.bias_t_ha, 4),
+                "relative_uncertainty": round(validation.relative_uncertainty, 4),
+                "accepted": not problems,
+                "issues": problems,
+            }, actor=actor)
+        return vid
+
+    def latest_model_validation(self, project_id: str):
+        """The most recent accepted validation, or None."""
+        from ..soil import ModelValidation
+
+        r = self.conn.execute(
+            "SELECT * FROM model_validations WHERE project_id = ? AND accepted = 1"
+            " ORDER BY created_at DESC LIMIT 1", (project_id,)).fetchone()
+        if r is None:
+            return None
+        return ModelValidation(
+            model_name=r["model_name"], model_version=r["model_version"],
+            pairs=[tuple(p) for p in json.loads(r["pairs_json"])],
+            held_out=bool(r["held_out"]))
+
+
+    # -- trees --------------------------------------------------------------
+
+    def add_tree_inventory(self, project_id: str, inventory, *,
+                           actor: str | None = None) -> str:
+        """Store a census inventory. Re-ingesting the same visit is a no-op.
+
+        Refuses a survey with no surveyor for the same reason a core with no
+        lab reference is refused: an unattributable measurement is not
+        evidence, and storing it invites it into a claim later.
+        """
+        from ..agroforestry import CensusInventory
+
+        if not isinstance(inventory, CensusInventory):
+            raise StoreError("expected a CensusInventory")
+        survey = inventory.survival
+        if not survey.surveyor.strip():
+            raise StoreError(
+                f"inventory {inventory.plot_id}: no surveyor recorded; an "
+                f"unattributable survival survey is not evidence")
+
+        inv_id = new_id("inv")
+        sample = [{"species_key": m.species_key, "dbh_cm": m.dbh_cm,
+                   "height_m": m.height_m} for m in inventory.sample]
+        # The allometry is stored with the measurements. A local fit that
+        # replaces a placeholder later must not silently restate last year's
+        # inventory at a new number.
+        used = sorted({m.species_key for m in inventory.sample})
+        species = {k: asdict(inventory.species[k]) for k in used}
+
+        with self.tx() as conn:
+            conn.execute(
+                "INSERT OR IGNORE INTO tree_inventories (id, project_id,"
+                " plot_id, measured_on, surveyed_on, surveyor, stems_planted,"
+                " stems_sampled, stems_alive, sample_json, species_json,"
+                " created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                (inv_id, project_id, inventory.plot_id,
+                 _s(inventory.measured_on), _s(survey.surveyed_on),
+                 survey.surveyor, survey.stems_planted, survey.stems_sampled,
+                 survey.stems_alive, _canonical(sample), _canonical(species),
+                 _now()))
+            stock, relative = inventory.stock()
+            self.record("trees.inventory_stored", "project", project_id, {
+                "plot_id": inventory.plot_id,
+                "measured_on": _s(inventory.measured_on),
+                "surveyor": survey.surveyor,
+                "stems_planted": survey.stems_planted,
+                "stems_sampled": survey.stems_sampled,
+                "survival_rate": round(survey.survival_rate, 4),
+                "survival_lower_bound": round(survey.survival_lower_bound(), 4),
+                "stems_measured": len(sample),
+                "species": used,
+                "local_allometry": inventory.uses_local_allometry,
+                "stock_tco2e": round(stock, 4),
+                "relative_uncertainty": round(relative, 4),
+                "needs_replanting": survey.needs_replanting,
+            }, actor=actor)
+        return inv_id
+
+    def tree_inventories(self, project_id: str, year: int | None = None) -> dict:
+        """The latest inventory per plot, at or before the end of `year`.
+
+        Keyed by plot id, which is what the census pathway takes. Carrying the
+        most recent visit forward rather than demanding one per year is what
+        lets a plot be inventoried every second year without its stock
+        appearing to vanish in between.
+        """
+        from ..agroforestry import (
+            SPECIES, CensusInventory, Species, StemMeasurement, SurvivalSurvey,
+        )
+
+        sql = "SELECT * FROM tree_inventories WHERE project_id = ?"
+        args: list[Any] = [project_id]
+        if year is not None:
+            sql += " AND measured_on <= ?"
+            args.append(f"{year}-12-31")
+        sql += " ORDER BY plot_id, measured_on"
+
+        out: dict[str, CensusInventory] = {}
+        for r in self.conn.execute(sql, args):
+            species = {k: Species(**v)
+                       for k, v in json.loads(r["species_json"]).items()}
+            out[r["plot_id"]] = CensusInventory(
+                plot_id=r["plot_id"], measured_on=_d(r["measured_on"]),
+                survival=SurvivalSurvey(
+                    plot_id=r["plot_id"], surveyed_on=_d(r["surveyed_on"]),
+                    stems_planted=r["stems_planted"],
+                    stems_sampled=r["stems_sampled"],
+                    stems_alive=r["stems_alive"], surveyor=r["surveyor"]),
+                sample=[StemMeasurement(**m)
+                        for m in json.loads(r["sample_json"])],
+                species=species or dict(SPECIES))
+        return out
 
 
 def new_id(prefix: str) -> str:

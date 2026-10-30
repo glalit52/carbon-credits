@@ -29,7 +29,8 @@ from dataclasses import dataclass, field
 from datetime import date
 
 from .domain import (
-    Enrollment, Farmer, Plot, Project, TenureBasis, TrackKind,
+    CarbonRights, Enrollment, Farmer, Plot, Project, RiceEcosystem,
+    StakeholderConsultation, TenureBasis, TrackKind, WaterControl,
 )
 from .geo import Ring
 
@@ -51,6 +52,19 @@ class Season:
         if start <= end:
             return start <= here <= end
         return here >= start or here <= end   # wraps the new year
+
+    @property
+    def wraps(self) -> bool:
+        return (self.end_month, self.end_day) < (self.start_month, self.start_day)
+
+    def closes_in(self, year: int) -> date:
+        """When the season that *starts* in `year` finishes.
+
+        Samba starts in August and finishes in January, so a 2026 vintage
+        cannot be read until 2027 -- the evidence for it does not exist yet.
+        """
+        return date(year + 1 if self.wraps else year,
+                    self.end_month, self.end_day)
 
     def progress(self, d: date) -> float:
         """0 at the start of the window, 1 at the end. Outside it, 0."""
@@ -108,6 +122,12 @@ class Site:
     awd_reduction: float = 0.0
     shade_peak_height_m: float = 0.0
     shade_years_to_half: float = 0.0
+    # Rice eligibility, recorded because VM0051 turns on it.
+    ecosystem: RiceEcosystem | None = None
+    water_control: WaterControl | None = None
+    # Additionality timing. The baseline has to predate the practice change.
+    baseline_captured_on: date | None = None
+    practice_started_on: date | None = None
 
     @property
     def area_ha(self) -> float:
@@ -171,6 +191,12 @@ THANJAVUR = Site(
     # with heavy organic input sit high in that range. 20-50% reduction.
     baseline_ch4_kg_ha_season=78.0,
     awd_reduction=0.42,
+    # Cauvery delta canal command: irrigated lowland with drainage control,
+    # which is the only rice VM0051 will credit.
+    ecosystem=RiceEcosystem.IRRIGATED_LOWLAND,
+    water_control=WaterControl.FULL,
+    baseline_captured_on=date(2025, 5, 20),
+    practice_started_on=date(2025, 6, 15),
 )
 
 NYERI = Site(
@@ -208,6 +234,8 @@ NYERI = Site(
     ),
     shade_peak_height_m=13.5,
     shade_years_to_half=4.5,
+    baseline_captured_on=date(2025, 3, 1),
+    practice_started_on=date(2025, 3, 20),
 )
 
 SITES: dict[str, Site] = {s.id: s for s in (THANJAVUR, NYERI)}
@@ -221,12 +249,26 @@ def as_project(site: Site) -> Project:
         track=site.track,
         country=site.country,
         start_date=site.enrolled_on,
+        methodology_version=("VM0051 v1.1" if site.track is TrackKind.RICE
+                             else "VM0047 v1.1"),
+        consultation=StakeholderConsultation(
+            held_on=site.enrolled_on,
+            record_reference=f"CONSULT/{site.id}/001",
+            participants=34,
+            grievance_channel="village committee, monthly; SMS to +91 80000 00000",
+        ),
     )
     farmer = project.add_farmer(Farmer(
         id=f"{site.id}-F1", name=site.farmer_name, village=site.village,
         district=site.admin, state=site.admin,
         consent_on=site.enrolled_on,
         consent_reference=f"CONSENT/{site.id}/001",
+        carbon_rights=CarbonRights(
+            agreement_reference=f"CRA/{site.id}/001",
+            signed_on=site.enrolled_on,
+            holder="SenseGrass (project proponent)",
+            reversal_clause_ack=True,
+        ),
     ))
     plot = project.add_plot(Plot(
         id=f"{site.id}-P1", farmer_id=farmer.id, boundary=site.boundary,
@@ -238,5 +280,9 @@ def as_project(site: Site) -> Project:
         plot_id=plot.id, project_id=project.id, enrolled_on=site.enrolled_on,
         practice=practice, species=list(site.species),
         stems_planted=int(site.area_ha * 120) if site.species else None,
+        baseline_captured_on=site.baseline_captured_on,
+        practice_started_on=site.practice_started_on,
+        ecosystem=site.ecosystem,
+        water_control=site.water_control,
     ))
     return project

@@ -13,7 +13,9 @@ from datetime import date
 from pathlib import Path
 
 from .domain import (
-    Enrollment, Farmer, Observation, Plot, Project, TenureBasis, TrackKind,
+    CarbonRights, Enrollment, Farmer, Observation, Plot, Project,
+    RiceEcosystem, StakeholderConsultation, TenureBasis, TrackKind,
+    WaterControl,
 )
 
 
@@ -33,11 +35,25 @@ def to_dict(project: Project) -> dict:
         "country": project.country,
         "start_date": _s(project.start_date),
         "crediting_period_yrs": project.crediting_period_yrs,
+        "methodology_version": project.methodology_version,
+        "consultation": (
+            {"held_on": _s(project.consultation.held_on),
+             "record_reference": project.consultation.record_reference,
+             "participants": project.consultation.participants,
+             "grievance_channel": project.consultation.grievance_channel}
+            if project.consultation else None),
         "farmers": [
             {"id": f.id, "name": f.name, "village": f.village,
              "district": f.district, "state": f.state,
              "consent_on": _s(f.consent_on),
-             "consent_reference": f.consent_reference}
+             "consent_reference": f.consent_reference,
+             "carbon_rights": (
+                 {"agreement_reference": f.carbon_rights.agreement_reference,
+                  "signed_on": _s(f.carbon_rights.signed_on),
+                  "holder": f.carbon_rights.holder,
+                  "reversal_clause_ack": f.carbon_rights.reversal_clause_ack,
+                  "expires_on": _s(f.carbon_rights.expires_on)}
+                 if f.carbon_rights else None)}
             for f in project.farmers.values()
         ],
         "plots": [
@@ -53,7 +69,11 @@ def to_dict(project: Project) -> dict:
         "enrollments": [
             {"plot_id": e.plot_id, "project_id": e.project_id,
              "enrolled_on": _s(e.enrolled_on), "practice": e.practice,
-             "species": e.species, "stems_planted": e.stems_planted}
+             "species": e.species, "stems_planted": e.stems_planted,
+             "baseline_captured_on": _s(e.baseline_captured_on),
+             "practice_started_on": _s(e.practice_started_on),
+             "ecosystem": e.ecosystem.value if e.ecosystem else None,
+             "water_control": e.water_control.value if e.water_control else None}
             for e in project.enrollments
         ],
         "observations": [
@@ -73,13 +93,27 @@ def from_dict(payload: dict) -> Project:
         country=payload["country"],
         start_date=_d(payload["start_date"]),
         crediting_period_yrs=payload.get("crediting_period_yrs", 30),
+        methodology_version=payload.get("methodology_version", ""),
+        consultation=(
+            StakeholderConsultation(
+                held_on=_d(payload["consultation"]["held_on"]),
+                record_reference=payload["consultation"]["record_reference"],
+                participants=payload["consultation"]["participants"],
+                grievance_channel=payload["consultation"]["grievance_channel"])
+            if payload.get("consultation") else None),
     )
     for f in payload.get("farmers", []):
+        cr = f.get("carbon_rights")
         project.add_farmer(Farmer(
             id=f["id"], name=f["name"], village=f["village"],
             district=f["district"], state=f["state"],
             consent_on=_d(f.get("consent_on")),
             consent_reference=f.get("consent_reference", ""),
+            carbon_rights=(CarbonRights(
+                agreement_reference=cr["agreement_reference"],
+                signed_on=_d(cr["signed_on"]), holder=cr["holder"],
+                reversal_clause_ack=cr.get("reversal_clause_ack", False),
+                expires_on=_d(cr.get("expires_on"))) if cr else None),
         ))
     for p in payload.get("plots", []):
         project.add_plot(Plot(
@@ -94,6 +128,11 @@ def from_dict(payload: dict) -> Project:
             plot_id=e["plot_id"], project_id=e["project_id"],
             enrolled_on=_d(e["enrolled_on"]), practice=e["practice"],
             species=e.get("species", []), stems_planted=e.get("stems_planted"),
+            baseline_captured_on=_d(e.get("baseline_captured_on")),
+            practice_started_on=_d(e.get("practice_started_on")),
+            ecosystem=(RiceEcosystem(e["ecosystem"]) if e.get("ecosystem") else None),
+            water_control=(WaterControl(e["water_control"])
+                           if e.get("water_control") else None),
         ))
     for o in payload.get("observations", []):
         project.observe(Observation(

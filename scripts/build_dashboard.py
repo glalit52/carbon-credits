@@ -7,6 +7,7 @@ opens with no network at all and cannot render half-empty.
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -23,9 +24,14 @@ def main() -> int:
     # The payload sits in a <script type="application/json">, so the only
     # sequence that can break out of it is a literal closing script tag.
     safe = data.replace("</", "<\\/")
-    out = DASH / "index.html"
+    out = Path(os.environ.get("CARBONSTACK_PAGE_OUT", DASH / "index.html"))
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(template.replace("__DATA__", safe))
-    print(f"wrote {out.relative_to(ROOT)}  {out.stat().st_size / 1024:.0f} KB")
+    try:
+        shown = out.relative_to(ROOT)
+    except ValueError:
+        shown = out
+    print(f"wrote {shown}  {out.stat().st_size / 1024:.0f} KB")
     return 0
 
 

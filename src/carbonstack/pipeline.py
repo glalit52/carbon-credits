@@ -27,7 +27,9 @@ TRACK_VARIABLES: dict[str, tuple[str, ...]] = {
     "arr": ("canopy_height_m", "stocking_index"),
     "agroforestry": ("canopy_height_m", "stocking_index"),
     "cropland": ("practice_adopted",),
-    "rice": ("practice_adopted",),
+    # Radar is on the rice row because AWD is practised in the monsoon and
+    # the optical passes that would otherwise evidence it are lost to cloud.
+    "rice": ("practice_adopted", "vv_db", "vh_db"),
 }
 
 
