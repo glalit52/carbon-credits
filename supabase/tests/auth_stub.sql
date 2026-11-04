@@ -28,6 +28,14 @@ create function auth.uid() returns uuid language sql stable as $$
 $$;
 grant execute on function auth.uid() to anon, authenticated;
 
+-- Supabase installs extensions in their own schema, out of reach of the core
+-- migration's revoke on public's functions. Without this the tests would pass
+-- against a layout no real project has.
+create schema extensions;
+create extension pgcrypto with schema extensions;
+grant usage on schema extensions to anon, authenticated;
+select format('alter database %I set search_path to "$user", public, extensions', current_database()) \gexec
+
 grant usage on schema public to anon, authenticated;
 alter default privileges in schema public grant all on tables to anon, authenticated;
 alter default privileges in schema public grant all on sequences to anon, authenticated;

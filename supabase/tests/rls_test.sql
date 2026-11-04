@@ -202,6 +202,10 @@ select test.login('00000000-0000-0000-0000-00000000000a');
 insert into public.invitations (org_id, email, role, token)
 values ((select v from test.ids where k = 'acme'), 'bilal@other.test', 'viewer', 'tok-bilal'),
        ((select v from test.ids where k = 'acme'), 'someone@else.test', 'admin', 'tok-else');
+-- As the app does it: no token given, so the column default draws one.
+insert into public.invitations (org_id, email, role)
+values ((select v from test.ids where k = 'acme'), 'drawn@acme.test', 'viewer');
+select test.expect_count($q$select * from public.invitations where email = 'drawn@acme.test' and token ~ '^[0-9a-f]{48}$'$q$, 1);
 select test.login('00000000-0000-0000-0000-00000000000b');
 select test.expect_error($q$select public.accept_invitation('tok-else')$q$, 'different email');
 select test.expect_count('select * from public.invitations', 0);
@@ -427,6 +431,34 @@ select test.expect_error($q$
   'row-level security|only be revoked');
 select test.login(null);
 select test.expect_count($q$select 1 where (public.farmer_statement((select token from link_token))->>'found')::boolean$q$, 0);
+
+-- ===========================================================================
+-- 0005: closing your own account
+-- ===========================================================================
+
+-- Nobody signed out can call it, and the last owner of an organisation cannot leave it ownerless.
+select test.expect_error('select public.delete_own_account()', 'permission denied');
+select test.login('00000000-0000-0000-0000-00000000000a');
+select test.expect_error('select public.delete_own_account()', 'only owner of Acme Carbon');
+
+-- Dev can close his account, although he issued a link that has since been revoked.
+create temp table audit_before_delete as select count(*) as n from public.audit_events;
+select test.login('00000000-0000-0000-0000-00000000000d');
+select public.delete_own_account();
+select test.login('00000000-0000-0000-0000-00000000000a');
+select test.expect_count($q$select * from public.profiles where id = '00000000-0000-0000-0000-00000000000d'$q$, 0);
+select test.expect_count($q$select * from public.memberships where user_id = '00000000-0000-0000-0000-00000000000d'$q$, 0);
+-- What he recorded stays with the organisation; the link is still revoked.
+select test.expect_count('select * from public.sensor_uploads where uploaded_by is null', 1);
+select test.expect_count($q$
+  select * from public.statement_links
+  where id = (select v from test.ids where k = 'link') and created_by is null and revoked_at is not null$q$, 1);
+-- The audit log only grew: his departure is recorded, nothing was rewritten.
+do $$ begin
+  if (select count(*) from public.audit_events) <= (select n from audit_before_delete) then
+    raise exception 'closing an account should be audited, not erase the log';
+  end if;
+end $$;
 
 reset role;
 \echo 'rls tests passed'

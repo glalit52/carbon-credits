@@ -1,13 +1,15 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-import { DEMO, SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/env";
+import { SIGNED_IN_ONLY, SIGNED_OUT_ONLY, safeNext, under } from "@/lib/auth-shared";
+import { DEMO, SUPABASE_ANON_KEY, SUPABASE_URL, siteUrl } from "@/lib/env";
 
 /**
- * Keeps the Supabase session cookie fresh and sends signed-out visitors to
- * the login page. This is the optimistic check only: every page and action
- * asks Supabase again, and the database's own policies decide what is
- * visible, so getting past this file grants nothing.
+ * Keeps the Supabase session cookie fresh, sends signed-out visitors to the
+ * login page and signed-in ones past it. This is the optimistic check only:
+ * every page and action asks Supabase again (getOrgContext / requireUser),
+ * and the database's own policies decide what is visible, so getting past
+ * this file grants nothing.
  */
 export async function proxy(request: NextRequest) {
   if (DEMO) return NextResponse.next();
@@ -28,16 +30,30 @@ export async function proxy(request: NextRequest) {
   const signedIn = Boolean(data?.claims?.sub);
   const path = request.nextUrl.pathname;
 
-  const guarded = ["/app", "/field", "/onboarding"].some((p) => path === p || path.startsWith(`${p}/`));
-  if (!signedIn && guarded) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.search = `?next=${encodeURIComponent(path + request.nextUrl.search)}`;
-    return NextResponse.redirect(url);
+  // A redirect is a new response: carry over any refreshed session cookies.
+  // Built on the configured site, not the request: behind a proxy the request
+  // URL can carry the container's own host.
+  const go = (pathname: string, search = "") => {
+    const redirect = NextResponse.redirect(new URL(pathname + search, siteUrl()));
+    for (const c of response.cookies.getAll()) redirect.cookies.set(c);
+    return redirect;
+  };
+
+  if (!signedIn && under(path, SIGNED_IN_ONLY)) {
+    return go("/login", `?next=${encodeURIComponent(path + request.nextUrl.search)}`);
   }
+  // Page loads only: a form posted from a tab opened before signing in should still get its answer.
+  if (signedIn && request.method === "GET" && under(path, SIGNED_OUT_ONLY)) {
+    const next = new URL(safeNext(request.nextUrl.searchParams.get("next")), siteUrl());
+    return go(next.pathname, next.search);
+  }
+
+  // Signed-in pages are per user: never let a shared cache keep one.
+  if (signedIn && under(path, SIGNED_IN_ONLY)) response.headers.set("Cache-Control", "private, no-store");
   return response;
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|svg|webp|ico)$).*)"],
+  // auth/v1, rest/v1 and storage/v1 are the self-hosted Supabase rewrites: they carry their own tokens.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|auth/v1|rest/v1|storage/v1|.*\\.(?:png|jpg|svg|webp|ico)$).*)"],
 };

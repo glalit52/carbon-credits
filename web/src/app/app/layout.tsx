@@ -1,4 +1,5 @@
 import { LogOut } from "lucide-react";
+import Link from "next/link";
 
 import { Logo } from "@/components/logo";
 import { MobileNav, NavLinks } from "@/components/shell/nav";
@@ -36,7 +37,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="px-2">{orgSwitcher}</div>
         <NavLinks />
         <div className="mt-auto px-2 text-xs text-muted">
-          <div className="truncate font-medium text-text">{ctx.user.name ?? ctx.user.email}</div>
+          <Link href="/app/profile" className="block truncate font-medium text-text hover:underline">
+            {ctx.user.name ?? ctx.user.email}
+          </Link>
           <div className="flex items-center justify-between">
             <span>{ROLE_LABEL[ctx.role]}</span>
             <form action={signOut}>

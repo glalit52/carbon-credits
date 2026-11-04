@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getOrgContext } from "@/lib/data";
-import { DEMO } from "@/lib/env";
+import { DEMO, siteUrl } from "@/lib/env";
 import { supabaseServer } from "@/lib/supabase/server";
 
 /**
@@ -19,5 +19,11 @@ export async function GET(request: NextRequest) {
   const supabase = await supabaseServer();
   const { data, error } = await supabase.storage.from("evidence").createSignedUrl(path, 300);
   if (error || !data) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  // Self-hosted, the link is built on the server's loopback address; the
+  // browser reaches the same path through the public site's rewrite.
+  if (process.env.SUPABASE_INTERNAL_URL) {
+    const signed = new URL(data.signedUrl);
+    return NextResponse.redirect(new URL(signed.pathname + signed.search, siteUrl()));
+  }
   return NextResponse.redirect(data.signedUrl);
 }

@@ -16,6 +16,7 @@ financial model that gates it, and `carbonstack`, the dMRV core it runs on.
 | `scripts/` | Build the dashboard dataset and page, and the web app's demo data |
 | `web/` | The web app: sign-up, organisations, farms on a map, bulk import, credits review, payments — see `web/README.md` |
 | `supabase/` | The web app's Postgres schema, row-level security, and the tests that prove it |
+| `deploy/railway/` | The Railway deployment: Postgres, self-hosted Supabase services, engine and web app |
 | `src/carbonstack/estimate.py` | A credit estimate for any farm from its polygon and crop calendar (`POST /api/estimate`) |
 | `tests/` | 494 tests, stdlib only |
 

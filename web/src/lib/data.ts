@@ -72,6 +72,57 @@ export const getUser = cache(async (): Promise<SessionUser | null> => {
   };
 });
 
+/** The signed-in user, or a trip to the login page. For pages and actions that need no organisation. */
+export async function requireUser(next?: string): Promise<SessionUser> {
+  const user = await getUser();
+  if (!user) redirect(next ? `/login?next=${encodeURIComponent(next)}` : "/login");
+  return user;
+}
+
+export type Account = SessionUser & {
+  phone: string | null;
+  created_at: string | null;
+  last_sign_in_at: string | null;
+  email_confirmed: boolean;
+  /** An address change waiting for its confirmation link to be opened. */
+  pending_email: string | null;
+  /** How they can sign in: "email" (password or link), "google", ... */
+  providers: string[];
+};
+
+/** The profile page's view of the user: auth facts plus their profile row. */
+export async function getAccount(): Promise<Account> {
+  const user = await requireUser("/app/profile");
+  if (DEMO) {
+    const m = demo.members.find((x) => x.user_id === demo.viewer)!;
+    return {
+      ...user,
+      phone: null,
+      created_at: m.created_at,
+      last_sign_in_at: null,
+      email_confirmed: true,
+      pending_email: null,
+      providers: ["email"],
+    };
+  }
+  const supabase = await supabaseServer();
+  const [{ data: auth }, { data: profile }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.from("profiles").select("full_name, phone").eq("id", user.id).maybeSingle(),
+  ]);
+  const u = auth.user;
+  return {
+    ...user,
+    name: profile?.full_name ?? user.name,
+    phone: profile?.phone ?? null,
+    created_at: u?.created_at ?? null,
+    last_sign_in_at: u?.last_sign_in_at ?? null,
+    email_confirmed: Boolean(u?.email_confirmed_at),
+    pending_email: u?.new_email ?? null,
+    providers: [...new Set((u?.identities ?? []).map((i) => i.provider))],
+  };
+}
+
 /** The user, their organisations and the one they are working in. */
 export const getOrgContext = cache(async (): Promise<OrgContext> => {
   const user = await getUser();

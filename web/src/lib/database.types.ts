@@ -485,6 +485,7 @@ export type Database = {
         Returns: string;
       };
       accept_invitation: { Args: { invite_token: string }; Returns: string };
+      delete_own_account: { Args: Record<string, never>; Returns: undefined };
       retire_credits: {
         Args: { vintage: string; credits: number; beneficiary_name: string; retire_purpose: RetirementPurpose };
         Returns: Retirement;

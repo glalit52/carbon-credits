@@ -141,3 +141,35 @@ export async function acceptInvitation(_: ActionResult, form: FormData): Promise
   await setActiveOrg(data);
   redirect("/app");
 }
+
+/** Leave an organisation from your profile. The last owner cannot: hand ownership over first. */
+export async function leaveOrganization(_: ActionResult, form: FormData): Promise<ActionResult> {
+  const refused = refuseInDemo();
+  if (refused) return refused;
+  const org_id = str(form, "org_id");
+  const ctx = await getOrgContext();
+  const mine = ctx.orgs.find((o) => o.org.id === org_id);
+  if (!org_id || !mine) return { error: "You are not a member of that organisation." };
+  const supabase = await supabaseServer();
+  if (mine.role === "owner") {
+    const { count } = await supabase
+      .from("memberships")
+      .select("user_id", { count: "exact", head: true })
+      .eq("org_id", org_id)
+      .eq("role", "owner")
+      .neq("user_id", ctx.user.id);
+    if (!count) return { error: `You are the only owner of ${mine.org.name}. Make someone else an owner first.` };
+  }
+  const { data, error } = await supabase
+    .from("memberships")
+    .delete()
+    .eq("org_id", org_id)
+    .eq("user_id", ctx.user.id)
+    .select();
+  if (error) return { error: explain(error.message) };
+  if (!data?.length) return { error: "Your role does not allow leaving; ask an admin to remove you." };
+  const store = await cookies();
+  if (store.get(ACTIVE_ORG_COOKIE)?.value === org_id) store.delete(ACTIVE_ORG_COOKIE);
+  revalidatePath("/app", "layout");
+  redirect(ctx.orgs.length > 1 ? "/app/profile?notice=left-org" : "/onboarding");
+}

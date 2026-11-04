@@ -1,0 +1,7 @@
+# `railway up` from the repository root builds the engine and migrate images
+# (deploy/railway); neither needs the web app or the research.
+/web/
+/docs/
+/dashboard/
+/tests/
+/.github/

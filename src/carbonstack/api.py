@@ -14,10 +14,12 @@ under that actor's name.
 
 from __future__ import annotations
 
+import hmac
 import json
 import math
 import os
 import re
+import socket
 import traceback
 from datetime import date
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -581,7 +583,7 @@ def make_handler(store: Store, token: str | None):
             if not token:
                 return True
             header = self.headers.get("Authorization", "")
-            return header == f"Bearer {token}"
+            return hmac.compare_digest(header.encode(), f"Bearer {token}".encode())
 
         def _respond(self, status: int, payload: dict) -> None:
             raw = json.dumps(payload, indent=2, default=str).encode()
@@ -626,10 +628,17 @@ def make_handler(store: Store, token: str | None):
     return ApiHandler
 
 
+class _IPv6Server(ThreadingHTTPServer):
+    """For a host such as "::" (Railway's private network is IPv6). On Linux
+    "::" also accepts IPv4, so one bind serves both."""
+    address_family = socket.AF_INET6
+
+
 def serve(store: Store, host: str = "127.0.0.1", port: int = 8000) -> None:
     """Run the API. Token comes from CARBONSTACK_TOKEN if set."""
     token = os.environ.get("CARBONSTACK_TOKEN")
-    httpd = ThreadingHTTPServer((host, port), make_handler(store, token))
+    server_class = _IPv6Server if ":" in host else ThreadingHTTPServer
+    httpd = server_class((host, port), make_handler(store, token))
     print(f"carbonstack api on http://{host}:{port}  db={store.path}")
     print("  auth: " + ("bearer token required" if token
                         else "OPEN — set CARBONSTACK_TOKEN to require one"))

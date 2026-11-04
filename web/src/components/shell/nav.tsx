@@ -12,6 +12,7 @@ import {
   Smartphone,
   Sprout,
   Upload,
+  UserRound,
   Users,
   Wallet,
   X,
@@ -34,6 +35,7 @@ const ITEMS = [
   { href: "/app/integrations", label: "Integrations", icon: Plug },
   { href: "/app/activity", label: "Activity", icon: Activity },
   { href: "/field", label: "Field app", icon: Smartphone },
+  { href: "/app/profile", label: "Your profile", icon: UserRound },
   { href: "/app/settings", label: "Settings", icon: Settings },
 ];
 

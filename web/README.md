@@ -24,15 +24,55 @@ write says it is the demo.
 
 1. Create a project at supabase.com.
 2. Run the migrations, in order, in the SQL editor (or `supabase db push`):
-   `supabase/migrations/20261029000001_core.sql`, `…02_storage.sql`, `…03_claims.sql`, then
-   `20261030000004_field.sql`.
+   `supabase/migrations/20261029000001_core.sql`, `…02_storage.sql`, `…03_claims.sql`,
+   `20261030000004_field.sql`, then `20261104000005_account.sql`.
 3. Authentication → URL configuration: set the site URL and add
    `https://<your-domain>/auth/callback` to the redirect URLs.
 4. Optional: Authentication → Providers → Google, for "Continue with Google".
-5. Copy `.env.example` to `.env.local` and fill in the URL and anon key.
+5. Recommended: Authentication → Email Templates. Point each link at
+   `{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=<type>&next={{ .RedirectTo }}`
+   (`type` is `signup`, `magiclink`, `recovery`, `email_change` or `invite`). The default
+   templates work too, but only in the browser that asked for the email.
+6. Copy `.env.example` to `.env.local` and fill in the URL and anon key.
 
 The first person to sign up creates an organisation and becomes its owner;
 everyone else joins through an invitation link from Settings.
+
+## Accounts and sign-in
+
+- **Sign-up** takes a name, email and password (10 to 72 characters, entered
+  twice) or Google. Supabase sends the confirmation email; the login page can
+  resend it.
+- **Sign-in**: password, an emailed link, or Google. A forgotten password is
+  reset by email. The link lands on `/reset-password`, and setting the new
+  password signs out every other device.
+- **Your profile** (`/app/profile`, or click your name in the sidebar):
+  - name and phone
+  - email address, changed only after the new address is confirmed
+  - password, which needs the current one; Google-only accounts can set one
+  - organisations you belong to, with switch and leave
+  - sign out other devices, or every device
+  - close your account
+- **Closing an account** deletes the login and profile through
+  `delete_own_account()`. Farms, credits and payments stay with their
+  organisation, and the audit log keeps what the person did. The last owner
+  of an organisation cannot close their account or leave until they make
+  someone else an owner.
+- **Sign out** ends the session on this device only.
+
+Access is checked at three layers:
+
+1. `src/proxy.ts` refreshes the session cookie on every request. It sends
+   signed-out visitors away from `/app`, `/field`, `/onboarding` and
+   `/reset-password`, and signed-in ones away from `/login`, `/signup` and
+   `/forgot`.
+2. Every page, server action and download asks Supabase again, through
+   `getOrgContext()` or `requireUser()`. Server actions are not covered by the
+   proxy, so this check is the one that counts.
+3. Postgres row-level security decides which rows come back.
+
+`next.config.ts` adds `X-Frame-Options`, `Referrer-Policy`, `nosniff` and a
+`Permissions-Policy` that allows only GPS and the camera.
 
 ## Connect the engine
 
@@ -46,8 +86,12 @@ weather from Open-Meteo for each farm (NASA POWER as fallback).
 
 ## Deploy
 
-A second Vercel project with **Root Directory = `web`**, the env vars above,
-and nothing else. The engine project at the repository root is unchanged.
+- **Railway** (live): the app, the engine, Railway Postgres, and Supabase's
+  auth, REST and storage services, self-hosted on that Postgres. See
+  `deploy/railway/README.md`.
+- **Vercel + Supabase cloud**: a second Vercel project with
+  **Root Directory = `web`**, the env vars above, and nothing else. The engine
+  project at the repository root is unchanged.
 
 ## How access works
 
