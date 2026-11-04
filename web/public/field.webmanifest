@@ -1,0 +1,10 @@
+{
+  "name": "Carbonstack Field",
+  "short_name": "Field",
+  "start_url": "/field",
+  "scope": "/field",
+  "display": "standalone",
+  "background_color": "#f6f7f4",
+  "theme_color": "#1f7a4d",
+  "icons": []
+}

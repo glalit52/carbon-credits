@@ -11,4 +11,4 @@ __pycache__/
 
 # ...except the demo database, which the read-only Vercel deployment serves.
 !dashboard/pilot.db
-public/
+/public/

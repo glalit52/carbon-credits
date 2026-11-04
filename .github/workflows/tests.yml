@@ -1,0 +1,82 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # The core has no dependencies on purpose, so there is nothing to
+      # install but the test runner itself.
+      - run: pip install pytest
+      - run: python -m pytest -q
+
+      # The dashboard is committed rather than built on deploy, so it can
+      # drift from the code that generates it. This rebuilds and compares.
+      #
+      # Not a plain `git diff`: the governance section is read back from a real
+      # database run, so it carries wall-clock timestamps, uuid4 ids and hashes
+      # over both. Those differ every run by design. The checker normalises
+      # exactly those and compares everything else strictly.
+      - name: dashboard is in sync with the code that generates it
+        run: python3 scripts/check_dashboard_fresh.py
+
+      - name: static build succeeds
+        run: bash scripts/build_static.sh
+
+      # The web app's demo organisation is engine output committed as JSON.
+      # Rebuild it and fail if the engine now says something different.
+      - name: web demo data is in sync with the engine
+        run: |
+          python3 scripts/build_web_demo.py
+          git diff --exit-code web/src/lib/demo-data.json
+
+  # Row-level security is the web app's access control, so it is tested on a
+  # real Postgres: one organisation cannot see or write another's farms, a
+  # field agent cannot promote themselves, nobody approves their own vintage.
+  database:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - run: supabase/tests/run.sh
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      # Built without Supabase settings, i.e. as the demo, which is also what
+      # a fresh Vercel deploy serves until the project is connected.
+      - run: npm run build

@@ -51,7 +51,7 @@ def centroid(ring: Ring) -> tuple[float, float]:
     pts = _closed(ring)
     if len(pts) < 4:
         n = max(len(ring), 1)
-        return (sum(p[0] for p in ring) / n, sum(p[1] for p in ring) / n)
+        return (math.fsum(p[0] for p in ring) / n, math.fsum(p[1] for p in ring) / n)
 
     a2 = cx = cy = 0.0
     for (x1, y1), (x2, y2) in zip(pts, pts[1:]):
@@ -61,7 +61,7 @@ def centroid(ring: Ring) -> tuple[float, float]:
         cy += (y1 + y2) * cross
     if a2 == 0:
         n = len(pts) - 1
-        return (sum(p[0] for p in pts[:-1]) / n, sum(p[1] for p in pts[:-1]) / n)
+        return (math.fsum(p[0] for p in pts[:-1]) / n, math.fsum(p[1] for p in pts[:-1]) / n)
     return (cx / (3 * a2), cy / (3 * a2))
 
 

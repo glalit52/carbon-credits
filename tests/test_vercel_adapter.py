@@ -75,7 +75,8 @@ def test_every_api_route_survives_the_rewrite(adapter):
         sample = (regex.pattern[1:-1]
                   .replace("(?P<project_id>[^/]+)", "IN-TNJ-01")
                   .replace("(?P<vintage_id>[^/]+)", "IN-TNJ-01:2025")
-                  .replace("(?P<payment_id>[^/]+)", "pay-1"))
+                  .replace("(?P<payment_id>[^/]+)", "pay-1")
+                  .replace("(?P<site_id>[^/]+)", "KE-NYR-01"))
         assert adapter.resolve(rewrite(sample))[0] == sample
 
 
