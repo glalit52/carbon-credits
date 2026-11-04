@@ -17,7 +17,7 @@ financial model that gates it, and `carbonstack`, the dMRV core it runs on.
 | `web/` | The web app: sign-up, organisations, farms on a map, bulk import, credits review, payments — see `web/README.md` |
 | `supabase/` | The web app's Postgres schema, row-level security, and the tests that prove it |
 | `src/carbonstack/estimate.py` | A credit estimate for any farm from its polygon and crop calendar (`POST /api/estimate`) |
-| `tests/` | 456 tests, stdlib only |
+| `tests/` | 494 tests, stdlib only |
 
 ## The two numbers that shape everything
 
@@ -44,7 +44,7 @@ python3 model/carbon_model.py            # cashflow, peak funding need, sensitiv
 
 ```bash
 pip install -e ".[dev]"
-python -m pytest                         # 433 tests
+python -m pytest                         # 494 tests
 
 python -m carbonstack demo               # both tracks against synthetic monitoring
 python -m carbonstack export estate --out project.json
@@ -367,6 +367,23 @@ Each of these blocked validation and is now enforced:
 
 These are reported apart from per-plot findings when they block the whole
 project at once, so they do not bury the rest.
+
+### Opting in, so an upgrade never changes an answer
+
+The two plot-level gates above -- carbon rights and baseline timing -- exclude
+a plot from the creditable area, so switching them on changes how many
+credits an existing project carries. They are therefore a recorded choice per
+project, `eligibility_rules`, rather than a side effect of upgrading:
+
+| `eligibility_rules` | A plot is excluded when it lacks |
+|---|---|
+| `core` (default) | documented tenure, or recorded farmer consent -- the original rules |
+| `registry` | the above, plus a carbon rights agreement and a baseline captured before the practice changed |
+
+Projects in a database written before the column existed come back as `core`.
+Rice likewise still enrols under VM0042 by default; `carbonstack enroll vallam
+--methodology VM0051` selects the rice methodology described above, which is
+what the dashboard and the web demo use.
 
 ### Cost per issued tonne replaces cost per verified hectare
 

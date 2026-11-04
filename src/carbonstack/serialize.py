@@ -13,8 +13,8 @@ from datetime import date
 from pathlib import Path
 
 from .domain import (
-    CarbonRights, Enrollment, Farmer, Observation, Plot, Project,
-    RiceEcosystem, StakeholderConsultation, TenureBasis, TrackKind,
+    CarbonRights, EligibilityRules, Enrollment, Farmer, Observation, Plot,
+    Project, RiceEcosystem, StakeholderConsultation, TenureBasis, TrackKind,
     WaterControl,
 )
 
@@ -36,6 +36,7 @@ def to_dict(project: Project) -> dict:
         "start_date": _s(project.start_date),
         "crediting_period_yrs": project.crediting_period_yrs,
         "methodology_version": project.methodology_version,
+        "eligibility_rules": project.eligibility_rules.value,
         "consultation": (
             {"held_on": _s(project.consultation.held_on),
              "record_reference": project.consultation.record_reference,
@@ -94,6 +95,7 @@ def from_dict(payload: dict) -> Project:
         start_date=_d(payload["start_date"]),
         crediting_period_yrs=payload.get("crediting_period_yrs", 30),
         methodology_version=payload.get("methodology_version", ""),
+        eligibility_rules=EligibilityRules(payload.get("eligibility_rules", "core")),
         consultation=(
             StakeholderConsultation(
                 held_on=_d(payload["consultation"]["held_on"]),

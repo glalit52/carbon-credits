@@ -27,8 +27,8 @@ from pathlib import Path
 from typing import Any, Iterator
 
 from ..domain import (
-    CarbonRights, Enrollment, Farmer, Observation, Plot, Project,
-    RiceEcosystem, StakeholderConsultation, TenureBasis, TrackKind,
+    CarbonRights, EligibilityRules, Enrollment, Farmer, Observation, Plot,
+    Project, RiceEcosystem, StakeholderConsultation, TenureBasis, TrackKind,
     WaterControl,
 )
 from .schema import migrate
@@ -170,12 +170,13 @@ class Store:
             conn.execute(
                 "INSERT OR REPLACE INTO projects (id, name, track, country,"
                 " start_date, crediting_period_yrs, methodology_id, registry,"
-                " registry_ref, created_at, methodology_version, consultation_json)"
-                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                " registry_ref, created_at, methodology_version, consultation_json,"
+                " eligibility_rules) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (project.id, project.name, project.track.value, project.country,
                  _s(project.start_date), project.crediting_period_yrs,
                  methodology_id, registry, registry_ref, _now(),
-                 project.methodology_version, consultation),
+                 project.methodology_version, consultation,
+                 project.eligibility_rules.value),
             )
             for f in project.farmers.values():
                 rights = None
@@ -243,6 +244,7 @@ class Store:
             crediting_period_yrs=row["crediting_period_yrs"],
             methodology_version=row["methodology_version"] or "",
             consultation=consultation,
+            eligibility_rules=EligibilityRules(row["eligibility_rules"]),
         )
         for r in self.conn.execute(
                 "SELECT * FROM farmers WHERE project_id = ? ORDER BY id", (project_id,)):

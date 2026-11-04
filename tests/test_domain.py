@@ -3,8 +3,8 @@ from datetime import date
 import pytest
 
 from carbonstack.domain import (
-    CarbonRights, Enrollment, Farmer, Observation, Plot, Project, TenureBasis,
-    TrackKind,
+    CarbonRights, EligibilityRules, Enrollment, Farmer, Observation, Plot,
+    Project, TenureBasis, TrackKind,
 )
 
 
@@ -148,7 +148,7 @@ def test_data_consent_is_not_carbon_rights():
     who owns the carbon."""
     from carbonstack.domain import CarbonRights
 
-    p = make_project()
+    p = make_project(eligibility_rules=EligibilityRules.REGISTRY)
     f = p.add_farmer(Farmer(id="F1", name="A", village="V", district="D",
                             state="S", consent_on=date(2025, 6, 1),
                             consent_reference="C/1"))
@@ -185,7 +185,7 @@ def test_an_expired_carbon_rights_agreement_blocks(tmp_path):
 def test_a_practice_adopted_before_the_baseline_breaks_additionality():
     """The eligible pool shrinks every season this is not captured: a farmer
     already practising AWD has no counterfactual left to measure."""
-    p = make_project()
+    p = make_project(eligibility_rules=EligibilityRules.REGISTRY)
     f = p.add_farmer(consented())
     plot = Plot(id="PL", farmer_id=f.id, boundary=square(80.0, 16.3),
                 tenure=TenureBasis.OWNED_TITLE, tenure_reference="RoR/1")
@@ -199,7 +199,7 @@ def test_a_practice_adopted_before_the_baseline_breaks_additionality():
 
 
 def test_a_missing_baseline_date_blocks_on_its_own():
-    p = make_project()
+    p = make_project(eligibility_rules=EligibilityRules.REGISTRY)
     f = p.add_farmer(consented())
     plot = Plot(id="PL", farmer_id=f.id, boundary=square(80.0, 16.3),
                 tenure=TenureBasis.OWNED_TITLE, tenure_reference="RoR/1")
@@ -208,6 +208,28 @@ def test_a_missing_baseline_date_blocks_on_its_own():
                         enrolled_on=date(2025, 7, 15), practice="awd"))
     assert any("baseline capture date" in m
                for m in p.eligibility_issues()[plot.id])
+
+
+def test_core_rules_are_the_default_and_keep_the_original_gates():
+    """A project that never opted in is held to the original gates only --
+    tenure and consent -- exactly as before the registry records existed."""
+    p = make_project()
+    assert p.eligibility_rules is EligibilityRules.CORE
+    f = p.add_farmer(Farmer(id="F1", name="A", village="V", district="D",
+                            state="S", consent_on=date(2025, 6, 1),
+                            consent_reference="C/1"))
+    plot = Plot(id="PL", farmer_id=f.id, boundary=square(80.0, 16.3),
+                tenure=TenureBasis.OWNED_TITLE, tenure_reference="RoR/1")
+    p.add_plot(plot)
+    p.enroll(Enrollment(plot_id=plot.id, project_id=p.id,
+                        enrolled_on=date(2025, 7, 15), practice="awd"))
+    assert p.eligibility_issues() == {}
+    assert p.creditable_plot_ids() == {plot.id}
+
+    p.eligibility_rules = EligibilityRules.REGISTRY
+    problems = p.eligibility_issues()[plot.id]
+    assert "no carbon rights agreement on file" in problems
+    assert "no baseline capture date recorded" in problems
 
 
 def test_programme_issues_are_reported_once_not_per_plot():

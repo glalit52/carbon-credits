@@ -116,6 +116,25 @@ class StakeholderConsultation:
         return problems
 
 
+class EligibilityRules(str, Enum):
+    """Which plot-level gates exclude a plot from the creditable area.
+
+    CORE is the original rule set: documented tenure and recorded farmer
+    consent. It is the default, so projects created before the registry
+    records existed -- and every database written by those versions -- keep
+    exactly the eligibility they were quantified under.
+
+    REGISTRY adds the records the September 2026 methodology review found a
+    registry asks for: a carbon rights agreement per farmer, and a baseline
+    captured before the practice changed. A project opts in explicitly, so
+    tightening a gate is a decision recorded on the project, never a side
+    effect of upgrading the software.
+    """
+
+    CORE = "core"
+    REGISTRY = "registry"
+
+
 class TenureBasis(str, Enum):
     """How the project's right to the carbon is established.
 
@@ -285,6 +304,7 @@ class Project:
     it was quantified under cannot be reproduced or defended."""
 
     consultation: StakeholderConsultation | None = None
+    eligibility_rules: EligibilityRules = EligibilityRules.CORE
     farmers: dict[str, Farmer] = field(default_factory=dict)
     plots: dict[str, Plot] = field(default_factory=dict)
     enrollments: list[Enrollment] = field(default_factory=list)
@@ -364,8 +384,10 @@ class Project:
             else:
                 if not farmer.consent_valid:
                     problems.append("farmer consent missing or unreferenced")
-                problems += farmer.carbon_rights_issues()
-            problems += by_plot[pid].additionality_issues()
+                if self.eligibility_rules is EligibilityRules.REGISTRY:
+                    problems += farmer.carbon_rights_issues()
+            if self.eligibility_rules is EligibilityRules.REGISTRY:
+                problems += by_plot[pid].additionality_issues()
             if problems:
                 report[pid] = problems
         return report

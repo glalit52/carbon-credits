@@ -282,6 +282,12 @@ MIGRATIONS: list[tuple[int, str]] = [
     );
     CREATE INDEX idx_tree_inv_project ON tree_inventories(project_id, measured_on);
     """),
+    (6, """
+    -- Which eligibility gates a project is held to. Existing rows default to
+    -- 'core', the rules they were quantified under; the stricter 'registry'
+    -- gates are opted into per project, never applied by an upgrade.
+    ALTER TABLE projects ADD COLUMN eligibility_rules TEXT NOT NULL DEFAULT 'core';
+    """),
 ]
 
 LATEST = max(v for v, _ in MIGRATIONS)

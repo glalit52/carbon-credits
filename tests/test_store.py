@@ -37,6 +37,43 @@ def test_project_round_trips_with_everything_that_affects_credits(store):
            [e.practice for e in original.enrollments]
 
 
+def test_eligibility_rules_round_trip(store):
+    from carbonstack.domain import EligibilityRules
+
+    p = as_project(NYERI)
+    p.eligibility_rules = EligibilityRules.REGISTRY
+    store.save_project(p, methodology_id="VM0047")
+    assert store.load_project(p.id).eligibility_rules is EligibilityRules.REGISTRY
+
+
+def test_a_database_from_before_the_rules_column_keeps_the_core_rules(tmp_path):
+    """Upgrading the software must not tighten the gates on projects already
+    stored: rows written before migration 6 come back under the core rules."""
+    import sqlite3
+
+    from carbonstack.domain import EligibilityRules
+    from carbonstack.store.schema import MIGRATIONS
+
+    path = tmp_path / "old.db"
+    conn = sqlite3.connect(path)
+    conn.execute("CREATE TABLE schema_version (version INTEGER NOT NULL)")
+    for version, ddl in sorted(MIGRATIONS):
+        if version > 5:
+            break
+        conn.executescript(ddl)
+        conn.execute("INSERT INTO schema_version (version) VALUES (?)", (version,))
+    conn.execute(
+        "INSERT INTO projects (id, name, track, country, start_date,"
+        " crediting_period_yrs, methodology_id, registry, registry_ref, created_at)"
+        " VALUES ('OLD', 'old', 'agroforestry', 'IN', '2025-01-01', 30, 'VM0047',"
+        " '', '', '2025-01-01T00:00:00+00:00')")
+    conn.commit()
+    conn.close()
+
+    with Store(path) as s:
+        assert s.load_project("OLD").eligibility_rules is EligibilityRules.CORE
+
+
 def test_loading_an_unknown_project_is_refused(store):
     with pytest.raises(StoreError):
         store.load_project("nope")

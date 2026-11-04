@@ -22,6 +22,21 @@ def test_round_trip_preserves_everything_that_affects_credits(tmp_path):
            {p.fingerprint for p in original.plots.values()}
 
 
+def test_eligibility_rules_survive_json_and_default_to_core(tmp_path):
+    from carbonstack.domain import EligibilityRules
+
+    original = scenario.demo_estate(n_farmers=2)
+    original.eligibility_rules = EligibilityRules.REGISTRY
+    path = tmp_path / "p.json"
+    serialize.save(original, path)
+    assert serialize.load(path).eligibility_rules is EligibilityRules.REGISTRY
+
+    payload = json.loads(path.read_text())
+    del payload["eligibility_rules"]             # a file written before the field
+    path.write_text(json.dumps(payload))
+    assert serialize.load(path).eligibility_rules is EligibilityRules.CORE
+
+
 def test_saved_document_is_readable_by_a_human(tmp_path):
     """A verifier opens this file in a text editor. Derived values are written
     alongside the raw ones so nothing has to be recomputed to be checked."""
@@ -101,13 +116,15 @@ def test_cli_refuses_a_write_without_an_actor(tmp_path, capsys):
     assert "actor" in str(exc.value)
 
 
-def test_rice_enrols_under_vm0051_not_vm0042(tmp_path, capsys):
-    """Two independent methodology reviews flagged VM0042 as the wrong choice
-    for paddy. VM0051 is written for rice, replaces CDM AMS-III.AU, and is
-    CORSIA eligible."""
-    db = str(tmp_path / "t.db")
-    assert main(["--db", db, "enroll", "vallam"]) == 0
-    assert "VM0051" in capsys.readouterr().out
+def test_rice_enrols_under_vm0042_by_default_and_vm0051_on_request(tmp_path, capsys):
+    """The default is unchanged, so an existing workflow quantifies as it
+    always has. VM0051 -- written for rice, replacing CDM AMS-III.AU, CORSIA
+    eligible -- is an explicit choice."""
+    assert main(["--db", str(tmp_path / "a.db"), "enroll", "vallam"]) == 0
+    assert "methodology VM0042" in capsys.readouterr().out
+    assert main(["--db", str(tmp_path / "b.db"), "enroll", "vallam",
+                 "--methodology", "VM0051"]) == 0
+    assert "methodology VM0051" in capsys.readouterr().out
 
 
 def test_no_buffer_is_withheld_on_avoided_methane(tmp_path, capsys):
@@ -115,13 +132,14 @@ def test_no_buffer_is_withheld_on_avoided_methane(tmp_path, capsys):
     non-permanence buffer does not apply. Worth about a fifth of the credits
     against the ARR pathway, and the practical difference VM0051 makes."""
     db = str(tmp_path / "t.db")
-    main(["--db", db, "enroll", "vallam"])
+    main(["--db", db, "enroll", "vallam", "--methodology", "VM0051"])
     main(["--db", db, "monitor", "IN-TNJ-01", "--to", "2026-09-11"])
     capsys.readouterr()
     main(["--db", db, "quantify", "IN-TNJ-01", "--year", "2025",
           "--tier", "3", "--actor", "lalit"])
     out = capsys.readouterr().out
-    assert "buffer pool" in out and "(0%)" in out
+    buffer_line = next(l for l in out.splitlines() if "buffer pool" in l)
+    assert "(0%)" in buffer_line
 
 
 def test_cli_stack_audit_reports_a_clean_project(tmp_path, capsys):
@@ -206,8 +224,20 @@ def test_cli_explain_reads_the_stored_derivation(tmp_path, capsys):
 
     assert main(["--db", db, "explain", "IN-TNJ-01:2025"]) == 0
     out = capsys.readouterr().out
-    # Rice quantifies under VM0051, the purpose-built rice methodology, not
-    # VM0042 as the first prototype did.
+    assert "VM0042 abatement" in out
+    assert "source:" in out
+
+
+def test_cli_explain_under_vm0051_when_enrolled_under_it(tmp_path, capsys):
+    db = str(tmp_path / "t.db")
+    main(["--db", db, "enroll", "vallam", "--methodology", "VM0051"])
+    main(["--db", db, "monitor", "IN-TNJ-01", "--to", "2026-09-11"])
+    main(["--db", db, "quantify", "IN-TNJ-01", "--year", "2025",
+          "--actor", "lalit"])
+    capsys.readouterr()
+
+    assert main(["--db", db, "explain", "IN-TNJ-01:2025"]) == 0
+    out = capsys.readouterr().out
     assert "VM0051 abatement" in out
     assert "source:" in out
 

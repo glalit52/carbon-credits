@@ -116,11 +116,12 @@ def cmd_init(args) -> int:
 def cmd_enroll(args) -> int:
     site = _site(args.site)
     project = sites.as_project(site)
-    # Rice goes to VM0051, the purpose-built rice methodology, not VM0042.
-    # VM0042 covers rice but is an agricultural land management methodology;
-    # VM0051 replaces CDM AMS-III.AU and is CORSIA eligible.
-    meth = {"rice": "VM0051", "cropland": "VM0042"}.get(
-        site.track.value, "VM0047")
+    # Rice defaults to VM0042, as it always has, so an existing workflow
+    # quantifies exactly as before. VM0051 -- the purpose-built rice
+    # methodology, replacing CDM AMS-III.AU and CORSIA eligible -- is chosen
+    # with --methodology VM0051; the dashboard and the web demo use it.
+    meth = args.methodology or (
+        "VM0042" if site.track.value in ("rice", "cropland") else "VM0047")
     with _store(args) as store:
         store.save_project(project, methodology_id=meth)
         print(f"enrolled {project.id} — {project.name}")
@@ -1196,6 +1197,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("enroll", help="load a built-in pilot site", parents=[actor_opt])
     p.add_argument("site")
+    p.add_argument("--methodology", choices=["VM0042", "VM0047", "VM0051"],
+                   help="override the default (VM0042 for rice and cropland, "
+                        "VM0047 for trees)")
     p.set_defaults(func=cmd_enroll)
 
     p = sub.add_parser("import", help="load a project from JSON", parents=[actor_opt])
