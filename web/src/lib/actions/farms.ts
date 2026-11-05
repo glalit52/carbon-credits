@@ -17,6 +17,7 @@ import type {
   WaterControl,
 } from "@/lib/database.types";
 import { getOrgContext } from "@/lib/data";
+import { demo } from "@/lib/demo";
 import { EngineError, estimateRequest, runEstimate } from "@/lib/engine";
 import { measure, validate } from "@/lib/geo";
 import { parseSeasons } from "@/lib/import";
@@ -114,12 +115,56 @@ async function farmerFor(
 }
 
 export async function createFarm(_: ActionResult, form: FormData): Promise<ActionResult> {
-  const refused = refuseInDemo();
-  if (refused) return refused;
   const ctx = await getOrgContext();
   if (!can.enrol(ctx.role)) return { error: "Your role cannot enrol farms." };
   const { fields, error } = farmFields(form);
   if (!fields) return { error };
+
+  if (ctx.demo) {
+    const farmId = crypto.randomUUID();
+    let farmerId = str(form, "farmer_id");
+    if (farmerId === "new") {
+      farmerId = crypto.randomUUID();
+      const newFarmerName = str(form, "new_farmer_name") || "New Farmer";
+      demo.farmers.unshift({
+        id: farmerId,
+        org_id: ctx.org.id,
+        name: newFarmerName,
+        phone: str(form, "new_farmer_phone"),
+        village: str(form, "new_farmer_village"),
+        district: null,
+        state: null,
+        country: null,
+        external_ref: null,
+        consent_on: str(form, "consent_on") || new Date().toISOString().slice(0, 10),
+        consent_reference: str(form, "consent_reference") || "CONSENT-" + Date.now().toString(36).toUpperCase(),
+        carbon_rights_ref: null,
+        carbon_rights_signed_on: null,
+        payout_method: "bank",
+        payout_reference: null,
+        language: "en",
+        created_at: new Date().toISOString(),
+        created_by: ctx.user.id,
+      });
+    }
+    const newFarm: Farm = {
+      ...fields,
+      id: farmId,
+      org_id: ctx.org.id,
+      farmer_id: farmerId,
+      source: (str(form, "source") as FarmSource | null) ?? "drawn",
+      status: "enrolled",
+      created_at: new Date().toISOString(),
+      created_by: ctx.user.id,
+    };
+    demo.farms.unshift(newFarm);
+    revalidatePath("/app");
+    revalidatePath("/app/farms");
+    redirect(`/app/farms/${farmId}?created=1`);
+  }
+
+  const refused = refuseInDemo();
+  if (refused) return refused;
 
   const supabase = await supabaseServer();
   const farmer = await farmerFor(form, supabase, ctx.org.id, ctx.user.id);
@@ -142,14 +187,52 @@ export async function createFarm(_: ActionResult, form: FormData): Promise<Actio
 }
 
 export async function updateFarm(_: ActionResult, form: FormData): Promise<ActionResult> {
-  const refused = refuseInDemo();
-  if (refused) return refused;
   const ctx = await getOrgContext();
   if (!can.enrol(ctx.role)) return { error: "Your role cannot edit farms." };
   const id = str(form, "id");
   if (!id) return { error: "Missing farm." };
   const { fields, error } = farmFields(form);
   if (!fields) return { error };
+
+  if (ctx.demo) {
+    const existing = demo.farms.find((f) => f.id === id);
+    if (!existing) return { error: "Farm not found." };
+    let farmerId = str(form, "farmer_id");
+    if (farmerId === "new") {
+      farmerId = crypto.randomUUID();
+      const newFarmerName = str(form, "new_farmer_name") || "New Farmer";
+      demo.farmers.unshift({
+        id: farmerId,
+        org_id: ctx.org.id,
+        name: newFarmerName,
+        phone: str(form, "new_farmer_phone"),
+        village: str(form, "new_farmer_village"),
+        district: null,
+        state: null,
+        country: null,
+        external_ref: null,
+        consent_on: str(form, "consent_on") || new Date().toISOString().slice(0, 10),
+        consent_reference: str(form, "consent_reference") || "CONSENT-" + Date.now().toString(36).toUpperCase(),
+        carbon_rights_ref: null,
+        carbon_rights_signed_on: null,
+        payout_method: "bank",
+        payout_reference: null,
+        language: "en",
+        created_at: new Date().toISOString(),
+        created_by: ctx.user.id,
+      });
+    }
+    Object.assign(existing, fields, {
+      farmer_id: farmerId || existing.farmer_id,
+    });
+    revalidatePath("/app");
+    revalidatePath("/app/farms");
+    revalidatePath(`/app/farms/${id}`);
+    redirect(`/app/farms/${id}?updated=1`);
+  }
+
+  const refused = refuseInDemo();
+  if (refused) return refused;
 
   const supabase = await supabaseServer();
   const { data: before } = await supabase
