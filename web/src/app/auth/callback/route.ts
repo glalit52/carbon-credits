@@ -15,9 +15,10 @@ import { supabaseServer } from "@/lib/supabase/server";
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
-  // Behind Railway's proxy the request's own origin is the container's
-  // (https://localhost:8080), so every redirect goes to the configured site.
-  const origin = siteUrl().replace(/\/$/, "");
+  // Behind Railway's proxy, respect x-forwarded-host so any valid domain stays on itself.
+  const host = request.headers.get("x-forwarded-host");
+  const proto = request.headers.get("x-forwarded-proto") || "https";
+  const origin = host ? `${proto}://${host}` : siteUrl().replace(/\/$/, "");
   const failed = (message: string) =>
     NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(message)}`);
 
