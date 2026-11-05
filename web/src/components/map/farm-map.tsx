@@ -111,12 +111,26 @@ export function FarmMap({
             "circle-stroke-width": 1.5,
           },
         });
-        const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 8 });
+        const popup = new maplibregl.Popup({
+          closeButton: false,
+          closeOnClick: false,
+          offset: 10,
+          className: "farm-map-popup",
+        });
         for (const layer of ["farms-fill", "farms-dot"]) {
           m.on("mousemove", layer, (e) => {
             m.getCanvas().style.cursor = linkBase ? "pointer" : "";
             const p = e.features?.[0]?.properties;
-            if (p) popup.setLngLat(e.lngLat).setText(`${p.name} · ${Number(p.area).toFixed(2)} ha`).addTo(m);
+            if (p) {
+              const area = Number(p.area);
+              const areaStr = isNaN(area) ? "" : ` · ${area.toFixed(2)} ha`;
+              popup
+                .setLngLat(e.lngLat)
+                .setHTML(
+                  `<div class="farm-popup-content"><span class="farm-popup-name">${p.name}</span><span class="farm-popup-area">${areaStr}</span></div>`,
+                )
+                .addTo(m);
+            }
           });
           m.on("mouseleave", layer, () => {
             m.getCanvas().style.cursor = "";
