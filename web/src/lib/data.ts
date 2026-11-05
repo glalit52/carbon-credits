@@ -35,6 +35,7 @@ import type {
 } from "@/lib/database.types";
 import { demo } from "@/lib/demo";
 import { DEMO } from "@/lib/env";
+import { findMockUser, MOCK_USER_COOKIE } from "@/lib/mock-creds";
 import { supabaseServer } from "@/lib/supabase/server";
 
 // Every read the pages make, in one place. In demo mode it serves the
@@ -58,6 +59,13 @@ export const getUser = cache(async (): Promise<SessionUser | null> => {
   // Per-request, always: a page about one user's organisation must never be
   // prerendered and served to another, whatever the build-time settings were.
   await connection();
+  const mockCookie = (await cookies()).get(MOCK_USER_COOKIE)?.value;
+  if (mockCookie) {
+    const mock = findMockUser(mockCookie);
+    if (mock) {
+      return { id: `mock-${mock.role}-${mock.email}`, email: mock.email, name: mock.name };
+    }
+  }
   if (DEMO) {
     const m = demo.members.find((x) => x.user_id === demo.viewer)!;
     return { id: m.user_id, email: m.email, name: m.full_name };
@@ -93,6 +101,19 @@ export type Account = SessionUser & {
 /** The profile page's view of the user: auth facts plus their profile row. */
 export async function getAccount(): Promise<Account> {
   const user = await requireUser("/app/profile");
+  const mockCookie = (await cookies()).get(MOCK_USER_COOKIE)?.value;
+  const mock = findMockUser(mockCookie ?? user.email);
+  if (mock) {
+    return {
+      ...user,
+      phone: "+91 98401 23456",
+      created_at: "2025-05-02T10:00:00+00:00",
+      last_sign_in_at: new Date().toISOString(),
+      email_confirmed: true,
+      pending_email: null,
+      providers: ["email"],
+    };
+  }
   if (DEMO) {
     const m = demo.members.find((x) => x.user_id === demo.viewer)!;
     return {
@@ -127,13 +148,16 @@ export async function getAccount(): Promise<Account> {
 export const getOrgContext = cache(async (): Promise<OrgContext> => {
   const user = await getUser();
   if (!user) redirect("/login");
-  if (DEMO) {
+  const mockCookie = (await cookies()).get(MOCK_USER_COOKIE)?.value;
+  const mock = findMockUser(mockCookie ?? user.email);
+  if (mock || DEMO) {
+    const role: Role = mock?.role ?? "owner";
     return {
       user,
       org: demo.organization,
-      role: "owner",
-      orgs: [{ org: demo.organization, role: "owner" }],
-      demo: true,
+      role,
+      orgs: [{ org: demo.organization, role }],
+      demo: Boolean(DEMO && !mock),
     };
   }
   const supabase = await supabaseServer();

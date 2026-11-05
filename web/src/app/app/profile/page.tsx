@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 
 import { ActionForm } from "@/components/action-form";
 import { PasswordInput } from "@/components/password-input";
+import { ProfileNav } from "@/components/profile/profile-nav";
 import { Badge, Button, ButtonLink, Card, CardHeader, Field, Input, Notice, PageHeader } from "@/components/ui";
 import {
   changeEmail,
@@ -42,6 +43,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   return (
     <>
       <PageHeader title="Your profile" description="How you sign in, what your teammates see, and the organisations you belong to." />
+      <ProfileNav />
       {said && (
         <div className="mb-6">
           <Notice tone="brand">{said}</Notice>

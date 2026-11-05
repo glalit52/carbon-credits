@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { isEmail, passwordProblem, safeNext } from "@/lib/auth-shared";
 import { ACTIVE_ORG_COOKIE, getAccount, requireUser } from "@/lib/data";
 import { siteUrl } from "@/lib/env";
+import { findMockUser, MOCK_USER_COOKIE, MOCK_USERS, verifyMockCredentials } from "@/lib/mock-creds";
 import { supabaseServer } from "@/lib/supabase/server";
 
 import { type ActionResult, explain, refuseInDemo, str } from "./result";
@@ -28,11 +29,24 @@ function mailFailure(error: { status?: number } | null): ActionResult | null {
 }
 
 export async function signIn(_: ActionResult, form: FormData): Promise<ActionResult> {
-  const refused = refuseInDemo();
-  if (refused) return refused;
   const email = str(form, "email");
   const password = str(form, "password");
   if (!email || !password) return { error: "Enter your email and password." };
+
+  // Check mock credentials first - works seamlessly in demo and production!
+  const mock = verifyMockCredentials(email, password);
+  if (mock) {
+    (await cookies()).set(MOCK_USER_COOKIE, mock.email, {
+      path: "/",
+      maxAge: 30 * 86400,
+      sameSite: "lax",
+      httpOnly: true,
+    });
+    redirect(safeNext(str(form, "next")));
+  }
+
+  const refused = refuseInDemo();
+  if (refused) return refused;
   const supabase = await supabaseServer();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
@@ -111,8 +125,23 @@ export async function signInWithGoogle(form: FormData): Promise<void> {
   redirect(data.url);
 }
 
+/** 1-click login action using production mock credentials. */
+export async function quickMockSignIn(form: FormData): Promise<void> {
+  const email = str(form, "email") || "admin@carbonstack.io";
+  const next = safeNext(str(form, "next"));
+  const mockUser = findMockUser(email) ?? MOCK_USERS[0];
+  (await cookies()).set(MOCK_USER_COOKIE, mockUser.email, {
+    path: "/",
+    maxAge: 30 * 86400,
+    sameSite: "lax",
+    httpOnly: true,
+  });
+  redirect(next);
+}
+
 /** Sign out here only. supabase-js defaults to every device, which a shared field phone should not do to a laptop. */
 export async function signOut(): Promise<void> {
+  (await cookies()).delete(MOCK_USER_COOKIE);
   if (!refuseInDemo()) {
     const supabase = await supabaseServer();
     await supabase.auth.signOut({ scope: "local" });
@@ -123,7 +152,11 @@ export async function signOut(): Promise<void> {
 
 /** For a lost phone: ends every session, this one included. */
 export async function signOutEverywhere(): Promise<void> {
-  if (refuseInDemo()) return;
+  (await cookies()).delete(MOCK_USER_COOKIE);
+  if (refuseInDemo()) {
+    redirect("/login?notice=signed-out-everywhere");
+    return;
+  }
   const supabase = await supabaseServer();
   await supabase.auth.signOut({ scope: "global" });
   (await cookies()).delete(ACTIVE_ORG_COOKIE);
