@@ -138,6 +138,20 @@ export function BoundaryEditor({
     [],
   );
 
+  useEffect(() => {
+    if (!paste.trim()) return;
+    try {
+      const [p] = parseLatLonList(paste);
+      if (p?.geometry) {
+        setGeometry(p.geometry);
+        setMessage(null);
+        showOnMap(p.geometry);
+      }
+    } catch {
+      // User is still typing or pasting, wait for complete input
+    }
+  }, [paste, showOnMap]);
+
   function accept(g: PolygonGeometry, note?: string) {
     setGeometry(g);
     setMessage(note ?? null);
@@ -289,9 +303,11 @@ export function BoundaryEditor({
       {tab === "paste" && (
         <div className="flex flex-col gap-2">
           <Textarea
+            name="pasted_points"
             rows={5}
             value={paste}
             onChange={(e) => setPaste(e.target.value)}
+            onBlur={usePasted}
             placeholder={"One corner per line, latitude first:\n10.7867, 79.1378\n10.7868, 79.1398\n10.7878, 79.1396"}
           />
           <Button type="button" variant="secondary" onClick={usePasted} disabled={!paste.trim()}>

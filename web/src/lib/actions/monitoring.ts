@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 
 import type { Json } from "@/lib/database.types";
-import { getFarm, getOrgContext, listEstimates } from "@/lib/data";
+import { getFarm, getOrgContext, isDemoOrg, listEstimates } from "@/lib/data";
+import { demo } from "@/lib/demo";
 import { EngineError, type EngineResult, runSensors } from "@/lib/engine";
 import { can } from "@/lib/roles";
 import { supabaseServer } from "@/lib/supabase/server";
@@ -44,6 +45,28 @@ export async function uploadLogger(_: ActionResult, form: FormData): Promise<Act
     return { error: e instanceof EngineError ? e.message : `Could not read the file: ${(e as Error).message}` };
   }
   const days = summary.days.map((d) => d.day).sort();
+
+  if (ctx.demo || isDemoOrg(ctx.org.id) || ctx.user.id.startsWith("mock-")) {
+    demo.sensor_uploads.unshift({
+      id: crypto.randomUUID(),
+      org_id: ctx.org.id,
+      farm_id: farm.id,
+      file_name: file.name.slice(0, 200),
+      file_path: `demo/evidence/loggers/${Date.now()}-${file.name}`,
+      readings: summary.readings,
+      first_day: days[0] ?? null,
+      last_day: days.at(-1) ?? null,
+      summary: summary as unknown as Json,
+      uploaded_by: ctx.user.id,
+      created_at: new Date().toISOString(),
+    });
+    revalidatePath(`/app/farms/${farm.id}/monitoring`);
+    const devices = summary.records.length;
+    const events = summary.records.reduce((n, r) => n + r.dry_downs.length, 0);
+    return {
+      message: `${summary.readings.toLocaleString()} readings from ${devices} logger${devices === 1 ? "" : "s"}; ${events} measured dry-down${events === 1 ? "" : "s"}.`,
+    };
+  }
 
   const supabase = await supabaseServer();
   const safe = file.name.replace(/[^\w.-]+/g, "_").slice(-80);

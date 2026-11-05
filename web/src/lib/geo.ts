@@ -162,19 +162,62 @@ export function parseWKT(text: string): ParsedBoundary[] {
  * tabs between the two numbers.
  */
 export function parseLatLonList(text: string): ParsedBoundary[] {
-  const pts = text
-    .split(/\r?\n|;/)
-    .map((l) => l.trim())
-    .filter((l) => l && !/^[a-z]/i.test(l))
-    .map((l) => {
-      const nums = l.match(WKT_NUMBER)?.map(Number) ?? [];
-      if (nums.length < 2) throw new BoundaryError(`"${l}" is not a "lat, lon" pair`);
-      const [lat, lon] = nums;
-      if (Math.abs(lat) > 90) {
-        throw new BoundaryError(`latitude ${lat} is out of range; enter points as "lat, lon"`);
+  const clean = text.trim();
+  if (clean.startsWith("{") || clean.startsWith("[")) {
+    try {
+      if (clean.startsWith("{") && (clean.includes('"type"') || clean.includes("'type'"))) {
+        return parseGeoJSON(clean);
       }
-      return [lon, lat];
-    });
+      const parsed = JSON.parse(clean);
+      if (Array.isArray(parsed)) {
+        const pts: number[][] = parsed.map((item: unknown) => {
+          if (Array.isArray(item) && item.length >= 2) {
+            let [a, b] = [Number(item[0]), Number(item[1])];
+            if (Math.abs(a) > 90 && Math.abs(b) <= 90) return [a, b];
+            if (Math.abs(b) > 90 && Math.abs(a) <= 90) return [b, a];
+            return Math.abs(a) <= 90 && Math.abs(b) <= 180 ? [b, a] : [a, b];
+          }
+          if (item && typeof item === "object") {
+            const obj = item as Record<string, unknown>;
+            const lat = Number(obj.lat ?? obj.latitude);
+            const lon = Number(obj.lon ?? obj.lng ?? obj.longitude);
+            if (Number.isFinite(lat) && Number.isFinite(lon)) return [lon, lat];
+          }
+          throw new BoundaryError("Invalid coordinate array item");
+        });
+        if (pts.length >= 3) {
+          return fromFeatures([{ type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [pts] } }]);
+        }
+      }
+    } catch (e) {
+      if (e instanceof BoundaryError) throw e;
+    }
+  }
+
+  const lines = clean.split(/\r?\n|;/).map((l) => l.trim()).filter((l) => l && !/^[a-z]/i.test(l));
+  const pts = lines.map((l) => {
+    const isSouth = /\bS\b/i.test(l);
+    const isWest = /\bW\b/i.test(l);
+    const nums = l.match(WKT_NUMBER)?.map(Number) ?? [];
+    if (nums.length < 2) throw new BoundaryError(`"${l}" is not a "lat, lon" pair`);
+    let [n1, n2] = nums;
+    if (isSouth) n1 = -Math.abs(n1);
+    if (isWest) n2 = -Math.abs(n2);
+    let lat = n1;
+    let lon = n2;
+    // Auto-detect swapped lon/lat: if first number is > 90, it must be longitude
+    if (Math.abs(n1) > 90 && Math.abs(n2) <= 90) {
+      lon = n1;
+      lat = n2;
+    }
+    if (Math.abs(lat) > 90) {
+      throw new BoundaryError(`latitude ${lat} is out of range (-90 to 90)`);
+    }
+    if (Math.abs(lon) > 180) {
+      throw new BoundaryError(`longitude ${lon} is out of range (-180 to 180)`);
+    }
+    return [lon, lat];
+  });
   if (pts.length < 3) throw new BoundaryError("a boundary needs at least three corner points");
   return fromFeatures([
     { type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [pts] } },
