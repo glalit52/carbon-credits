@@ -29,21 +29,23 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     );
 
   return (
-    <div className="flex min-h-dvh">
-      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-6 border-r border-border bg-surface px-3 py-5 lg:flex">
-        <div className="px-2">
+    <div className="flex min-h-dvh bg-bg text-text">
+      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-border bg-surface px-3 py-4 lg:flex">
+        <div className="shrink-0 px-2 pb-3">
           <Logo href="/app" />
         </div>
-        <div className="px-2">{orgSwitcher}</div>
-        <NavLinks />
-        <div className="mt-auto px-2 text-xs text-muted">
+        <div className="shrink-0 px-2 pb-3">{orgSwitcher}</div>
+        <div className="flex-1 overflow-y-auto min-h-0 py-1 pr-1">
+          <NavLinks />
+        </div>
+        <div className="mt-auto shrink-0 border-t border-border pt-3 px-2 text-xs text-muted">
           <Link href="/app/profile" className="block truncate font-medium text-text hover:underline">
             {ctx.user.name ?? ctx.user.email}
           </Link>
-          <div className="flex items-center justify-between">
+          <div className="mt-1 flex items-center justify-between">
             <span>{ROLE_LABEL[ctx.role]}</span>
             <form action={signOut}>
-              <button className="flex items-center gap-1 hover:text-text" title="Sign out">
+              <button className="flex items-center gap-1 hover:text-text cursor-pointer" title="Sign out">
                 <LogOut className="h-3.5 w-3.5" /> Sign out
               </button>
             </form>

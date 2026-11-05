@@ -89,7 +89,7 @@ export function MobileNav({ children }: { children: React.ReactNode }) {
       {open && (
         <div className="fixed inset-0 z-50 flex">
           <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-          <div className="relative flex w-72 flex-col gap-4 bg-surface p-4 shadow-xl">
+          <div className="relative flex h-full max-h-dvh w-72 flex-col bg-surface p-4 shadow-xl">
             <button
               type="button"
               onClick={() => setOpen(false)}
@@ -98,8 +98,10 @@ export function MobileNav({ children }: { children: React.ReactNode }) {
             >
               <X className="h-5 w-5" />
             </button>
-            {children}
-            <NavLinks onNavigate={() => setOpen(false)} />
+            <div className="shrink-0 pb-3">{children}</div>
+            <div className="flex-1 overflow-y-auto min-h-0 pr-1">
+              <NavLinks onNavigate={() => setOpen(false)} />
+            </div>
           </div>
         </div>
       )}

@@ -184,7 +184,7 @@ export const getOrgContext = cache(async (): Promise<OrgContext> => {
 function isDemoOrg(orgId?: string | null): boolean {
   if (DEMO) return true;
   if (!orgId) return false;
-  return orgId === demo.organizations[0].id || orgId.startsWith("11111111-");
+  return orgId === demo.organization.id || orgId.startsWith("11111111-");
 }
 
 async function q<T>(
