@@ -642,26 +642,10 @@ export async function estimateFarm(
           seasons: [{ name: "Kharif", start: "06-15", end: "10-15" }],
           monitoring: {
             simulated: true,
-            passes: 24,
-            usable_passes: 22,
-            coverage: 0.92,
-            drained_fraction: 0.78,
-            adoption_confidence: 0.94,
-            spells: [
-              {
-                start: "07-10",
-                end: "07-22",
-                days: 12,
-                passes: 3,
-                mean_confidence: 0.95,
-                spanned_ambiguous: 0,
-                terminal: false,
-              },
-            ],
+            years,
+            optical: [],
             radar: [],
             regimes: [],
-            optical: [],
-            warnings: [],
           },
           totals: {
             creditable_net_t: net_t * years.length,
