@@ -34,10 +34,13 @@ export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // A redirect is a new response: carry over any refreshed session cookies.
-  // Built on the configured site, not the request: behind a proxy the request
-  // URL can carry the container's own host.
+  // Respect the current host so domains (e.g. web-production-c782e or custom domains) stay on themselves.
+  const host = request.headers.get("x-forwarded-host") || request.nextUrl.host;
+  const proto = request.headers.get("x-forwarded-proto") || request.nextUrl.protocol.replace(":", "") || "https";
+  const origin = host ? `${proto}://${host}` : siteUrl();
+
   const go = (pathname: string, search = "") => {
-    const redirect = NextResponse.redirect(new URL(pathname + search, siteUrl()));
+    const redirect = NextResponse.redirect(new URL(pathname + search, origin));
     for (const c of response.cookies.getAll()) redirect.cookies.set(c);
     return redirect;
   };
@@ -47,7 +50,7 @@ export async function proxy(request: NextRequest) {
   }
   // Page loads only: a form posted from a tab opened before signing in should still get its answer.
   if (signedIn && request.method === "GET" && under(path, SIGNED_OUT_ONLY)) {
-    const next = new URL(safeNext(request.nextUrl.searchParams.get("next")), siteUrl());
+    const next = new URL(safeNext(request.nextUrl.searchParams.get("next")), origin);
     return go(next.pathname, next.search);
   }
 
