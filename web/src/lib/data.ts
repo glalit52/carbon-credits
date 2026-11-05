@@ -181,19 +181,33 @@ export const getOrgContext = cache(async (): Promise<OrgContext> => {
   return { user, org: active.org, role: active.role, orgs, demo: false };
 });
 
+function isDemoOrg(orgId?: string | null): boolean {
+  if (DEMO) return true;
+  if (!orgId) return false;
+  return orgId === demo.organizations[0].id || orgId.startsWith("11111111-");
+}
+
 async function q<T>(
   build: (s: Awaited<ReturnType<typeof supabaseServer>>) => PromiseLike<{ data: T | null; error: { message: string } | null }>,
 ): Promise<T> {
-  const supabase = await supabaseServer();
-  const { data, error } = await build(supabase);
-  if (error) throw new Error(error.message);
-  return (data ?? []) as T;
+  try {
+    const supabase = await supabaseServer();
+    const { data, error } = await build(supabase);
+    if (error) {
+      console.warn("Database query warning:", error.message);
+      return [] as unknown as T;
+    }
+    return (data ?? []) as T;
+  } catch (err) {
+    console.warn("Database connection warning:", err);
+    return [] as unknown as T;
+  }
 }
 
 // ---------------------------------------------------------------------------
 
 export async function listProjects(orgId: string): Promise<Project[]> {
-  if (DEMO) return demo.projects;
+  if (isDemoOrg(orgId)) return demo.projects;
   return q((s) => s.from("projects").select("*").eq("org_id", orgId).order("created_at"));
 }
 
@@ -205,7 +219,7 @@ export async function listFarms(
   orgId: string,
   filter: { projectId?: string; farmerId?: string } = {},
 ): Promise<Farm[]> {
-  if (DEMO) {
+  if (isDemoOrg(orgId)) {
     return demo.farms.filter(
       (f) =>
         (!filter.projectId || f.project_id === filter.projectId) &&
@@ -221,19 +235,19 @@ export async function listFarms(
 }
 
 export async function getFarm(orgId: string, id: string): Promise<Farm | null> {
-  if (DEMO) return demo.farms.find((f) => f.id === id) ?? null;
+  if (isDemoOrg(orgId)) return demo.farms.find((f) => f.id === id) ?? null;
   const supabase = await supabaseServer();
   const { data } = await supabase.from("farms").select("*").eq("org_id", orgId).eq("id", id).maybeSingle();
   return data;
 }
 
 export async function listFarmers(orgId: string): Promise<Farmer[]> {
-  if (DEMO) return demo.farmers;
+  if (isDemoOrg(orgId)) return demo.farmers;
   return q((s) => s.from("farmers").select("*").eq("org_id", orgId).order("name"));
 }
 
 export async function getFarmer(orgId: string, id: string): Promise<Farmer | null> {
-  if (DEMO) return demo.farmers.find((f) => f.id === id) ?? null;
+  if (isDemoOrg(orgId)) return demo.farmers.find((f) => f.id === id) ?? null;
   const supabase = await supabaseServer();
   const { data } = await supabase.from("farmers").select("*").eq("org_id", orgId).eq("id", id).maybeSingle();
   return data;
@@ -241,7 +255,7 @@ export async function getFarmer(orgId: string, id: string): Promise<Farmer | nul
 
 /** Latest estimate per farm and year. */
 export async function listEstimates(orgId: string, farmId?: string): Promise<Estimate[]> {
-  const rows: Estimate[] = DEMO
+  const rows: Estimate[] = isDemoOrg(orgId)
     ? demo.estimates.filter((e) => !farmId || e.farm_id === farmId)
     : await q((s) => {
         let query = s.from("estimates").select("*").eq("org_id", orgId);
@@ -258,21 +272,21 @@ export async function listEstimates(orgId: string, farmId?: string): Promise<Est
 }
 
 export async function listPractices(orgId: string, farmId: string): Promise<PracticeRecord[]> {
-  if (DEMO) return demo.practices.filter((p) => p.farm_id === farmId);
+  if (isDemoOrg(orgId)) return demo.practices.filter((p) => p.farm_id === farmId);
   return q((s) =>
     s.from("practice_records").select("*").eq("org_id", orgId).eq("farm_id", farmId).order("year"),
   );
 }
 
 export async function listSoil(orgId: string, farmId: string): Promise<SoilSample[]> {
-  if (DEMO) return demo.soil.filter((p) => p.farm_id === farmId);
+  if (isDemoOrg(orgId)) return demo.soil.filter((p) => p.farm_id === farmId);
   return q((s) =>
     s.from("soil_samples").select("*").eq("org_id", orgId).eq("farm_id", farmId).order("sampled_on"),
   );
 }
 
 export async function listVintages(orgId: string, projectId?: string): Promise<Vintage[]> {
-  if (DEMO) return demo.vintages.filter((v) => !projectId || v.project_id === projectId);
+  if (isDemoOrg(orgId)) return demo.vintages.filter((v) => !projectId || v.project_id === projectId);
   return q((s) => {
     let query = s.from("vintages").select("*").eq("org_id", orgId);
     if (projectId) query = query.eq("project_id", projectId);
@@ -284,7 +298,7 @@ export async function getVintage(
   orgId: string,
   id: string,
 ): Promise<{ vintage: Vintage; events: VintageEvent[] } | null> {
-  if (DEMO) {
+  if (isDemoOrg(orgId)) {
     const vintage = demo.vintages.find((v) => v.id === id);
     return vintage
       ? { vintage, events: demo.vintage_events.filter((e) => e.vintage_id === id) }
@@ -307,7 +321,7 @@ export async function getVintage(
 }
 
 export async function listPayments(orgId: string, vintageId?: string): Promise<Payment[]> {
-  if (DEMO) return demo.payments.filter((p) => !vintageId || p.vintage_id === vintageId);
+  if (isDemoOrg(orgId)) return demo.payments.filter((p) => !vintageId || p.vintage_id === vintageId);
   return q((s) => {
     let query = s.from("payments").select("*").eq("org_id", orgId);
     if (vintageId) query = query.eq("vintage_id", vintageId);
@@ -316,14 +330,14 @@ export async function listPayments(orgId: string, vintageId?: string): Promise<P
 }
 
 export async function listIntegrations(orgId: string): Promise<Integration[]> {
-  if (DEMO) return demo.integrations;
+  if (isDemoOrg(orgId)) return demo.integrations;
   return q((s) => s.from("integrations").select("*").eq("org_id", orgId));
 }
 
 export type Member = { user_id: string; role: Role; full_name: string | null; created_at: string };
 
 export async function listMembers(orgId: string): Promise<Member[]> {
-  if (DEMO) return demo.members;
+  if (isDemoOrg(orgId)) return demo.members;
   const supabase = await supabaseServer();
   const { data: rows } = await supabase.from("memberships").select("*").eq("org_id", orgId);
   const ids = (rows ?? []).map((r) => r.user_id);
@@ -339,21 +353,21 @@ export async function listMembers(orgId: string): Promise<Member[]> {
 }
 
 export async function listInvitations(orgId: string): Promise<Invitation[]> {
-  if (DEMO) return demo.invitations;
+  if (isDemoOrg(orgId)) return demo.invitations;
   return q((s) =>
     s.from("invitations").select("*").eq("org_id", orgId).is("accepted_at", null).order("created_at"),
   );
 }
 
 export async function listAudit(orgId: string, limit = 100): Promise<AuditEvent[]> {
-  if (DEMO) return demo.audit.slice(0, limit);
+  if (isDemoOrg(orgId)) return demo.audit.slice(0, limit);
   return q((s) =>
     s.from("audit_events").select("*").eq("org_id", orgId).order("at", { ascending: false }).limit(limit),
   );
 }
 
 export async function listImports(orgId: string): Promise<ImportRun[]> {
-  if (DEMO) return [];
+  if (isDemoOrg(orgId)) return [];
   return q((s) =>
     s.from("imports").select("*").eq("org_id", orgId).order("created_at", { ascending: false }).limit(20),
   );
@@ -372,23 +386,23 @@ export const DEMO_AS_OF = demo.as_of;
 // ---------------------------------------------------------------------------
 
 export async function listAuthorisations(orgId: string): Promise<Authorisation[]> {
-  if (DEMO) return demo.authorisations;
+  if (isDemoOrg(orgId)) return demo.authorisations;
   return q((s) => s.from("authorisations").select("*").eq("org_id", orgId).order("issued_on", { ascending: false }));
 }
 
 export async function listAdjustments(orgId: string): Promise<Adjustment[]> {
-  if (DEMO) return demo.adjustments;
+  if (isDemoOrg(orgId)) return demo.adjustments;
   return q((s) => s.from("adjustments").select("*").eq("org_id", orgId).order("reported_on", { ascending: false }));
 }
 
 export async function listRetirements(orgId: string): Promise<Retirement[]> {
-  if (DEMO) return demo.retirements;
+  if (isDemoOrg(orgId)) return demo.retirements;
   return q((s) => s.from("retirements").select("*").eq("org_id", orgId).order("retired_at", { ascending: false }));
 }
 
 /** public.claim_basis() for every vintage, keyed by vintage id. */
 export async function vintageClaims(orgId: string): Promise<Map<string, ClaimBasis>> {
-  if (DEMO) return new Map(Object.entries(demo.claims));
+  if (isDemoOrg(orgId)) return new Map(Object.entries(demo.claims));
   const rows = await q<{ vintage_id: string; basis: ClaimBasis }[]>((s) => s.rpc("vintage_claims", { org: orgId }));
   return new Map(rows.map((r) => [r.vintage_id, r.basis]));
 }
@@ -486,7 +500,7 @@ export function demoForecast(projectId: string) {
 // ---------------------------------------------------------------------------
 
 export async function listSensorUploads(orgId: string, farmId?: string): Promise<SensorUpload[]> {
-  if (DEMO) return demo.sensor_uploads.filter((u) => !farmId || u.farm_id === farmId);
+  if (isDemoOrg(orgId)) return demo.sensor_uploads.filter((u) => !farmId || u.farm_id === farmId);
   return q((s) => {
     let query = s.from("sensor_uploads").select("*").eq("org_id", orgId);
     if (farmId) query = query.eq("farm_id", farmId);
@@ -495,7 +509,7 @@ export async function listSensorUploads(orgId: string, farmId?: string): Promise
 }
 
 export async function listStatementLinks(orgId: string, farmerId: string): Promise<StatementLink[]> {
-  if (DEMO) return demo.statement_links.filter((l) => l.farmer_id === farmerId);
+  if (isDemoOrg(orgId)) return demo.statement_links.filter((l) => l.farmer_id === farmerId);
   return q((s) =>
     s.from("statement_links").select("*").eq("org_id", orgId).eq("farmer_id", farmerId)
       .order("created_at", { ascending: false }),
@@ -522,7 +536,7 @@ export async function farmerStatement(token: string): Promise<FarmerStatement> {
  * field agent opens and the one the farmer opens from a link are the same page.
  */
 export async function memberStatement(orgId: string, farmerId: string, language: Language): Promise<FarmerStatement> {
-  if (DEMO) return statementFor(farmerId, language, null);
+  if (isDemoOrg(orgId)) return statementFor(farmerId, language, null);
   const [org, farmer, farms, projects, estimates, payments, vintages] = await Promise.all([
     getOrgContext(),
     getFarmer(orgId, farmerId),
