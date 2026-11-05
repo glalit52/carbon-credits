@@ -16,7 +16,7 @@ import type {
   Tenure,
   WaterControl,
 } from "@/lib/database.types";
-import { getOrgContext } from "@/lib/data";
+import { getOrgContext, isDemoOrg } from "@/lib/data";
 import { demo } from "@/lib/demo";
 import { EngineError, estimateRequest, runEstimate } from "@/lib/engine";
 import { measure, validate } from "@/lib/geo";
@@ -120,7 +120,7 @@ export async function createFarm(_: ActionResult, form: FormData): Promise<Actio
   const { fields, error } = farmFields(form);
   if (!fields) return { error };
 
-  if (ctx.demo) {
+  if (ctx.demo || isDemoOrg(ctx.org.id) || ctx.user.id.startsWith("mock-")) {
     const farmId = crypto.randomUUID();
     let farmerId = str(form, "farmer_id");
     if (farmerId === "new") {
@@ -195,7 +195,7 @@ export async function updateFarm(_: ActionResult, form: FormData): Promise<Actio
   const { fields, error } = farmFields(form);
   if (!fields) return { error };
 
-  if (ctx.demo) {
+  if (ctx.demo || isDemoOrg(ctx.org.id) || ctx.user.id.startsWith("mock-")) {
     const existing = demo.farms.find((f) => f.id === id);
     if (!existing) return { error: "Farm not found." };
     let farmerId = str(form, "farmer_id");
@@ -264,21 +264,34 @@ export async function updateFarm(_: ActionResult, form: FormData): Promise<Actio
 }
 
 export async function updateFarmStatus(form: FormData): Promise<void> {
-  if (refuseInDemo()) return;
   const id = str(form, "id");
   const status = str(form, "status") as Database["public"]["Tables"]["farms"]["Row"]["status"] | null;
   if (!id || !status) return;
   const ctx = await getOrgContext();
+  if (ctx.demo || isDemoOrg(ctx.org.id) || ctx.user.id.startsWith("mock-")) {
+    const f = demo.farms.find((x) => x.id === id);
+    if (f) f.status = status;
+    revalidatePath(`/app/farms/${id}`);
+    revalidatePath("/app/farms");
+    return;
+  }
+  if (refuseInDemo()) return;
   const supabase = await supabaseServer();
   await supabase.from("farms").update({ status }).eq("id", id).eq("org_id", ctx.org.id);
   revalidatePath(`/app/farms/${id}`);
 }
 
 export async function deleteFarm(form: FormData): Promise<void> {
-  if (refuseInDemo()) return;
   const id = str(form, "id");
   if (!id) return;
   const ctx = await getOrgContext();
+  if (ctx.demo || isDemoOrg(ctx.org.id) || ctx.user.id.startsWith("mock-")) {
+    const idx = demo.farms.findIndex((f) => f.id === id);
+    if (idx !== -1) demo.farms.splice(idx, 1);
+    revalidatePath("/app/farms");
+    redirect("/app/farms");
+  }
+  if (refuseInDemo()) return;
   const supabase = await supabaseServer();
   await supabase.from("farms").delete().eq("id", id).eq("org_id", ctx.org.id);
   revalidatePath("/app/farms");
@@ -286,13 +299,33 @@ export async function deleteFarm(form: FormData): Promise<void> {
 }
 
 export async function addPractice(_: ActionResult, form: FormData): Promise<ActionResult> {
-  const refused = refuseInDemo();
-  if (refused) return refused;
   const ctx = await getOrgContext();
   const farm_id = str(form, "farm_id");
   const year = num(form, "year");
   const practice = str(form, "practice");
   if (!farm_id || !year || !practice) return { error: "Year and practice are required." };
+
+  if (ctx.demo || isDemoOrg(ctx.org.id) || ctx.user.id.startsWith("mock-")) {
+    demo.practices.unshift({
+      id: crypto.randomUUID(),
+      org_id: ctx.org.id,
+      farm_id,
+      year,
+      season: str(form, "season"),
+      practice,
+      started_on: str(form, "started_on"),
+      ended_on: str(form, "ended_on"),
+      notes: str(form, "notes"),
+      evidence_path: null,
+      recorded_by: ctx.user.id,
+      created_at: new Date().toISOString(),
+    });
+    revalidatePath(`/app/farms/${farm_id}`);
+    return { message: "Practice recorded." };
+  }
+
+  const refused = refuseInDemo();
+  if (refused) return refused;
   const supabase = await supabaseServer();
 
   let evidence_path: string | null = null;
@@ -325,8 +358,6 @@ export async function addPractice(_: ActionResult, form: FormData): Promise<Acti
 }
 
 export async function addSoilSample(_: ActionResult, form: FormData): Promise<ActionResult> {
-  const refused = refuseInDemo();
-  if (refused) return refused;
   const ctx = await getOrgContext();
   const farm_id = str(form, "farm_id");
   const sampled_on = str(form, "sampled_on");
@@ -337,6 +368,28 @@ export async function addSoilSample(_: ActionResult, form: FormData): Promise<Ac
     return { error: "Date, depths and SOC are required." };
   }
   if (bottom <= top) return { error: "The bottom depth must be below the top depth." };
+
+  if (ctx.demo || isDemoOrg(ctx.org.id) || ctx.user.id.startsWith("mock-")) {
+    demo.soil.unshift({
+      id: crypto.randomUUID(),
+      org_id: ctx.org.id,
+      farm_id,
+      sampled_on,
+      depth_top_cm: top,
+      depth_bottom_cm: bottom,
+      soc_pct: soc,
+      bulk_density: num(form, "bulk_density"),
+      lab: str(form, "lab"),
+      lab_reference: str(form, "lab_reference"),
+      recorded_by: ctx.user.id,
+      created_at: new Date().toISOString(),
+    });
+    revalidatePath(`/app/farms/${farm_id}`);
+    return { message: "Sample recorded." };
+  }
+
+  const refused = refuseInDemo();
+  if (refused) return refused;
   const supabase = await supabaseServer();
   const { error } = await supabase.from("soil_samples").insert({
     org_id: ctx.org.id,

@@ -61,7 +61,6 @@ export default async function Image() {
               border: "1px solid rgba(31, 122, 77, 0.4)",
               borderRadius: "999px",
               padding: "6px 16px",
-              width: "fit-content",
             }}
           >
             <span style={{ fontSize: "14px", color: "#49b07a", fontWeight: 600, letterSpacing: "0.05em" }}>
@@ -103,9 +102,9 @@ export default async function Image() {
           }}
         >
           <div style={{ display: "flex", gap: "28px", color: "#97a59b", fontSize: "16px", fontWeight: 500 }}>
-            <span>✓ Verra VM0051 & VM0047</span>
-            <span>✓ Sentinel-1 Radar Water Telemetry</span>
-            <span>✓ Traceable Serial Ledger</span>
+            <span>• Verra VM0051 & VM0047</span>
+            <span>• Sentinel-1 Radar Water Telemetry</span>
+            <span>• Traceable Serial Ledger</span>
           </div>
           <span style={{ color: "#49b07a", fontSize: "16px", fontWeight: 600 }}>
             carbonstack.io

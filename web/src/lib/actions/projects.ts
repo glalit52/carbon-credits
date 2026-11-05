@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import type { Pathway } from "@/lib/database.types";
-import { getOrgContext } from "@/lib/data";
+import { getOrgContext, isDemoOrg } from "@/lib/data";
 import { demo } from "@/lib/demo";
 import { isLanguage } from "@/lib/i18n";
 import { can } from "@/lib/roles";
@@ -161,8 +161,6 @@ export async function updateFarmer(_: ActionResult, form: FormData): Promise<Act
 const STATUSES = ["design", "listed", "registered", "closed"] as const;
 
 export async function updateProject(_: ActionResult, form: FormData): Promise<ActionResult> {
-  const refused = refuseInDemo();
-  if (refused) return refused;
   const ctx = await getOrgContext();
   if (!can.manage(ctx.role)) return { error: "Your role cannot edit projects." };
   const id = str(form, "id");
@@ -170,6 +168,25 @@ export async function updateProject(_: ActionResult, form: FormData): Promise<Ac
   if (!id || !name) return { error: "Name is required." };
   const status = str(form, "status") as (typeof STATUSES)[number] | null;
   if (status && !STATUSES.includes(status)) return { error: "Unknown status." };
+
+  if (ctx.demo || isDemoOrg(ctx.org.id) || ctx.user.id.startsWith("mock-")) {
+    const p = demo.projects.find((x) => x.id === id);
+    if (p) {
+      p.name = name;
+      if (str(form, "registry")) p.registry = str(form, "registry");
+      if (str(form, "country")) p.country = str(form, "country");
+      if (str(form, "region")) p.region = str(form, "region");
+      if (str(form, "start_date")) p.start_date = str(form, "start_date");
+      if (num(form, "crediting_period_yrs")) p.crediting_period_yrs = num(form, "crediting_period_yrs")!;
+      if (status) p.status = status;
+    }
+    revalidatePath("/app/projects");
+    revalidatePath(`/app/projects/${id}`);
+    redirect(`/app/projects/${id}`);
+  }
+
+  const refused = refuseInDemo();
+  if (refused) return refused;
   // Pathway and methodology stay as created: estimates already made under
   // them would silently stop matching the project they belong to.
   const supabase = await supabaseServer();

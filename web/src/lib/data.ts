@@ -157,7 +157,7 @@ export const getOrgContext = cache(async (): Promise<OrgContext> => {
       org: demo.organization,
       role,
       orgs: [{ org: demo.organization, role }],
-      demo: Boolean(DEMO && !mock),
+      demo: true,
     };
   }
   const supabase = await supabaseServer();
@@ -181,7 +181,7 @@ export const getOrgContext = cache(async (): Promise<OrgContext> => {
   return { user, org: active.org, role: active.role, orgs, demo: false };
 });
 
-function isDemoOrg(orgId?: string | null): boolean {
+export function isDemoOrg(orgId?: string | null): boolean {
   if (DEMO) return true;
   if (!orgId) return false;
   return orgId === demo.organization.id || orgId.startsWith("11111111-");
