@@ -155,6 +155,7 @@ export async function createFarm(_: ActionResult, form: FormData): Promise<Actio
       source: (str(form, "source") as FarmSource | null) ?? "drawn",
       status: "enrolled",
       created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
       created_by: ctx.user.id,
     };
     demo.farms.unshift(newFarm);
