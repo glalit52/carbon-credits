@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { SIGNED_IN_ONLY, SIGNED_OUT_ONLY, safeNext, under } from "@/lib/auth-shared";
 import { DEMO, SUPABASE_ANON_KEY, SUPABASE_URL, siteUrl } from "@/lib/env";
+import { MOCK_USER_COOKIE } from "@/lib/mock-creds";
 
 /**
  * Keeps the Supabase session cookie fresh, sends signed-out visitors to the
@@ -13,6 +14,8 @@ import { DEMO, SUPABASE_ANON_KEY, SUPABASE_URL, siteUrl } from "@/lib/env";
  */
 export async function proxy(request: NextRequest) {
   if (DEMO) return NextResponse.next();
+
+  const mockCookie = request.cookies.get(MOCK_USER_COOKIE)?.value;
 
   let response = NextResponse.next({ request });
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -27,7 +30,7 @@ export async function proxy(request: NextRequest) {
   });
 
   const { data } = await supabase.auth.getClaims();
-  const signedIn = Boolean(data?.claims?.sub);
+  const signedIn = Boolean(data?.claims?.sub) || Boolean(mockCookie);
   const path = request.nextUrl.pathname;
 
   // A redirect is a new response: carry over any refreshed session cookies.
