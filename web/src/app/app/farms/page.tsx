@@ -1,4 +1,4 @@
-import { Download, Plus, Upload } from "lucide-react";
+import { Compass, Download, Plus, Upload } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -49,6 +49,9 @@ export default async function FarmsPage({
         description={`${shown.length} farms · ${fmt.ha(totalHa)}`}
         actions={
           <>
+            <ButtonLink href="/app/checker" variant="secondary">
+              <Compass className="h-4 w-4" /> Field Checker
+            </ButtonLink>
             <DownloadLink href={`/app/export/farms.csv${project ? `?project=${project}` : ""}`}>
               <Download className="h-4 w-4" /> CSV
             </DownloadLink>

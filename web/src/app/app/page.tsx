@@ -1,4 +1,4 @@
-import { ArrowRight, Plus, Upload } from "lucide-react";
+import { ArrowRight, Compass, Plus, Upload } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -111,16 +111,21 @@ export default async function Overview() {
         title="Overview"
         description={`${ctx.org.name} · ${farms.length} farms across ${projects.length} projects`}
         actions={
-          can.enrol(ctx.role) && (
-            <>
-              <ButtonLink href="/app/import" variant="secondary">
-                <Upload className="h-4 w-4" /> Import
-              </ButtonLink>
-              <ButtonLink href="/app/farms/new">
-                <Plus className="h-4 w-4" /> Add farm
-              </ButtonLink>
-            </>
-          )
+          <div className="flex flex-wrap items-center gap-2">
+            <ButtonLink href="/app/checker" variant="secondary">
+              <Compass className="h-4 w-4" /> Field Checker
+            </ButtonLink>
+            {can.enrol(ctx.role) && (
+              <>
+                <ButtonLink href="/app/import" variant="secondary">
+                  <Upload className="h-4 w-4" /> Import
+                </ButtonLink>
+                <ButtonLink href="/app/farms/new">
+                  <Plus className="h-4 w-4" /> Add farm
+                </ButtonLink>
+              </>
+            )}
+          </div>
         }
       />
 

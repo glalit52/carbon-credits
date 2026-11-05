@@ -1,4 +1,4 @@
-import { ArrowRight, BadgeCheck, FileSpreadsheet, Map, Satellite, ShieldCheck, Wallet } from "lucide-react";
+import { ArrowRight, BadgeCheck, Compass, FileSpreadsheet, Map, Satellite, ShieldCheck, Wallet } from "lucide-react";
 
 import { Logo } from "@/components/logo";
 import { ButtonLink, Card } from "@/components/ui";
@@ -65,6 +65,9 @@ export default function Home() {
           <div className="mt-8 flex flex-wrap gap-3">
             <ButtonLink href={DEMO ? "/app" : "/signup"} className="px-5 py-2.5">
               {DEMO ? "Explore the demo organisation" : "Create your organisation"} <ArrowRight className="h-4 w-4" />
+            </ButtonLink>
+            <ButtonLink href="/app/checker" variant="secondary" className="px-5 py-2.5">
+              <Compass className="h-4 w-4 text-brand" /> Field & Location Checker
             </ButtonLink>
             {!DEMO && (
               <ButtonLink href="/login" variant="secondary" className="px-5 py-2.5">

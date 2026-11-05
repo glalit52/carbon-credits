@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { Compass, Plus } from "lucide-react";
 import Link from "next/link";
 
 import { QueueList } from "@/components/field/queue-list";
@@ -24,6 +24,12 @@ export default async function FieldHome() {
         className="flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-5 text-lg font-medium text-white shadow-sm active:bg-brand-strong"
       >
         <Plus className="h-6 w-6" /> {t("field.enrol")}
+      </Link>
+      <Link
+        href="/app/checker"
+        className="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 py-3 text-sm font-medium text-text hover:bg-surface-2 transition shadow-xs"
+      >
+        <Compass className="h-4 w-4 text-brand" /> Quick Location Feasibility Checker
       </Link>
       <QueueList lang={lang} />
       <section>
